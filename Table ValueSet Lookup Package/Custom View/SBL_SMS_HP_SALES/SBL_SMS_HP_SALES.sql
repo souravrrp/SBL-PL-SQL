@@ -1,0 +1,2 @@
+/* Formatted on 4/25/2022 3:03:05 PM (QP5 v5.381) */
+SELECT * FROM SBL_SMS_HP_SALES;

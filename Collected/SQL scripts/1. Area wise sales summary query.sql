@@ -1,0 +1,5 @@
+SELECT AREA_CODE, SUM(SALES_PRICE)AS TOTAL_REVENUE
+FROM shop_dts_info 
+INNER JOIN sbl_jr_sales_dtl_inv ON shop_dts_info.SHOP_CODE=sbl_jr_sales_dtl_inv.SITE
+WHERE sbl_jr_sales_dtl_inv.SALES_DATE BETWEEN TO_DATE('11/8/2017','MM/DD/YYYY') AND TO_DATE('11/11/2017','MM/DD/YYYY')
+GROUP BY AREA_CODE 

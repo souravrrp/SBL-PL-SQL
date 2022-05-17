@@ -1,0 +1,31 @@
+/* Formatted on 3/24/2022 4:17:43 PM (QP5 v5.381) */
+SELECT T.PRICE_LIST_NO,
+       T.SALE_PART_NO,
+       T.PART_DESC,
+       T.BRAND,
+       T.PRODUCT_FAMILY,
+       T.COMMODITY_GROUP2,
+       T.VALID_FROM_DATE,
+       T.SALE_PRICE_NSP,
+       T.TAX_CODE,
+       T.TAX_RATE,
+       T.CO_DISCOUNT,
+       DECODE (T.SALE_PRICE_NSP,
+               0, 0,
+               ROUND ((T.CO_DISCOUNT / T.SALE_PRICE_NSP) * 100, 2))
+           "CO_DISCOUNT_",
+       T.HP_DISCOUNT,
+       DECODE (T.SALE_PRICE_NSP,
+               0, 0,
+               ROUND ((T.HP_DISCOUNT / T.SALE_PRICE_NSP) * 100, 2))
+           "HP_DISCOUNT_",
+       T.CASH_PRICE,
+       T.HIRE_CASH_PRICE,
+       T.CASH_COMMISSION,
+       T.HP_COMMISSION
+       ,to_date (VALID_FROM_DATE,'YYYY-MM-DD HH24:MI:SS') DATE_RANGE
+  FROM IFSAPP.SBL_LATEST_PRICE_LIST T
+ WHERE     T.PRICE_LIST_NO = '&PRICE_LIST_NO'
+       AND T.SALE_PART_NO LIKE UPPER ('%&CATALOG_NO%')
+       --AND to_date (VALID_FROM_DATE,'YYYY-MM-DD HH24:MI:SS') >= NVL (TO_DATE ( :p_date_from), to_date (VALID_FROM_DATE,'YYYY-MM-DD HH24:MI:SS'))
+       AND to_date (VALID_FROM_DATE,'YYYY-MM-DD HH24:MI:SS') BETWEEN NVL (TO_DATE ( :p_date_from), to_date (VALID_FROM_DATE,'YYYY-MM-DD HH24:MI:SS')) AND NVL (TO_DATE ( :p_date_to), to_date (VALID_FROM_DATE,'YYYY-MM-DD HH24:MI:SS'))       

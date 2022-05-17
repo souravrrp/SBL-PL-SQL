@@ -1,0 +1,1 @@
+SELECT SUM(SALES_PRICE)FROM(SELECT AREA_CODE, SHOP_CODE, SALES_PRICE FROM shop_dts_info INNER JOIN sbl_jr_sales_dtl_inv ON shop_dts_info.SHOP_CODE=sbl_jr_sales_dtl_inv.SITE)WHERE AREA_CODE='CENTRAL-C'

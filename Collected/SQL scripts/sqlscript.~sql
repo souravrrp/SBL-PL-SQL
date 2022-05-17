@@ -1,0 +1,1 @@
+select * from SBL_JR_SALES_DTL_INV where LINE_NO=2

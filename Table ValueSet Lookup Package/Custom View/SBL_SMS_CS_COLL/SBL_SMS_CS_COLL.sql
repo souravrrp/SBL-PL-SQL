@@ -1,0 +1,2 @@
+/* Formatted on 4/25/2022 9:29:51 AM (QP5 v5.381) */
+SELECT * FROM SBL_SMS_CS_COLL
