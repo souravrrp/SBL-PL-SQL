@@ -1,0 +1,1 @@
+select IFSAPP.sbl_pass('&USER_ID') from dual
