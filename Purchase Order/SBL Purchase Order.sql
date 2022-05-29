@@ -1,14 +1,20 @@
-/* Formatted on 3/29/2022 12:28:40 PM (QP5 v5.381) */
+/* Formatted on 5/29/2022 9:45:27 AM (QP5 v5.381) */
   SELECT *
     FROM ifsapp.purchase_order_tab
    WHERE 1 = 1
 --AND order_no = 'W-9999'
 ORDER BY date_entered DESC;
 
+SELECT * FROM ifsapp.purchase_order_line_tab;
+
+SELECT *
+  FROM pur_ord_line_ext_tab polet;
+
   SELECT *
     FROM ifsapp.purchase_order_hist_arc
    WHERE 1 = 1
 ORDER BY data_archive_date DESC;
+
 
 SELECT * FROM ifsapp.purchase_order_line_arc;
 
@@ -25,8 +31,6 @@ SELECT * FROM ifsapp.purchase_order_hist_tab;
 SELECT * FROM ifsapp.purchase_order_invoice_tab;
 
 SELECT * FROM ifsapp.purchase_order_line_hist_tab;
-
-SELECT * FROM ifsapp.purchase_order_line_tab;
 
 --------------------------------No data Found-----------------------------------
 
