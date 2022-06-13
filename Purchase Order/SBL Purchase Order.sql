@@ -5,7 +5,9 @@
 --AND order_no = 'W-9999'
 ORDER BY date_entered DESC;
 
-SELECT * FROM ifsapp.purchase_order_line_tab;
+SELECT * FROM ifsapp.purchase_order_line_tab
+where 1=1
+and ORDER_NO='A-30664594';
 
 SELECT *
   FROM pur_ord_line_ext_tab polet;

@@ -1,0 +1,1 @@
+SELECT SUBSTR ('Sourav Paul', 0, 2) FROM DUAL
