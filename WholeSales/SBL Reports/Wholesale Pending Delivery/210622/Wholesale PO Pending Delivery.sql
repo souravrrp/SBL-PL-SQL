@@ -3,23 +3,25 @@ SELECT po_no,
        order_from,
        order_to,
        sku,
-       quantity,
-       po_date,
+       po_quantity,
+       receive_quantity,
+       pending_quantity,
+       TO_CHAR(po_date,'YYYY-MM-DD'),
        po_status
   FROM (SELECT pot.order_no                                    po_no,
                (CASE
-                    WHEN     (SUBSTR (pot.order_no, 0, 2) = 'A-'
-                         AND SUBSTR (pot.contract, 4, 4) != 'P')
+                    WHEN (    SUBSTR (pot.order_no, 0, 2) = 'A-'
+                          AND SUBSTR (pot.contract, 4, 4) != 'P')
                     THEN
                         'Retail'
                     WHEN (SUBSTR (pot.order_no, 0, 2) = 'W-')
                     THEN
-                        'Wholease'
+                        'Wholesale'
                     WHEN (SUBSTR (pot.order_no, 0, 2) = 'I-')
                     THEN
                         'Corp'
-                    WHEN     (SUBSTR (pot.order_no, 0, 2) = 'A-'
-                         AND SUBSTR (pot.contract, 4, 4) = 'P')
+                    WHEN (    SUBSTR (pot.order_no, 0, 2) = 'A-'
+                          AND SUBSTR (pot.contract, 4, 4) = 'P')
                     THEN
                         'Service Center'
                     WHEN (SUBSTR (pot.order_no, 0, 2) = 'O-')
@@ -31,7 +33,9 @@ SELECT po_no,
                pot.contract                                    order_from,
                pot.vendor_no                                   order_to,
                polt.part_no                                    sku,
-               (polt.buy_qty_due - NVL (rr.qty_arrived, 0))    quantity,
+               polt.buy_qty_due                                po_quantity,
+               NVL (rr.qty_arrived, 0)                         receive_quantity,
+               (polt.buy_qty_due - NVL (rr.qty_arrived, 0))    pending_quantity,
                TRUNC (pot.order_date)                          po_date,
                pot.rowstate                                    po_status
           FROM ifsapp.purchase_order_tab       pot,
@@ -48,11 +52,11 @@ SELECT po_no,
                          r.release_no,
                          r.part_no) rr
          WHERE     pot.order_no = polt.order_no
-               AND pot.order_date BETWEEN $P{FROM_DATE} and $P{TO_DATE}+ 0.99999
                AND pot.rowstate NOT IN ('Cancelled', 'Closed')
                AND polt.rowstate NOT IN ('Cancelled', 'Closed')
                AND order_sent = 'SENT'
-               AND $X{IN, pot.contract, SHOP}
+               AND $X{IN, pot.vendor_no, WAREHOUSE}
+               AND $X{IN, polt.part_no, PRODUCT}
                AND EXISTS
                        (SELECT 1
                           FROM ifsapp.customer_order co
@@ -66,4 +70,4 @@ SELECT po_no,
                AND polt.line_no = rr.line_no(+)
                AND polt.release_no = rr.release_no(+)
                AND polt.part_no = rr.part_no(+))
- WHERE quantity > 0
+ WHERE pending_quantity > 0

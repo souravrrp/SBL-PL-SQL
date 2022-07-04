@@ -1,0 +1,39 @@
+/* Formatted on 6/26/2022 3:45:04 PM (QP5 v5.381) */
+  SELECT H.YEAR,
+         H.PERIOD,
+         H.SHOP_CODE,
+         H.CUSTOMER,
+         IFSAPP.customer_info_api.Get_Name (H.CUSTOMER)
+             CUSTOMER_NAME,
+         H.ORIGINAL_ACCT_NO,
+         H.ACCT_NO,
+         H.PRODUCT_CODE,
+         TO_CHAR (H.ACTUAL_SALES_DATE, 'MM/DD/YYYY')
+             ACTUAL_SALES_DATE,
+         TO_CHAR (H.SALES_DATE, 'MM/DD/YYYY')
+             SALES_DATE,
+         TO_CHAR (H.REAL_SHIP_DATE, 'MM/DD/YYYY')
+             REAL_SHIP_DATE,
+         TO_CHAR (H.CLOSED_DATE, 'MM/DD/YYYY')
+             CLOSED_DATE,
+         H.NORMAL_CASH_PRICE,
+         H.HIRE_CASH_PRICE,
+         H.HIRE_PRICE,
+         H.LIST_PRICE,
+         H.AMOUNT_FINANCED,
+         H.MONTHLY_PAY,
+         H.FIRST_PAY,
+         H.DOWN_PAYMENT,
+         H.LOC,
+         H.DISCOUNT,
+         H.ACT_OUT_BAL,
+         H.VAT,
+         TO_CHAR (H.CASH_CONVERSION_ON_DATE, 'MM/DD/YYYY')
+             CASH_CONVERSION_ON_DATE,
+         H.EFFECTIVE_RATE,
+         H.PRESENT_VALUE,
+         H.ACTUAL_UCC,
+         H.EFFECTIVE_ECC
+    FROM IFSAPP.HPNRET_FORM249_ARREARS_TAB H
+   WHERE H.YEAR = '&YEAR_I' AND H.PERIOD = '&PERIOD' AND H.ACT_OUT_BAL > 0
+ORDER BY H.SHOP_CODE, H.ORIGINAL_ACCT_NO, H.PRODUCT_CODE
