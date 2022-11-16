@@ -6,6 +6,7 @@ SELECT sdi.area_code,
   FROM ifsapp.shop_dts_info sdi, ifsapp.user_group_finance_tab ugft
  WHERE     1 = 1
        AND sdi.shop_code = ugft.user_group
+       AND (   :p_district_code IS NULL OR sdi.district_code = :p_district_code)
        AND (   :p_shop_code IS NULL
             OR (UPPER (sdi.shop_code) LIKE UPPER ('%' || :p_shop_code || '%')));
 
@@ -21,3 +22,16 @@ SELECT *
 
 SELECT *
   FROM ifsapp.user_group_finance ugf;
+  
+--------------------------------------------------------------------------------
+  
+  select
+  *
+  from
+  IFSAPP.SITE;
+  
+  SELECT *
+  FROM ifsapp.ware_house_info hrt
+ WHERE 1 = 1
+--AND hrt.shop_code = 'DUTB'
+;

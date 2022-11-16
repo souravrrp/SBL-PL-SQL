@@ -1,6 +1,6 @@
 /* Formatted on 4/11/2022 2:03:46 PM (QP5 v5.381) */
 SELECT hhdt.account_no
-  --,cot.*
+  ,hhht.*
   --,colt.*
   FROM ifsapp.hpnret_hp_head_tab hhht, ifsapp.hpnret_hp_dtl_tab hhdt
  WHERE     1 = 1

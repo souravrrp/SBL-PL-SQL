@@ -1,13 +1,17 @@
-/* Formatted on 5/29/2022 9:45:27 AM (QP5 v5.381) */
+/* Formatted on 10/20/2022 11:01:47 AM (QP5 v5.381) */
   SELECT *
-    FROM ifsapp.purchase_order_tab
-   WHERE 1 = 1
---AND order_no = 'W-9999'
+    FROM ifsapp.purchase_order_tab pot
+   WHERE     1 = 1
+         --AND order_no IN ('A-30948924')
+         AND ( :p_po_no IS NULL OR (UPPER (pot.order_no) = UPPER ( :p_po_no)))
 ORDER BY date_entered DESC;
 
-SELECT * FROM ifsapp.purchase_order_line_tab
-where 1=1
-and ORDER_NO='A-30664594';
+SELECT *
+  FROM ifsapp.purchase_order_line_tab polt
+   WHERE     1 = 1
+         --AND order_no IN ('A-30948924')
+         AND ( :p_po_no IS NULL OR (UPPER (polt.order_no) = UPPER ( :p_po_no)))
+ORDER BY date_entered DESC;
 
 SELECT *
   FROM pur_ord_line_ext_tab polet;
@@ -17,6 +21,7 @@ SELECT *
    WHERE 1 = 1
 ORDER BY data_archive_date DESC;
 
+--------------------------------------------------------------------------------
 
 SELECT * FROM ifsapp.purchase_order_line_arc;
 
