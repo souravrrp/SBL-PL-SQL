@@ -66,7 +66,7 @@ select U.USER_ID,
        U.PASS
   from IFSAPP.SBL_USER_LIST U
  where U.site LIKE '&SHOP_CODE'
- AND U.USER_ID = '&USER_ID'
+ AND U.USER_ID = '&USER_ID';
  
    
 --*****Status of a WO
@@ -103,13 +103,14 @@ SELECT kk.wo_no,
    /*and substr(kk.mch_code, 1, instr(kk.mch_code, '-', -1, 1) - 1) like
        '&re_PRODUCT_CODE'
    and kk.mch_code_contract like '&re_SHOP_CODE'*/
+   ;
 
 
 --*****Password of a shop
 select S.contract, S.USERID, IFSAPP.sbl_pass(USERID) PASS_WORD
   from IFSAPP.USER_ALLOWED_SITE S
  where s.CONTRACT LIKE '&SHOP_CODE'
-   and s.USER_SITE_TYPE = 'DefaultSite'
+   and s.USER_SITE_TYPE = 'DefaultSite';
 
 
 --*****Approval details of a shop
@@ -125,13 +126,14 @@ SELECT A.SHOP_CODE,
    AND A.SHOP_CODE LIKE '&SHOP_CODE'
    AND TRUNC(A.APPROVE_DATE) = TO_DATE('&APPROVE_DATE', 'YYYY/MM/DD')
  ORDER BY A.APPROVE_DATE /*DESC*/
+ ;
 
 
 --*****No of Shops completed counting in a day
 SELECT COUNT(DISTINCT(A.SHOP_CODE)) NO_OF_SHOPS
   FROM IFSAPP.SBL_SHOP_ARRPOVE_TBL A
  WHERE A.APPROVE_STATUS = 1
-   AND TRUNC(A.APPROVE_DATE) <= TO_DATE('&COUNT_DATE', 'YYYY/MM/DD')
+   AND TRUNC(A.APPROVE_DATE) <= TO_DATE('&COUNT_DATE', 'YYYY/MM/DD');
 
 
 --*****Counting not completed sites
@@ -149,7 +151,7 @@ select U.SITE,
          WHERE A.SHOP_CODE = U.SITE
            AND A.APPROVE_STATUS = 1
          /*AND TRUNC(A.APPROVE_DATE) = TO_DATE('&COUNT_DATE', 'YYYY/MM/DD')*/)
- ORDER BY 1
+ ORDER BY 1;
 
 
 --*****Sites where counting not finished on count date
@@ -165,4 +167,4 @@ SELECT A.SHOP_CODE,
     ON A.SHOP_CODE = U.SITE
    AND A.AUDIT_USER_ID = U.USER_ID
  WHERE TRUNC(A.APPROVE_DATE) != U.DATE_OF_COUNT
-   AND U.DATE_OF_COUNT <= TO_DATE('&COUNT_DATE', 'YYYY/MM/DD')
+   AND U.DATE_OF_COUNT <= TO_DATE('&COUNT_DATE', 'YYYY/MM/DD');
