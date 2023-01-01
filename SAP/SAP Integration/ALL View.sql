@@ -1,0 +1,6 @@
+sbl_sap_intg_customer
+sbl_sap_intg_vendor
+sbl_sap_intg_sales_inv
+sbl_sap_intg_co_pay_line
+sbl_sap_intg_co_pay_head_cl
+sbl_sap_intg_co_pay_line_cl
