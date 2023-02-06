@@ -1,6 +1,14 @@
 /* Formatted on 11/20/2022 12:05:52 PM (QP5 v5.381) */
 SELECT channel,
        order_number,
+       IFSAPP.CUSTOMER_ORDER_API.GET_CUSTOMER_NO (order_number)
+           customer_no,
+       (SELECT NAME
+          FROM CUSTOMER_INFO_TAB
+         WHERE     1 = 1
+               AND CUSTOMER_ID =
+                   IFSAPP.CUSTOMER_ORDER_API.GET_CUSTOMER_NO (order_number))
+           customer_name,
        po_no,
        TRUNC (po_date)
            po_date,

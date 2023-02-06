@@ -4,3 +4,17 @@ sbl_sap_intg_sales_inv
 sbl_sap_intg_co_pay_line
 sbl_sap_intg_co_pay_head_cl
 sbl_sap_intg_co_pay_line_cl
+sbl_sap_intg_hp_dp_head
+sbl_sap_intg_hp_dp_line
+sbl_sap_intg_hp_dp_head_cl
+sbl_sap_intg_hp_dp_line_cl
+sbl_sap_intg_po_head
+sbl_sap_intg_po_line
+sbl_sap_intg_pkg_item
+sbl_sap_intg_ship_head
+sbl_sap_intg_ship_line
+sbl_sap_intg_ship_charge
+sbl_sap_intg_goods_receipt
+sbl_sap_intg_ccp_head
+sbl_sap_intg_ccp_line
+
