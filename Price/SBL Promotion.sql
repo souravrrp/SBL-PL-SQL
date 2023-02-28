@@ -1,0 +1,5 @@
+/* Formatted on 2/9/2023 9:35:32 AM (QP5 v5.381) */
+  SELECT *
+    FROM ifsapp.SBL_DISCOUNT_PROMOTION d
+   WHERE 1 = 1
+ORDER BY VALID_FROM DESC

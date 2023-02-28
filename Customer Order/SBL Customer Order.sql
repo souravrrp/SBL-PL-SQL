@@ -5,7 +5,11 @@ SELECT cot.order_no, cot.date_entered sales_date
   FROM ifsapp.customer_order_tab cot, ifsapp.customer_order_line_tab colt
  WHERE     1 = 1
        AND cot.order_no = colt.order_no
-       AND cot.order_no IN ('ZRN-R19888');
+       and (:p_customer_no is null or (cot.customer_no = :p_customer_no))
+       --and cot.customer_no='W0002991-2'
+       --AND cot.order_no like ('%SIS-R4991%')
+       and (:p_order_no is null or (cot.order_no = :p_order_no))
+       ;
 
 --------------------------------*********************---------------------------
 

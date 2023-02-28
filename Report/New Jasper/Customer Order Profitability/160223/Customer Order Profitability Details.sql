@@ -1,4 +1,3 @@
-/* Formatted on 2/7/2023 4:50:19 PM (QP5 v5.381) */
 SELECT l.order_no,
        l.line_no,
        l.vendor_no
@@ -12,9 +11,9 @@ SELECT l.order_no,
            order_date,
        l.buy_qty_due
            quantiy,
-       ROUND (l.cost, 2)
+       ifsapp.sbl_get_item_cost (l.catalog_no)
            unit_cost,
-       ROUND (l.cost, 2) * l.buy_qty_due
+       ifsapp.sbl_get_item_cost (l.catalog_no) * l.buy_qty_due
            cost,
        ifsapp.customer_order_line_api.Get_Base_Sale_Price_Total (
            l.order_no,
@@ -36,6 +35,12 @@ SELECT l.order_no,
                                                             l.rel_no,
                                                             l.line_item_no)
            discounted_nsp,
+         ifsapp.customer_order_line_api.get_sale_price_total (l.order_no,
+                                                              l.line_no,
+                                                              l.rel_no,
+                                                              l.line_item_no)
+       * 0.17
+           opex,
        ifsapp.customer_order_line_api.get_total_tax_amount (l.order_no,
                                                             l.line_no,
                                                             l.rel_no,
@@ -78,38 +83,71 @@ SELECT l.order_no,
               l.rel_no,
               l.line_item_no))
            discounted_rsp,
-       ROUND (
-             (  ifsapp.customer_order_line_api.get_sale_price_total (
-                    l.order_no,
-                    l.line_no,
-                    l.rel_no,
-                    l.line_item_no)
-              - ((  (ROUND (l.cost, 2) * l.buy_qty_due)
-                  + (ROUND (l.cost, 2) * l.buy_qty_due * .01))))
-           / (ifsapp.customer_order_line_api.get_sale_price_total (
-                  l.order_no,
-                  l.line_no,
-                  l.rel_no,
-                  l.line_item_no)),
-           2)
+       (CASE
+            WHEN ifsapp.customer_order_line_api.get_sale_price_total (
+                     l.order_no,
+                     l.line_no,
+                     l.rel_no,
+                     l.line_item_no) = 0
+            THEN
+                -1
+            ELSE
+                ROUND (
+                      (  ifsapp.customer_order_line_api.get_sale_price_total (
+                             l.order_no,
+                             l.line_no,
+                             l.rel_no,
+                             l.line_item_no)
+                       - ((  (  ifsapp.sbl_get_item_cost (l.catalog_no)
+                              * l.buy_qty_due)
+                           + (  ifsapp.sbl_get_item_cost (l.catalog_no)
+                              * l.buy_qty_due
+                              * .01))))
+                    / (ifsapp.customer_order_line_api.get_sale_price_total (
+                           l.order_no,
+                           l.line_no,
+                           l.rel_no,
+                           l.line_item_no)),
+                    2)
+        END)
            gm,
-         ROUND (
-               (  ifsapp.customer_order_line_api.get_sale_price_total (
-                      l.order_no,
-                      l.line_no,
-                      l.rel_no,
-                      l.line_item_no)
-                - ((  (ROUND (l.cost, 2) * l.buy_qty_due)
-                    + (ROUND (l.cost, 2) * l.buy_qty_due * .01))))
-             / (ifsapp.customer_order_line_api.get_sale_price_total (
-                    l.order_no,
-                    l.line_no,
-                    l.rel_no,
-                    l.line_item_no)),
-             2)
+         (CASE
+              WHEN ifsapp.customer_order_line_api.get_sale_price_total (
+                       l.order_no,
+                       l.line_no,
+                       l.rel_no,
+                       l.line_item_no) = 0
+              THEN
+                  -1
+              ELSE
+                  ROUND (
+                        (  ifsapp.customer_order_line_api.get_sale_price_total (
+                               l.order_no,
+                               l.line_no,
+                               l.rel_no,
+                               l.line_item_no)
+                         - ((  (  ifsapp.sbl_get_item_cost (l.catalog_no)
+                                * l.buy_qty_due)
+                             + (  ifsapp.sbl_get_item_cost (l.catalog_no)
+                                * l.buy_qty_due
+                                * .01))))
+                      / (ifsapp.customer_order_line_api.get_sale_price_total (
+                             l.order_no,
+                             l.line_no,
+                             l.rel_no,
+                             l.line_item_no)),
+                      2)
+          END)
        * 100
            gm_percentage,
        (CASE
+            WHEN ifsapp.customer_order_line_api.get_sale_price_total (
+                     l.order_no,
+                     l.line_no,
+                     l.rel_no,
+                     l.line_item_no) = 0
+            THEN
+                'Non-Profitable'
             WHEN SIGN (
                        ROUND (
                              (  ifsapp.customer_order_line_api.get_sale_price_total (
@@ -117,8 +155,13 @@ SELECT l.order_no,
                                     l.line_no,
                                     l.rel_no,
                                     l.line_item_no)
-                              - ((  (ROUND (l.cost, 2) * l.buy_qty_due)
-                                  + (ROUND (l.cost, 2) * l.buy_qty_due * .01))))
+                              - ((  (  ifsapp.sbl_get_item_cost (
+                                           l.catalog_no)
+                                     * l.buy_qty_due)
+                                  + (  ifsapp.sbl_get_item_cost (
+                                           l.catalog_no)
+                                     * l.buy_qty_due
+                                     * .01))))
                            / (ifsapp.customer_order_line_api.get_sale_price_total (
                                   l.order_no,
                                   l.line_no,
@@ -137,51 +180,13 @@ SELECT l.order_no,
            pay_term_id,
        ifsapp.customer_order_api.get_state (l.order_no)
            state
---       (CASE
---            WHEN   ROUND (  (  ifsapp.customer_order_line_api.get_sale_price_total (
---                                   l.order_no,
---                                   l.line_no,
---                                   l.rel_no,
---                                   l.line_item_no)
---                             - (ROUND (l.cost, 2) * l.buy_qty_due))
---                          / (ROUND (l.cost, 2) * l.buy_qty_due),
---                          2)
---                 * 100 >= 50
---            THEN
---                'Red'
---            WHEN       ROUND (  (  ifsapp.customer_order_line_api.get_sale_price_total (
---                                       l.order_no,
---                                       l.line_no,
---                                       l.rel_no,
---                                       l.line_item_no)
---                                 - (ROUND (l.cost, 2) * l.buy_qty_due))
---                              / (ROUND (l.cost, 2) * l.buy_qty_due),
---                              2)
---                     * 100 < 50
---                 AND   ROUND (  (  ifsapp.customer_order_line_api.get_sale_price_total (
---                                       l.order_no,
---                                       l.line_no,
---                                       l.rel_no,
---                                       l.line_item_no)
---                                 - (ROUND (l.cost, 2) * l.buy_qty_due))
---                              / (ROUND (l.cost, 2) * l.buy_qty_due),
---                              2)
---                     * 100 >= 25
---            THEN
---                'Yellow'
---            ELSE
---                'Green'
---        END)
---           line_color
-  --,l.*
   FROM ifsapp.customer_order_line l
- WHERE     ifsapp.customer_order_api.get_state (l.order_no) = 'Planned'
+ WHERE     ifsapp.customer_order_api.get_state (l.order_no) IN
+               ('Planned', 'Released')
+       AND ( :p_order_no IS NULL OR l.order_no = :p_order_no)
        AND TRUNC (l.date_entered) BETWEEN TO_DATE ('&FROM_DATE',
                                                    'YYYY/MM/DD')
-                                      AND TO_DATE ('&TO_DATE', 'YYYY/MM/DD')
+                                      AND   TO_DATE ('&TO_DATE',
+                                                     'YYYY/MM/DD')
+                                          + 1
        AND l.vendor_no IS NOT NULL
-       AND ifsapp.customer_order_line_api.get_sale_price_total (
-               l.order_no,
-               l.line_no,
-               l.rel_no,
-               l.line_item_no) <> 0
