@@ -20,4 +20,6 @@ SELECT *
 
 SELECT * FROM ifsapp.sbl_sms_hp_collection;
 
+SELECT * FROM ifsapp.sbl_sms_cs_coll;
+
 SELECT * FROM ifsapp.sbl_sms_online_collection;
