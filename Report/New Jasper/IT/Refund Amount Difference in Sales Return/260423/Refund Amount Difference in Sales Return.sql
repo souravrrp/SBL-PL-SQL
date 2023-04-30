@@ -1,4 +1,4 @@
-/* Formatted on 4/26/2023 11:27:17 AM (QP5 v5.381) */
+/* Formatted on 4/26/2023 2:44:21 PM (QP5 v5.381) */
 SELECT contract,
        customer_no,
        customer_name,
@@ -22,10 +22,29 @@ SELECT contract,
                colt.order_no,
                colt.date_entered
                    sales_date,
-                 ifsapp.customer_order_api.get_ord_gross_amount (
-                     colt.order_no)
-               + ifsapp.customer_order_api.get_total_base_charge__ (
-                     colt.order_no)
+               (CASE
+                    WHEN (SELECT ROUND (SUM (hprt.amount))
+                            FROM ifsapp.hpnret_pay_receipt_head_tab  hprht,
+                                 ifsapp.hpnret_pay_receipt_tab       hprt
+                           WHERE     1 = 1
+                                 AND hprht.receipt_no = hprt.receipt_no
+                                 AND hprt.ROWSTATE = 'Approved'
+                                 AND hprht.account_no = colt.order_no) <>
+                         0
+                    THEN
+                        (SELECT ROUND (SUM (hprt.amount))
+                           FROM ifsapp.hpnret_pay_receipt_head_tab  hprht,
+                                ifsapp.hpnret_pay_receipt_tab       hprt
+                          WHERE     1 = 1
+                                AND hprht.receipt_no = hprt.receipt_no
+                                AND hprt.ROWSTATE = 'Approved'
+                                AND hprht.account_no = colt.order_no)
+                    ELSE
+                          ifsapp.customer_order_api.get_ord_gross_amount (
+                              colt.order_no)
+                        + ifsapp.customer_order_api.get_total_base_charge__ (
+                              colt.order_no)
+                END)
                    total_amount_settled,
                ROUND (
                      ((hsrlt.qty_returned_inv * hsrlt.sale_unit_price))
@@ -86,5 +105,5 @@ SELECT contract,
                                                            :p_date_to,
                                                            TRUNC (
                                                                hsrlt.date_returned)))
- WHERE     total_amount_settled > refunded_amount
+ WHERE     total_amount_settled - refunded_amount > 1
        AND line_amount <> refunded_amount;

@@ -1,4 +1,4 @@
-/* Formatted on 3/20/2023 11:18:58 AM (QP5 v5.381) */
+/* Formatted on 4/18/2023 9:23:13 AM (QP5 v5.381) */
 SELECT cot.CONTRACT                                            site,
        cot.order_no,
        cot.date_entered                                        sales_date,
@@ -6,7 +6,7 @@ SELECT cot.CONTRACT                                            site,
        ifsapp.customer_info_api.get_name (colt.customer_no)    customer_name,
        colt.catalog_no                                         part_no,
        cort.serial_no,
-       colt.buy_qty_due                                        qty
+       colt.qty_shipdiff                                       excess_qty
   FROM ifsapp.customer_order_tab              cot,
        ifsapp.customer_order_line_tab         colt,
        ifsapp.customer_order_reservation_tab  cort

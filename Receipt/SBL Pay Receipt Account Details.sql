@@ -24,6 +24,7 @@
          AND b.pay_line_no = c.pay_line_no
          --AND   a.account_no       = '2701186'
          --AND   a.account_rev      = account_rev_
+         AND ( :p_order_no IS NULL OR (a.account_no = :p_order_no))
          AND (   :p_receipt_no IS NULL
               OR (UPPER (a.receipt_no) = UPPER ( :p_receipt_no)))
          AND TRUNC (a.receipt_date) BETWEEN NVL ( :p_date_from,

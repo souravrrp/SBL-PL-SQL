@@ -1,4 +1,4 @@
-/* Formatted on 4/9/2023 1:42:02 PM (QP5 v5.381) */
+/* Formatted on 4/18/2023 3:10:10 PM (QP5 v5.381) */
 SELECT cot.order_no,
        cot.date_entered
            sales_date,
@@ -8,6 +8,7 @@ SELECT cot.order_no,
        ifsapp.customer_info_comm_method_api.get_any_phone_no (
            colt.customer_no)
            phone_number,
+       colt.part_no,
        colt.buy_qty_due
            qty,
        colt.base_sale_unit_price
@@ -57,6 +58,7 @@ SELECT cot.order_no,
        AND cot.order_no = colt.order_no
        --and cot.customer_no='W0002991-2'
        --AND cot.order_no like ('%SIS-R4991%')
+       --AND EXISTS (SELECT 1 FROM ifsapp.customer_info_comm_method cicm WHERE ( :p_customer_phone IS NULL OR (cicm.value = :p_customer_phone)))
        AND ( :p_order_no IS NULL OR (cot.order_no = :p_order_no))
        AND (   :p_part_no IS NULL
             OR (UPPER (colt.catalog_no) LIKE UPPER ('%' || :p_part_no || '%')))
