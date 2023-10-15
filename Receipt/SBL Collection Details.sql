@@ -16,6 +16,7 @@ SELECT hprt.contract,
        ifsapp.hpnret_pay_receipt_tab       hprt
  WHERE     1 = 1
        AND hprt.receipt_no = hprht.receipt_no
+       AND ( :p_order_no IS NULL OR (hprht.account_no = :p_order_no))
        AND (   :p_shop_code IS NULL
             OR (UPPER (hprt.contract) = UPPER ( :p_shop_code)))
        AND TRUNC (hprt.voucher_date) BETWEEN NVL ( :p_date_from,

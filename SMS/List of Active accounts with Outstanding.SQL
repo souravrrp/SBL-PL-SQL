@@ -8,7 +8,7 @@
     FROM IFSAPP.SBL_JR_SALES_DTL_INV t, IFSAPP.CUSTOMER_INFO_COMM_METHOD r
    WHERE     t.customer_no = r.customer_id
          AND t.status = 'HireSale'
-         AND IFSAPP.HPNRET_HP_HEAD_API.GET_OBJSTATE (t.order_no, 1) = 'Active'
+         AND IFSAPP.HPNRET_HP_HEAD_API.GET_OBJSTATE (t.order_no, 1) in ( 'Active', 'PartiallyActive')
          AND R.COMM_ID=1
          AND t.site = :P_SITE
          --AND t.order_no = :p_order_no
@@ -26,7 +26,7 @@ UNION ALL
     FROM IFSAPP.SBL_JR_SALES_DTL_PKG_COMP p, IFSAPP.CUSTOMER_INFO_COMM_METHOD r
    WHERE     p.customer_no = r.customer_id
          AND p.status = 'HireSale'
-         AND IFSAPP.HPNRET_HP_HEAD_API.GET_OBJSTATE (p.order_no, 1) = 'Active'
+         AND IFSAPP.HPNRET_HP_HEAD_API.GET_OBJSTATE (p.order_no, 1) in ( 'Active', 'PartiallyActive')
          AND p.site = :P_SITE
          --AND p.order_no = :p_order_no
          AND NOT EXISTS(SELECT  1 FROM IFSAPP.SBL_JR_SALES_DTL_INV t2 where t2.order_no=p.order_no)

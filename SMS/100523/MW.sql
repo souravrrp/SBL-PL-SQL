@@ -1,4 +1,4 @@
-/* Formatted on 12/7/2022 9:06:14 AM (QP5 v5.381) */
+/* Formatted on 5/9/2023 4:30:38 PM (QP5 v5.381) */
 SELECT t.site,
        t.order_no,
        t.product_code,
@@ -15,8 +15,13 @@ SELECT t.site,
   FROM IFSAPP.SBL_JR_SALES_DTL_INV t, IFSAPP.CUSTOMER_INFO_COMM_METHOD r
  WHERE     t.customer_no = r.customer_id
        AND t.status = 'HireSale'
+       --AND t.site = :P_SITE
        AND IFSAPP.HPNRET_HP_HEAD_API.GET_OBJSTATE (t.order_no, 1) = 'Active'
-       AND ( :p_shop_code IS NULL OR t.site = :p_shop_code)
+       AND ifsapp.inventory_product_family_api.get_description (
+               ifsapp.inventory_part_api.get_part_product_family (
+                   'SCOM',
+                   t.product_code)) <>
+           'OVEN-MICROWAVE'
 UNION ALL
 SELECT p.site,
        p.order_no,
@@ -33,5 +38,9 @@ SELECT p.site,
   FROM IFSAPP.SBL_JR_SALES_DTL_PKG_COMP p, IFSAPP.CUSTOMER_INFO_COMM_METHOD r
  WHERE     p.customer_no = r.customer_id
        AND p.status = 'HireSale'
+       --AND p.site = :P_SITE
        AND IFSAPP.HPNRET_HP_HEAD_API.GET_OBJSTATE (p.order_no, 1) = 'Active'
-       AND ( :p_shop_code IS NULL OR p.site = :p_shop_code)
+       AND ifsapp.inventory_product_family_api.get_description (
+               ifsapp.sales_part_api.get_part_product_family ('SCOM',
+                                                              p.product_code)) <>
+           'OVEN-MICROWAVE'

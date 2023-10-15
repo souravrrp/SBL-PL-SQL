@@ -4,7 +4,7 @@
          afnt.pdf_file_name     file_name
     --, at.*
     --, afnt.*
-    FROM archive_tab at, archive_file_name_tab afnt
+    FROM ifsapp.archive_tab at, ifsapp.archive_file_name_tab afnt
    WHERE     1 = 1
          AND at.result_key = afnt.result_key
          AND (   :p_owner_name IS NULL
@@ -19,13 +19,13 @@ ORDER BY at.rowversion DESC;
 --------------------------------------------------------------------------------
 
 SELECT *
-  FROM archive_file_name_tab
+  FROM ifsapp.archive_file_name_tab
  WHERE     1 = 1
        AND TO_CHAR (rowversion, 'DD-MM-RRRR') =
            TO_CHAR (SYSDATE, 'DD-MM-RRRR');
 
   SELECT *
-    FROM archive_tab at
+    FROM ifsapp.archive_tab at
    WHERE     1 = 1
          AND (   :p_owner_name IS NULL
               OR (UPPER (at.sender) LIKE UPPER ('%' || :p_owner_name || '%')))
