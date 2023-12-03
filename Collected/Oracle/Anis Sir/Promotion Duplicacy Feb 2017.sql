@@ -1,0 +1,53 @@
+--Feb 2017 Promotion Duplicacy
+--Conflict promotions 'SINGER New Year Offer-FUR-FEB-2017', 'SINGER New Year Offer-FUR-(CO)-FEB-2017'
+--Problem promotions 'SINGER New Year Offer-Fur-2017', 'Discount-Fur-Sept2016'
+select r.rule_no,
+       t.template_id,
+       t.line_no        t_line_no,
+       l.link_id,
+       r.description,
+       r.rule_type_no,
+       r.amount,
+       r.part,
+       l.part_no,
+       l.channel,
+       r.valid_from,
+       r.valid_to,
+       r.transaction_no,
+       r.line_no        r_line_no,
+       r.mandotary
+  from IFSAPP.HPNRET_RULE          r,
+       IFSAPP.HPNRET_RULE_TEMP_DET t,
+       IFSAPP.HPNRET_RULE_LINK     l
+ where r.rule_no = t.rule_no
+   and t.template_id = l.template_id
+   and r.mandotary = 'TRUE'
+   and r.rule_type_no = 'DISCOUNT' --FREE, DISCOUNT   
+   and l.channel in ('ALL', '24')
+   and r.transaction_no = 2
+   and r.line_no = 1
+   and r.valid_from <= to_date('&from_date', 'YYYY/MM/DD')
+   and r.valid_to >= to_date('&to_date', 'YYYY/MM/DD')
+   /*and r.description in
+       ('SINGER New Year Offer-Fur-2017',
+        'Discount-Fur-Sept2016',
+        'SINGER New Year Offer-FUR-FEB-2017',
+        'SINGER New Year Offer-FUR-(CO)-FEB-2017')*/
+   and l.part_no in
+       (select l.part_no
+          from IFSAPP.HPNRET_RULE          r,
+               IFSAPP.HPNRET_RULE_TEMP_DET t,
+               IFSAPP.HPNRET_RULE_LINK     l
+         where r.rule_no = t.rule_no
+           and t.template_id = l.template_id
+           and r.mandotary = 'TRUE'
+           and r.rule_type_no = 'DISCOUNT' --FREE, DISCOUNT   
+           and l.channel in ('ALL', '24'/*, '736'*/)
+           and r.transaction_no = 2
+           and r.line_no = 1
+           and r.valid_from <= to_date('&from_date', 'YYYY/MM/DD')
+           and r.valid_to >= to_date('&to_date', 'YYYY/MM/DD')
+           and l.part_no like '%FUR-%'
+         group by l.part_no
+        having count(*) > 1)
+ order by 9, 10, 11, 12

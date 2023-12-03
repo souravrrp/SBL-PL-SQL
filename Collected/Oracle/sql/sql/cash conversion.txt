@@ -1,0 +1,10 @@
+SELECT nvl(Hpnret_Hp_Head_API.Get_Gross_Hire_Value(h.account_no,h.account_rev),0) gross_sale_value,
+Hpnret_Hp_Head_API.Get_Total_Out_Bal(h.account_no,h.account_rev) Out_Bal,
+Hpnret_Hp_Head_API.Get_Total_Amt_Paid(h.account_no,h.account_rev) Total_Amt_Paid,
+nvl(CUSTOMER_ORDER_API.Get_Gross_Amount(h.account_no),0),
+nvl(Hpnret_Hp_Head_API.Get_Discount(h.account_no,h.account_rev),0),
+nvl(CUSTOMER_ORDER_API.Get_Total_Tax_Amount(h.account_no),0)
+           
+FROM   hpnret_hp_head_tab h
+WHERE  
+h.ACCOUNT_NO='JMP-H2988'

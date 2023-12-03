@@ -1,0 +1,80 @@
+--Shopwise Product Model Sales Summary (Monthly)
+SELECT EXTRACT(YEAR FROM R.SALES_DATE) "YEAR",
+       EXTRACT(MONTH FROM R.SALES_DATE) PERIOD,
+       R.AREA_CODE,
+       R.DISTRICT_CODE,
+       R.SHOP_CODE,
+       /*'DESK-n-LAP COM' 'WM' PRODUCT,*/
+       /*R.PRODUCT_CODE,*/
+       P.PRODUCT_FAMILY,
+       /*P.BRAND,*/
+       SUM(R.SALES_QUANTITY) TOTAL_SALES_QUANTITY,
+       SUM(R.SALES_PRICE) TOTAL_SALES_PRICE
+  FROM IFSAPP.SBL_JR_SALES_INV_COMP_VIEW R,
+       IFSAPP.SBL_JR_PRODUCT_DTL_INFO    P
+ WHERE R.PRODUCT_CODE = P.PRODUCT_CODE
+   AND R.SALES_DATE BETWEEN TO_DATE('&FROM_DATE', 'YYYY/MM/DD') AND
+       TO_DATE('&TO_DATE', 'YYYY/MM/DD')
+   AND R.SALES_PRICE != 0
+      /*AND R.AREA_CODE = 'South East Area'*/
+   AND P.PRODUCT_FAMILY IN ('WASHING-MACHINE-FRONT-LOADER',
+                            'WASHING-MACHINE-TOP-LOADER',
+                            'Washing Machine Semi Auto Top Load',
+                            'Washing Machine/Washer')
+/*AND P.BRAND != 'Grundig'*/
+/*AND P.PRODUCT_CODE \*= 'SRSM-SME-1408'*\
+in ('PTWTP-PUREIT-CLASSIC-BLUE',
+                    'PTWTP-PUREIT-CLASSIC-MARO',
+                   'PTWTP-PUREIT-ULTIMA-418',
+                   'PTWTP-PUREIT-ULTIMA-MAR-RO-UV',
+                   'PTWTP-PUREIT-ULTIMA-RO-UV',
+                   'PTWTP-PUREIT-CLASIC-RO-MF')*/
+ GROUP BY EXTRACT(YEAR FROM R.SALES_DATE),
+          EXTRACT(MONTH FROM R.SALES_DATE),
+          R.AREA_CODE,
+          R.DISTRICT_CODE,
+          R.SHOP_CODE,
+          P.PRODUCT_FAMILY /*,
+          P.BRAND,
+          R.PRODUCT_CODE*/
+ ORDER BY EXTRACT(YEAR FROM R.SALES_DATE),
+          EXTRACT(MONTH FROM R.SALES_DATE),
+          /*R.AREA_CODE,*/
+          TO_NUMBER(R.DISTRICT_CODE),
+          R.SHOP_CODE,
+          P.PRODUCT_FAMILY /*,
+          P.BRAND,
+          R.PRODUCT_CODE*/
+
+--*****Parameter Values
+--Product Family
+/*'REFRIGERATOR-DIRECT-COOL',
+'REFRIGERATOR-SIDE-BY-SIDE',
+'REFRIGERATOR-NOFROST',
+'REFRIGERATOR-FREEZER',
+'REFRIGERATOR-SEMI-COMM',
+'TV-PANEL',
+'OVEN-ELECTRICWAVE', 
+'OVEN-MICROWAVE', 
+'WASHING-MACHINE-FRONT-LOADER',
+'WASHING-MACHINE-TOP-LOADER', 
+'Washing Machine Semi Auto Top Load',
+'Washing Machine/Washer',
+'RICE-COOKER'
+'BLENDER',
+'ELECTRIC-KETTLE',
+'IRON',
+'NON-STICK-PAN',
+'COOKWARE',
+'PRESSURE-COOKER',
+'GRINDER',
+'SANDWICH-MAKER',
+'TOASTER',
+'HOOD'*/
+
+--Brand
+/*Samsung
+Beko*/
+
+--Part No
+/*SRSM-SME-1408*/

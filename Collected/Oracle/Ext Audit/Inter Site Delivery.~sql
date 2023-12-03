@@ -1,0 +1,8 @@
+--***** Inter Site Delivery
+select l.*
+  from IFSAPP.CUSTOMER_ORDER_LINE_TAB l
+ inner join IFSAPP.PURCHASE_ORDER_LINE_TAB p
+    on l.demand_order_ref1 = p.order_no
+   and l.demand_order_ref2 = p.line_no
+   and l.demand_order_ref3 = p.release_no
+ where p.order_no = '1779'

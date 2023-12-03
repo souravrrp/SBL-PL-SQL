@@ -1,0 +1,704 @@
+-----------------------------------------------------------------------------
+--
+--  Logical unit: <<< Enter your logical unit description here >>>
+--
+--  File:         SinShopArrearsVarience.RDF
+--  Version:      Foundation1 2.2
+--
+--  Date    Sign  History
+--  ------  ----  -----------------------------------------------------------
+-- 
+-----------------------------------------------------------------------------
+
+define MODULE             = HPNRET
+define LU                 = HpnretCustomerOrder
+define PKG                = SIN_SHOP_ARR_VAR_RPI
+
+define TABLE              = INFO_SERVICES_RPT
+define VIEW               = SIN_SHOP_ARR_VAR_REP
+define METHOD             = Report_Overview
+
+-----------------------------------------------------------------------------
+-- PACKAGE SPECIFICATION:
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG specification
+
+CREATE OR REPLACE PACKAGE &PKG AS
+
+module_ CONSTANT VARCHAR2(6) := '&MODULE';
+lu_name_ CONSTANT VARCHAR2(25) := '&LU';
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 );
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- REPORTS
+
+-----------------------------------------------------------------------------
+
+PROMPT Creating report view &VIEW
+
+CREATE OR REPLACE VIEW &VIEW AS
+SELECT RESULT_KEY                              RESULT_KEY,
+       ROW_NO                                  ROW_NO,
+       s1                                      CHANNAL,
+       s2                                      AREA,
+       s3                                      DISTRICT,
+       s4                                      SHOP,
+       s5                                      SHOPNAME,
+       s6                                      SALESMAN,
+       n1                                      YEARP,
+       n2                                      MONTHP,
+       n3                                      YEARC,
+       n4                                      MONTHC,
+       n5                                      TOT_ACCT_PRV,
+       n6                                      TOT_ACCT_CUR,
+       n7                                      TOT_RECE_PRV,
+       n8                                      TOT_RECE_CUR,
+       n9                                      TOT_ARRE_PRV,
+       n10                                     TOT_ARRE_CUR,
+       n11                                     TOT_ARRE_ACCT_PRV,
+       n12                                     TOT_ARRE_ACCT_CUR,
+       n13                                     TOT_DELI_ACCT_PRV,
+       n14                                     TOT_DELI_ACCT_CUR,
+       n15                                     TOT_COLL_CUR,
+       n16                                     TOT_DISC_CUR,
+       n17                                     TOT_RCOLL_CUR,
+       n18                                     TOT_RDISC_CUR,
+       n19                                     UN_CHECK,
+       n20                                     TOT_NORMAL_CUR,
+       n21                                     TOT_GROUP_CUR,
+       n22                                     TOT_SPECIAL_CUR,
+       n23                                     TOT_NORMAL_ACCT_CUR,  
+       n24                                     TOT_GROUP_ACCT_CUR, 
+       n25                                     TOT_SPECIAL_ACCT_CUR,
+       n26                                     TOT_ADMIN,        
+       n27                                     CALL_CENTRE,
+       n28                                     TOTAL_SALE_UNITS,           
+       n29                                     TOTAL_SALE_VALUE        
+FROM  &TABLE
+WITH  read only;
+
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=&LU^
+   ^METHOD=&PKG..&METHOD^MODE=PLSQL1.2^TABLE=&TABLE^TITLE=Report Title^';
+COMMENT ON COLUMN &VIEW..result_key IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..row_no IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..channal IS
+   'FLAGS=A----^TITLE=Channal^ITEM_NAME=iChannel^DATATYPE=STRING(40)^';
+COMMENT ON COLUMN &VIEW..area IS
+   'FLAGS=A----^TITLE=Area^ITEM_NAME=iArea^DATATYPE=STRING(40)^';
+COMMENT ON COLUMN &VIEW..district IS
+   'FLAGS=A----^TITLE=District^ITEM_NAME=iDistrict^DATATYPE=STRING(40)^';
+COMMENT ON COLUMN &VIEW..shop IS
+   'FLAGS=A----^TITLE=Shop^ITEM_NAME=iShop^DATATYPE=STRING(06)^';
+COMMENT ON COLUMN &VIEW..shopname IS
+   'FLAGS=A----^TITLE=Shopname^ITEM_NAME=iShopname^DATATYPE=STRING(40)^';
+COMMENT ON COLUMN &VIEW..salesman IS
+   'FLAGS=A----^TITLE=Salesman^ITEM_NAME=iSalesman^DATATYPE=STRING(40)^';
+COMMENT ON COLUMN &VIEW..yearp IS
+   'FLAGS=A----^TITLE=Yearp^ITEM_NAME=iYearp^DATATYPE=NUMBER^QUERY=Previous Month Year :^QFLAGS=MC---^';
+COMMENT ON COLUMN &VIEW..monthp IS
+   'FLAGS=A----^TITLE=Monthp^ITEM_NAME=iMonthp^DATATYPE=NUMBER^QUERY=Previous Month :^QFLAGS=MC---^';
+   COMMENT ON COLUMN &VIEW..yearc IS
+   'FLAGS=A----^TITLE=Yearc^ITEM_NAME=iYearc^DATATYPE=NUMBER^QUERY=Current Month Year :^QFLAGS=MC---^';
+COMMENT ON COLUMN &VIEW..monthc IS
+   'FLAGS=A----^TITLE=Monthc^ITEM_NAME=iMonthc^DATATYPE=NUMBER^QUERY=Current Month :^QFLAGS=MC---^';
+COMMENT ON COLUMN &VIEW..tot_acct_prv IS
+   'FLAGS=A----^TITLE=Tot Acct Prv^ITEM_NAME=iTotAcctPrv^DATATYPE=NUMBER^';
+   COMMENT ON COLUMN &VIEW..tot_acct_cur IS
+   'FLAGS=A----^TITLE=Tot Acct Cur^ITEM_NAME=iTotAcctCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_rece_prv IS
+   'FLAGS=A----^TITLE=Tot Rece Prv^ITEM_NAME=iTotRecePrv^DATATYPE=NUMBER^';
+   COMMENT ON COLUMN &VIEW..tot_rece_cur IS
+   'FLAGS=A----^TITLE=Tot Rece Cur^ITEM_NAME=iTotReceCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_arre_prv IS
+   'FLAGS=A----^TITLE=Tot Arre Prv^ITEM_NAME=iTotArrePrv^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_arre_cur IS
+   'FLAGS=A----^TITLE=Tot Arre Cur^ITEM_NAME=iTotArreCur^DATATYPE=NUMBER^';
+ COMMENT ON COLUMN &VIEW..tot_arre_acct_prv IS
+   'FLAGS=A----^TITLE=Tot Arre Acct Prv^ITEM_NAME=iTotArreAcctPrv^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_arre_acct_cur IS
+   'FLAGS=A----^TITLE=Tot Arre Acct Cur^ITEM_NAME=iTotArreAcctCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_deli_acct_prv IS
+   'FLAGS=A----^TITLE=Tot Deli Acct Prv^ITEM_NAME=iTotDeliAcctPrv^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_deli_acct_cur IS
+   'FLAGS=A----^TITLE=Tot Deli Acct Cur^ITEM_NAME=iTotDeliAcctCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_coll_cur IS
+   'FLAGS=A----^TITLE=Tot Coll Cur^ITEM_NAME=iTotCollCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_disc_cur IS
+   'FLAGS=A----^TITLE=Tot Disc Cur^ITEM_NAME=iTotDiscCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_rcoll_cur IS
+   'FLAGS=A----^TITLE=Tot Rcoll Cur^ITEM_NAME=iTotRcollCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_rdisc_cur IS
+   'FLAGS=A----^TITLE=Tot Rdisc Cur^ITEM_NAME=iTotRdiscCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..Un_check IS
+   'FLAGS=A----^TITLE=Un Check Type^ITEM_NAME=iUnCheck^DATATYPE=NUMBER^';   
+COMMENT ON COLUMN &VIEW..tot_normal_cur IS
+   'FLAGS=A----^TITLE=Tot Normal Cur^ITEM_NAME=iTotNormalCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_group_cur IS
+   'FLAGS=A----^TITLE=Tot Group Cur^ITEM_NAME=iTotGroupCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_special_cur IS
+   'FLAGS=A----^TITLE=Tot Special Cur^ITEM_NAME=iTotSpecialCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_normal_acct_cur IS
+   'FLAGS=A----^TITLE=Tot Normal Acct Cur^ITEM_NAME=iTotNormalAcctCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_group_acct_cur IS
+   'FLAGS=A----^TITLE=Tot Group Acct Cur^ITEM_NAME=iTotGroupAcctCur^DATATYPE=NUMBER^';   
+COMMENT ON COLUMN &VIEW..tot_special_acct_cur IS
+   'FLAGS=A----^TITLE=Tot Special Acct Cur^ITEM_NAME=iTotSpecialAcctCur^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..tot_admin IS
+   'FLAGS=A----^TITLE=Tot admin^ITEM_NAME=iTotAdmin^DATATYPE=NUMBER^';  
+COMMENT ON COLUMN &VIEW..Call_centre IS
+   'FLAGS=A----^TITLE=Call Centre^ITEM_NAME=iCallCentre^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..total_sale_units IS
+   'FLAGS=A----^TITLE=Tot Sale Units^ITEM_NAME=iTotalSaleUnits^DATATYPE=NUMBER^';  
+COMMENT ON COLUMN &VIEW..total_sale_value IS
+   'FLAGS=A----^TITLE=Total Sale Value^ITEM_NAME=iTotalSaleValue^DATATYPE=NUMBER^';         
+BEGIN
+   Report_Sys.Define_Report_('&VIEW', '&MODULE', '&LU', 'Site Wise Arrears Varience Summary', '&TABLE', '&PKG..&METHOD', 0);
+    Report_SYS.Define_Report_Layout_('&VIEW', 'SinShopArrearsVarience.qrp','SinShopArrearsVarience','LETTER', 'CHANNAL,AREA,DISTRICT,SHOP,SALESMAN');
+ --  Report_SYS.Define_Report_Layout_('&VIEW', 'SinAreaArrearsVarience.qrp','SinAreaArrearsVarience','LETTER', 'ORD_TYPE');
+   Report_SYS.Refresh_('&VIEW');
+END;
+/
+
+-----------------------------------------------------------------------------
+-- PACKAGE IMPLEMENTATION
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG implementation
+
+CREATE OR REPLACE PACKAGE BODY &PKG AS
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 )
+IS
+   result_key_ NUMBER;
+   row_no_     NUMBER := 1;
+   Year_p_     NUMBER(4);
+   Month_p_    NUMBER(2);
+   Year_c_     NUMBER(4);
+   Month_c_    NUMBER(2);
+   Tot_acct_prv_  NUMBER := 0;
+   Tot_acct_cur_ NUMBER := 0; 
+   Tot_rece_prv_  NUMBER := 0;
+   Tot_rece_cur_  NUMBER := 0;
+   Tot_arre_prv_  NUMBER := 0;
+   Tot_arre_cur_  NUMBER := 0;
+   Tot_arre_acct_prv_  NUMBER := 0;
+   Tot_arre_acct_cur_  NUMBER := 0; 
+   Tot_deli_acct_prv_  NUMBER := 0;
+   Tot_deli_acct_cur_  NUMBER := 0;
+    Tot_coll_cur_ NUMBER := 0; 
+   Tot_rcoll_cur_ NUMBER := 0; 
+   Tot_disc_cur_  NUMBER := 0;
+   Tot_rdisc_cur_  NUMBER := 0;
+   Uncheck_    NUMBER := 0;
+   Tot_group_cur_ NUMBER := 0;
+   Tot_normal_cur_ NUMBER  := 0;
+   Tot_special_cur_  NUMBER := 0;
+   Tot_group_acct_cur_ NUMBER := 0;
+   Tot_normal_acct_cur_ NUMBER := 0;  
+   Tot_special_acct_cur_ NUMBER := 0;
+   Tot_admin_ NUMBER := 0;   
+   Callcheck_  NUMBER := 0;
+   Total_Sale_Units NUMBER := 0;
+   Total_Sale_Value NUMBER := 0;
+
+     
+
+-----------------------------------------------------
+CURSOR get_sales_cur(year_c_  IN NUMBER, month_c_ IN NUMBER) IS 
+SELECT   vv.Channel, vv.Area,vv.District,  dd.shop_code, dd.salesman,
+         COUNT(DISTINCT dd.acct_no) Tot_acct_cur_, SUM(dd.act_out_bal) Tot_rece_cur_
+                 
+FROM HPNRET_FORM249_ARREARS DD, IFSAPP.HPNRET_LEVELS_OVERVIEW VV
+WHERE 
+       dd.YEAR = year_c_ 
+       AND dd.period = month_c_
+      -- AND dd.act_out_bal > 0 
+       and dd.state <> 'Closed'
+       AND dd.shop_code = vv.SITE_ID
+       and (dd.last_variation <>'Reverted' OR dd.last_variation IS NULL)
+     
+GROUP BY
+        vv.Channel, vv.Area,vv.District, dd.shop_code, dd.salesman;
+--------------------------------------------------       
+CURSOR get_arrears_cur(year_c_ IN NUMBER, month_c_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT      
+         COUNT(DISTINCT dd.acct_no) Tot_arre_acct_cur_, SUM(dd.arr_amt) Tot_arre_cur_
+                 
+FROM HPNRET_FORM249_ARREARS DD 
+WHERE 
+       dd.YEAR = year_c_
+       AND dd.period = month_c_
+       AND dd.arr_amt > 0 
+       AND  dd.shop_code = shopcode_
+       AND dd.salesman = Salesman_
+     
+GROUP BY
+         dd.shop_code, dd.salesman;
+-----------------------------
+CURSOR get_sales_prv(Year_p_  IN NUMBER, month_p_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT  
+         COUNT(DISTINCT dd.acct_no) Tot_acct_prv_, SUM(dd.act_out_bal) Tot_rece_prv_
+                 
+FROM HPNRET_FORM249_ARREARS DD 
+WHERE 
+       dd.YEAR = year_p_ 
+       AND dd.period = month_p_
+        --AND dd.act_out_bal > 0 
+        and dd.state <> 'Closed'
+        AND  dd.shop_code = shopcode_
+        AND dd.salesman = Salesman_
+        and (dd.last_variation <>'Reverted' OR dd.last_variation IS NULL)
+     
+GROUP BY
+      dd.shop_code, dd.salesman;
+
+---------------------------
+CURSOR get_arrears_prv(year_p_ IN NUMBER, month_p_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT    
+         COUNT(DISTINCT dd.acct_no) Tot_arre_acct_prv_,SUM(dd.arr_amt) Tot_arre_prv_
+                 
+FROM HPNRET_FORM249_ARREARS DD 
+WHERE 
+       dd.YEAR = year_p_
+       AND dd.period = month_p_
+       AND dd.arr_amt > 0 
+
+      AND  dd.shop_code = shopcode_
+          AND dd.salesman = Salesman_
+     
+GROUP BY
+  dd.shop_code, dd.salesman;
+
+---------------------------- 
+ 
+
+CURSOR get_delinquent_prv(year_p_ IN NUMBER, month_p_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT    
+         COUNT(DISTINCT dd.acct_no) Tot_deli_acct_prv_ 
+                 
+FROM HPNRET_FORM249_ARREARS DD 
+WHERE 
+       dd.YEAR = year_p_
+       AND dd.period = month_p_
+       AND dd.del_mon > 0 
+
+      AND  dd.shop_code = shopcode_
+          AND dd.salesman = Salesman_
+     
+GROUP BY
+  dd.shop_code, dd.salesman;
+
+
+---------------------------
+CURSOR get_delinquent_cur(year_c_ IN NUMBER, month_c_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT    
+         COUNT(DISTINCT dd.acct_no) Tot_deli_acct_cur_ 
+                 
+FROM HPNRET_FORM249_ARREARS DD 
+WHERE 
+       dd.YEAR = year_c_
+       AND dd.period = month_c_
+       AND dd.del_mon > 0 
+
+      AND  dd.shop_code = shopcode_
+          AND dd.salesman = Salesman_
+     
+GROUP BY
+  dd.shop_code, dd.salesman;
+
+-----------------------------
+CURSOR get_collection_nor(shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT  
+          SUM(mg.collection) Tot_coll_cur_, SUM(mg.discount) Tot_disc_cur_
+                 
+FROM IFSAPP.data_mig_collections mg 
+WHERE 
+             
+        mg.STATUS = 'N'
+        AND ifsapp.hpnret_hp_head_api.get_contract(mg.hp_num_ifs, 1) = shopcode_
+        AND mg.s_man = Salesman_
+     
+GROUP BY
+      ifsapp.hpnret_hp_head_api.get_contract(mg.hp_num_ifs, 1), mg.s_man;
+---------------------------------
+ CURSOR get_collection_rev(shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT  
+          SUM(mg.collection) Tot_rcoll_cur_, SUM(mg.discount) Tot_rdisc_cur_
+                 
+FROM IFSAPP.data_mig_collections mg 
+WHERE 
+             
+        mg.STATUS = 'R'
+        AND ifsapp.hpnret_hp_head_api.get_contract(mg.hp_num_ifs, 1) = shopcode_
+        AND mg.s_man = Salesman_
+     
+GROUP BY
+      ifsapp.hpnret_hp_head_api.get_contract(mg.hp_num_ifs, 1), mg.s_man;
+ 
+------------------------------------------------------
+ CURSOR get_uncheck(year_c_  IN NUMBER,  month_c_  IN NUMBER,shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+ SELECT COUNT(DISTINCT UN.ORIGENAL_ACC_NO) uncheck_
+  FROM HPNRET_UN_CHECKED_ACCOUNT UN, HPNRET_FORM249_ARREARS DD
+ WHERE 
+   UN.ORIGENAL_ACC_NO = DD.ORIGINAL_ACCT_NO
+   AND UN.SITE = DD.SHOP_CODE  
+   AND dd.salesman = Salesman_
+   AND DD.SHOP_CODE  = shopcode_
+    AND dd.act_out_bal > 0  
+   AND  dd.YEAR = year_c_ 
+   AND dd.period =  month_c_  
+   and un.rowstate = 'Checked'
+   
+      
+ GROUP BY DD.SHOP_CODE, DD.SALESMAN;
+-----------------------------------
+CURSOR get_group_cur(year_c_ IN NUMBER, month_c_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT    
+         COUNT(DISTINCT dd.acct_no) Tot_group_acct_cur_,SUM(dd.act_out_bal) Tot_group_cur_
+                 
+FROM HPNRET_FORM249_ARREARS DD 
+WHERE 
+       dd.YEAR = year_c_
+       AND dd.period = month_c_
+       --AND dd.act_out_bal > 0 
+       and dd.state<>'Closed'
+       and (dd.last_variation <>'Reverted' OR dd.last_variation IS NULL)
+       AND dd.scheme = 'Group'
+
+      AND  dd.shop_code = shopcode_
+      AND dd.salesman = Salesman_
+     
+GROUP BY
+  dd.shop_code, dd.salesman;
+  
+-----------------------------------
+CURSOR get_normal_cur(year_c_ IN NUMBER, month_c_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT    
+         COUNT(DISTINCT dd.acct_no) Tot_normal_acct_cur_,SUM(dd.act_out_bal) Tot_normal_cur_
+                 
+FROM HPNRET_FORM249_ARREARS DD 
+WHERE 
+       dd.YEAR = year_c_
+       AND dd.period = month_c_
+     --  AND dd.act_out_bal > 0 
+       and dd.state<>'Closed'
+       and (dd.last_variation <>'Reverted' OR dd.last_variation IS NULL)
+       AND dd.scheme = 'Normal'
+
+       AND dd.shop_code = shopcode_
+       AND dd.salesman = Salesman_
+     
+GROUP BY
+  dd.shop_code, dd.salesman;
+-----------------------------------
+CURSOR get_special_cur(year_c_ IN NUMBER, month_c_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+SELECT    
+         COUNT(DISTINCT dd.acct_no) Tot_special_acct_cur_,SUM(dd.act_out_bal) Tot_special_cur_
+                 
+FROM HPNRET_FORM249_ARREARS DD 
+WHERE 
+       dd.YEAR = year_c_
+       AND dd.period = month_c_
+     --  AND dd.act_out_bal > 0 
+       and dd.state<>'Closed'
+       and (dd.last_variation <>'Reverted' OR dd.last_variation IS NULL)
+       AND dd.scheme = 'Special'
+
+       AND dd.shop_code = shopcode_
+       AND dd.salesman = Salesman_
+     
+GROUP BY
+  dd.shop_code, dd.salesman;
+ ---------------------------------------------------    
+ 
+ CURSOR get_admin(year_c_ IN NUMBER, month_c_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+select  SUM(d.amount) Tot_admin_
+       
+  FROM ifsapp.hpnret_pay_receipt  r,
+       ifsapp.hpnret_pay_rec_head d,
+       ifsapp.hpnret_hp_head_info h,
+       IFSAPP.SALES_PART_SALESMAN tt
+ WHERE
+
+ d.receipt_no = r.receipt_no
+ AND d.contract = r.contract
+ AND d.contract = tt.contract
+ and tt.branch_manager = 'TRUE'
+ AND d.state IN ('Printed', 'Approved') 
+ AND r.admin = 'TRUE'
+ AND d.account_no = h.account_no
+ AND d.contract = h.contract 
+ AND d.contract = shopcode_
+ and tt.salesman_code = Salesman_
+ and TO_CHAR(r.voucher_date, 'YYYY') = year_c_
+ AND TO_CHAR(r.voucher_date, 'MM') = month_c_
+ 
+  group by d.contract,tt.salesman_code;
+ 
+ --------------------------------------------------- 
+ /* Removed on 2013-08-06
+ 
+CURSOR get_callcheck(Year_a_ IN NUMBER, Month_m_ IN NUMBER,shop_code_ IN VARCHAR2, sales_man_ IN VARCHAR2) IS 
+ SELECT   COUNT(DISTINCT nn.origenal_acc_no) Callcheck_
+  FROM IFSAPP.HPNRET_OUT_SOURCED_ACCOUNT nn, HPNRET_FORM249_ARREARS DD
+WHERE 
+   nn.origenal_acc_no = DD.ORIGINAL_ACCT_NO
+   AND nn.site = DD.SHOP_CODE  
+   AND dd.salesman =  sales_man_ 
+   AND DD.SHOP_CODE  = shop_code_
+   AND  dd.YEAR = year_c_ 
+   AND dd.period = month_c_ 
+   and nn.state in 'Selected'
+   and nn.out_sourced_to in 'Call Center'
+
+     
+ GROUP BY DD.SHOP_CODE, DD.SALESMAN;
+ 
+ */
+ ------------------------------------------------------
+ 
+ 
+ CURSOR get_callcheck(year_c_ IN NUMBER, month_c_ IN NUMBER,shop_code_ IN VARCHAR2, sales_man_ IN VARCHAR2) IS 
+ SELECT COUNT(DISTINCT UN.ORIGENAL_ACC_NO) Callcheck_
+  FROM HPNRET_UN_CHECKED_ACCOUNT UN, HPNRET_FORM249_ARREARS DD
+ WHERE 
+   UN.ORIGENAL_ACC_NO = DD.ORIGINAL_ACCT_NO
+   AND UN.SITE = DD.SHOP_CODE  
+   AND dd.salesman = sales_man_ 
+   AND DD.SHOP_CODE  = shop_code_
+    AND dd.act_out_bal > 0  
+   AND  dd.YEAR = year_c_ 
+   AND dd.period = month_c_ 
+   ---Changed - 2014/12/10
+ ---  and un.rowstate = 'Checked'     
+  ----and IFSAPP.HPNRET_CHECKER_INFOR_api.Get_Hpnret_Checker_Type(un.checked_by) in ('CallCenter','Internal')
+  -----Changed - 2014/12/10
+   and IFSAPP.HPNRET_CHECKER_INFOR_api.Get_Hpnret_Checker_Type(un.checked_by) in ('CallCenter')
+      
+ GROUP BY DD.SHOP_CODE, DD.SALESMAN;
+
+ --------------------------------------------------
+ 
+ CURSOR get_sales_value(year_c_ IN NUMBER, month_c_ IN NUMBER, shopcode_ IN VARCHAR2, Salesman_ IN VARCHAR2) IS 
+ SELECT 
+       (SUM(NN.TOTAL_HIRE_UNITS) + SUM(NN.TOTAL_CASH_UNITS)) Total_Sale_Units,
+       (SUM(NN.TOTAL_NET_HIRE_CASH_VALUE) + SUM(NN.CASH_VALUE)) Total_Sale_Value
+    
+  FROM IFSAPP.HPNRET_DIRECT_SALES NN
+  
+WHERE NN.CATALOG_TYPE NOT IN ('KOMP')
+   AND nn.salesman_code =  Salesman_ 
+   AND nn.SHOP_CODE  = shopcode_
+   AND nn.YEAR = year_c_ 
+   AND nn.period = month_c_ 
+   
+GROUP BY  nn.shop_code,nn.salesman_code;
+
+
+ 
+---------------------------------------------------- 
+   
+BEGIN
+    result_key_ := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY', report_attr_));
+    Year_p_    := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('YEARP',parameter_attr_));
+    Month_p_   := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('MONTHP',parameter_attr_));
+    Year_c_    := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('YEARC',parameter_attr_));
+    Month_c_   := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('MONTHC',parameter_attr_));
+   
+  -- Tot_acct_cur_  := 0; 
+  -- Tot_rece_cur_  := 0;
+    
+FOR rec_ IN get_sales_cur(year_c_,month_c_) LOOP
+   Tot_acct_cur_  := 0; 
+   Tot_rece_cur_  := 0;
+   Tot_acct_prv_  := 0; 
+   Tot_rece_prv_  := 0;
+   Tot_arre_prv_  := 0;
+   Tot_arre_cur_  := 0;
+   Tot_arre_acct_prv_ :=0;
+   Tot_arre_acct_cur_ :=0;
+   Tot_deli_acct_prv_ :=0;
+   Tot_deli_acct_cur_ :=0;
+   Tot_coll_cur_ :=0;
+   Tot_disc_cur_ :=0;
+   Tot_rcoll_cur_ :=0;
+   Tot_rdisc_cur_ :=0;
+   Uncheck_    := 0;
+   Tot_group_cur_ := 0;
+   Tot_normal_cur_ := 0;
+   Tot_special_cur_ := 0;
+   Tot_group_acct_cur_ := 0;
+   Tot_normal_acct_cur_ := 0;  
+   Tot_special_acct_cur_ := 0;
+   Tot_admin_ := 0;  
+   Callcheck_  := 0;
+   Total_Sale_Units := 0;
+   Total_Sale_Value := 0;
+ 
+       OPEN   get_arrears_cur(year_c_,month_c_, rec_.shop_code, rec_.salesman);
+       FETCH  get_arrears_cur INTO Tot_arre_acct_cur_,Tot_arre_cur_;
+       CLOSE  get_arrears_cur; 
+        
+       OPEN   get_sales_prv(year_p_,month_p_, rec_.shop_code, rec_.salesman);
+       FETCH  get_sales_prv INTO Tot_acct_prv_, Tot_rece_prv_;
+       CLOSE  get_sales_prv; 
+       
+       OPEN   get_arrears_prv(year_p_,month_p_, rec_.shop_code, rec_.salesman);
+       FETCH  get_arrears_prv INTO Tot_arre_acct_prv_,Tot_arre_prv_;
+       CLOSE  get_arrears_prv;     
+       
+       
+       
+       OPEN   get_delinquent_prv(year_p_,month_p_, rec_.shop_code, rec_.salesman);
+       FETCH  get_delinquent_prv INTO Tot_deli_acct_prv_;
+       CLOSE  get_delinquent_prv;
+        
+       OPEN   get_delinquent_cur(year_c_,month_c_, rec_.shop_code, rec_.salesman);
+       FETCH  get_delinquent_cur INTO Tot_deli_acct_cur_;
+       CLOSE  get_delinquent_cur;
+       
+        OPEN   get_collection_nor(rec_.shop_code, rec_.salesman);
+       FETCH  get_collection_nor INTO Tot_coll_cur_, Tot_disc_cur_;
+       CLOSE  get_collection_nor; 
+       
+       OPEN   get_collection_rev(rec_.shop_code, rec_.salesman);
+       FETCH  get_collection_rev INTO Tot_rcoll_cur_, Tot_rdisc_cur_;
+       CLOSE  get_collection_rev; 
+       
+       OPEN   get_uncheck(year_c_,month_c_, rec_.shop_code, rec_.salesman);
+       FETCH  get_uncheck INTO Uncheck_;
+       CLOSE  get_uncheck;
+       
+       OPEN   get_group_cur(year_c_,month_c_, rec_.shop_code, rec_.salesman);
+       FETCH  get_group_cur INTO Tot_group_acct_cur_,Tot_group_cur_;
+       CLOSE  get_group_cur;
+       
+       OPEN   get_normal_cur(year_c_,month_c_, rec_.shop_code, rec_.salesman);
+       FETCH  get_normal_cur INTO Tot_normal_acct_cur_,Tot_normal_cur_;
+       CLOSE  get_normal_cur;
+       
+       OPEN   get_special_cur(year_c_,month_c_, rec_.shop_code, rec_.salesman);
+       FETCH  get_special_cur INTO Tot_special_acct_cur_,Tot_special_cur_;
+       CLOSE  get_special_cur;       
+        
+       OPEN   get_admin(year_c_,month_c_, rec_.shop_code, rec_.salesman);
+       FETCH  get_admin INTO Tot_admin_;
+       CLOSE  get_admin; 
+       
+          
+      Callcheck_      := 0;       
+       OPEN   get_callcheck(year_c_,month_c_,rec_.shop_code, rec_.salesman);
+       FETCH  get_callcheck INTO Callcheck_;
+       CLOSE  get_callcheck;      
+       
+       OPEN   get_sales_value(year_c_,month_c_, rec_.shop_code, rec_.salesman);
+       FETCH  get_sales_value INTO Total_Sale_Units,Total_Sale_Value;
+       CLOSE  get_sales_value;       
+       
+ Insert Into INFO_SERVICES_RPT
+                 (result_key,
+                  row_no,
+                  parent_row_no,
+                   s1,                                 --     CHANNAL,
+                   s2,                                  --    AREA,
+                   s3,
+                   s4,                                    ---  SHOP,
+                   s5,                                   --   SHOPNAME,
+                   s6,                                   -- salesman
+                   n1,                                  --    YEARP,
+                   n2,                                  --    MONTHP,
+                   n3,                                 --     YEARC,
+                   n4,                                 --     MONTHC,
+                   n5,                                  --    TOT_ACCT_PRV,
+                   n6,                                 --     TOT_ACCT_CUR,
+                   n7,                                 --     TOT_RECE_PRV,
+                   n8,                                 --     TOT_RECE_CUR,
+                   n9,                                  --    TOT_ARRE_PRV,
+                   n10,                                 --    TOT_ARRE_CUR,
+                   n11,                                 --    TOT_ARRE_ACCT_PRV,
+                   n12,                                 --    TOT_ARRE_ACCT_CUR
+                   n13,                                 --    TOT_DELI_ACCT_PRV,
+                   n14,                                 --    TOT_DELI_ACCT_CUR
+                   n15,                                --     TOT_COLL_CUR,
+                   n16,                                --     TOT_DISC_CUR,
+                   n17,                                --      TOT_RCOLL_CUR,
+                   n18,                                 --     TOT_RDISC_CUR 
+                   n19,                                  ---   UN_CHECK 
+                   n20,                            ---         TOT_NORMAL_CUR,
+                   n21,                           --          TOT_GROUP_CUR,
+                   n22,                           --          TOT_SPECIAL_CUR,
+                   n23,                             ---        TOT_NORMAL_ACCT_cur,  
+                   n24,                              --       TOT_GROUP_ACCT_cur, 
+                   n25,                                 --    TOT_SPECIAL_ACCT_cur   
+                   n26,                                  --    TOT_ADMIN 
+                   n27,                                    -- CALLCHECK      
+                   n28,                                    -- TOTAL_SALE_UNITS
+                   n29)                                     ---TOTAL_SALE_VALUE  
+                   
+                VALUES
+                  (result_key_,
+                  row_no_,
+                  0,
+                  rec_.Channel,
+                  rec_.Area,  
+                  rec_.District, 
+                  rec_.shop_code,
+                  ifsapp.site_api.Get_Description(rec_.shop_code), 
+                  rec_.salesman,               
+                  year_p_, 
+                  month_p_,
+                  year_c_, 
+                  month_c_, 
+                  nvl(Tot_acct_prv_,0),
+                  rec_.Tot_acct_cur_,
+                  nvl(Tot_rece_prv_,0), 
+                  rec_.Tot_rece_cur_, 
+                  nvl(Tot_arre_prv_,0),
+                  nvl(Tot_arre_cur_,0),
+                  nvl(Tot_arre_acct_prv_,0),
+                  nvl(Tot_arre_acct_cur_,0), 
+                  nvl(Tot_deli_acct_prv_,0),
+                  nvl(Tot_deli_acct_cur_,0),
+                  nvl(Tot_coll_cur_,0),
+                  nvl(Tot_disc_cur_,0),
+                  nvl(Tot_rcoll_cur_,0), 
+                  nvl(Tot_rdisc_cur_,0),
+                  nvl(Uncheck_,0),
+                  nvl(Tot_normal_cur_,0), 
+                  nvl(Tot_group_cur_,0), 
+                  nvl(Tot_special_cur_,0),
+                  nvl(Tot_normal_acct_cur_,0), 
+                  nvl(Tot_group_acct_cur_,0),
+                  nvl(Tot_special_acct_cur_,0),
+                  nvl(Tot_admin_,0),
+                  nvl(Callcheck_,0),   
+                  nvl(Total_Sale_Units,0),
+                  nvl(Total_Sale_Value,0)                                  
+                  );
+            row_no_:=row_no_+1;
+         
+    END LOOP;
+ 
+END &METHOD;
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- END
+-----------------------------------------------------------------------------
+

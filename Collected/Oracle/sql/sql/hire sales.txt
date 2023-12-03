@@ -1,0 +1,66 @@
+select   C.order_no    order_no,
+                  C.line_no         line_no,
+                  C.line_item_no    line_item_no,
+                  C.REL_NO          REL_NO,
+                  C.real_ship_date  real_ship_date,
+                  null              reverted_date,
+                  c.qty_invoiced    qty_invoiced,
+                  C.base_sale_unit_price  cash_price,
+                  C.dock_code       dock_code,
+                  1                 sale_cat,
+                  C.catalog_no      part_no,
+                  'Active'          state,
+                  'CO'              ord_type,
+                  C.discount        discount,
+                  0                 service_charge,
+                  0                 down_payment,
+                  0                 amt_finance,
+                  0                 hire_price,
+                  C.buy_qty_due     qty,
+                  0                 mon_pay,
+                  C.catalog_type    cat_type,
+				  ifsapp.customer_info_api.Get_Name(ifsapp.customer_order_line_api.Get_Customer_No( C.order_no , C.line_no ,C.REL_NO ,C.line_item_no )) customer_name,
+				  ifsapp.CUSTOMER_INFO_COMM_METHOD_API.Get_Any_Phone_No(ifsapp.customer_order_line_api.Get_Customer_No( C.order_no , C.line_no ,C.REL_NO ,C.line_item_no )) phone_no
+				  
+         FROM ifsapp.customer_order_line_tab C
+         WHERE C.CATALOG_type <> 'KOMP' --'BAB01'
+         --AND C.contract = cont_
+         AND   trunc(C.real_ship_date) between TO_DATE('&from_','YYYY/MM/DD') and TO_DATE('&to_','YYYY/MM/DD')
+         AND substr(order_no,instr(order_no,'-',-1,1)+1,1) = 'H'
+   UNION
+         SELECT   H.ACCOUNT_NO         order_no,
+                  H.line_no            line_no,
+                  H.account_rev        line_item_no,
+                  NULL                 REL_NO,
+                  H.Variated_Date      real_ship_date,
+                  h.reverted_date      reverted_date,
+                  H.QUANTITY           qty_invoiced,
+                  h.cash_price         cash_price,
+                  NULL                 dock_code,
+                  2                    sale_cat,
+                  h.catalog_no         part_no,
+                  h.rowstate           state,
+                  'HP'                 ord_type,
+                  h.discount           discount,
+                  h.service_charge     service_charge,
+                  h.down_payment       down_payment,
+                  h.amt_finance        amt_finance,
+                  h.hire_price         hire_price,
+                  h.quantity           qty,
+                  h.install_amt        mon_pay,
+                  h.catalog_type       cat_type,				 
+   			    ifsapp.customer_info_api.Get_Name(ifsapp.customer_order_line_api.Get_Customer_No( H.ACCOUNT_NO ,H.ref_line_no ,H.ref_REL_NO ,H.ref_line_item_no )),
+				ifsapp.CUSTOMER_INFO_COMM_METHOD_API.Get_Any_Phone_No(ifsapp.customer_order_line_api.Get_Customer_No( H.ACCOUNT_NO ,H.ref_line_no ,H.ref_REL_NO ,H.ref_line_item_no ))
+
+         FROM ifsapp.Hpnret_Hp_Dtl_tab H
+         WHERE h.Rowstate IN ('CashConverted','ExchangedIn','Returned','TermChanged','AssumeClosed','Reverted','RevertReversed','Closed')
+         AND H.CATALOG_type <> 'KOMP'
+        -- AND H.CONTRACT = cont_
+         AND H.CATALOG_type <> 'KOMP'
+         AND (TRUNC(H.Variated_Date) between TO_DATE('&from_','YYYY/MM/DD') and TO_DATE('&to_','YYYY/MM/DD')
+         OR TRUNC(H.Reverted_Date) between TO_DATE('&from_','YYYY/MM/DD') and TO_DATE('&to_','YYYY/MM/DD'))
+         OR (H.REFERENCE_HP IS NOT NULL AND TRUNC(H.CLOSED_DATE) between TO_DATE('&to_','YYYY/MM/DD') and TO_DATE('&to_','YYYY/MM/DD') 
+		-- AND H.CONTRACT = cont_
+		  AND H.CATALOG_type <> 'KOMP' AND rowstate NOT IN ('DiscountClosed')
+         AND (SELECT 1
+              FROM ifsapp.hpnret_hp_head_tab h2 WHERE h2.account_no = H.Reference_Hp AND h2.rowstate ='Cancelled') IS NULL )

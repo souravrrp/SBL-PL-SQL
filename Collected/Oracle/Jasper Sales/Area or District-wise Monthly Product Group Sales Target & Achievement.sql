@@ -1,0 +1,65 @@
+--***** Area/District-wise Monthly Product Group Sales Target & Achievement
+SELECT B.YEAR,
+       B.PERIOD,
+       B.AREA_CODE,
+       B.DISTRICT_CODE,
+       B.PRODUCT_GROUP,
+       SUM(B.TARGET_QTY) TARGET_QTY,
+       SUM(B.TARGET_AMOUNT) TARGET_AMOUNT,
+       SUM(NVL(A.ACHIEV_QTY, 0)) ACHIEV_QTY,
+       SUM(NVL(A.ACHIEV_AMOUNT, 0)) ACHIEV_AMOUNT
+  FROM (SELECT T.YEAR,
+               T.PERIOD,
+               S.AREA_CODE,
+               S.DISTRICT_CODE,
+               T.SHOP_CODE,
+               G.SERIAL_NO,
+               G.PRODUCT_GROUP_CODE,
+               G.PRODUCT_GROUP,
+               T.QTY TARGET_QTY,
+               (T.QTY * G.AVERAGE_VALUE) TARGET_AMOUNT
+          FROM IFSAPP.SBL_JR_RST_PG_QTN_TGT T
+         INNER JOIN IFSAPP.SBL_JR_RST_PRODUCT_GROUP G
+            ON T.YEAR = G.YEAR
+           AND T.PRODUCT_GROUP_CODE = G.PRODUCT_GROUP_CODE
+         INNER JOIN IFSAPP.SHOP_DTS_INFO S
+            ON T.SHOP_CODE = S.SHOP_CODE
+         WHERE T.YEAR = '&YEAR_I'
+           AND G.YEAR = '&YEAR_I'
+           AND T.PERIOD BETWEEN '&START_PERIOD' AND '&END_PERIOD') B
+  LEFT JOIN (SELECT EXTRACT(YEAR FROM C.SALES_DATE) "YEAR",
+                    EXTRACT(MONTH FROM C.SALES_DATE) PERIOD,
+                    C.AREA_CODE,
+                    C.DISTRICT_CODE,
+                    C.SHOP_CODE,
+                    M.PRODUCT_GROUP_CODE,
+                    SUM(C.SALES_QUANTITY) ACHIEV_QTY,
+                    SUM(C.SALES_PRICE) ACHIEV_AMOUNT
+               FROM IFSAPP.SBL_JR_SALES_INV_COMP_VIEW C
+              INNER JOIN IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+                 ON C.PRODUCT_CODE = P.PRODUCT_CODE
+              INNER JOIN IFSAPP.SBL_JR_RST_PG_PF_MAP M
+                 ON P.PRODUCT_FAMILY_CODE = M.PRODUCT_FAMILY_CODE
+                AND EXTRACT(YEAR FROM C.SALES_DATE) = M.YEAR
+              WHERE EXTRACT(YEAR FROM C.SALES_DATE) = '&YEAR_I'
+                AND M.YEAR = '&YEAR_I'
+                AND EXTRACT(MONTH FROM C.SALES_DATE) BETWEEN '&START_PERIOD' AND
+                    '&END_PERIOD'
+              GROUP BY EXTRACT(YEAR FROM C.SALES_DATE),
+                       EXTRACT(MONTH FROM C.SALES_DATE),
+                       C.AREA_CODE,
+                       C.DISTRICT_CODE,
+                       C.SHOP_CODE,
+                       M.PRODUCT_GROUP_CODE) A
+    ON B.YEAR = A.YEAR
+   AND B.PERIOD = A.PERIOD
+   AND B.AREA_CODE = A.AREA_CODE
+   AND B.DISTRICT_CODE = A.DISTRICT_CODE
+   AND B.SHOP_CODE = A.SHOP_CODE
+   AND B.PRODUCT_GROUP_CODE = A.PRODUCT_GROUP_CODE
+ WHERE B.PRODUCT_GROUP = 'FURNITURE'
+ GROUP BY B.YEAR, B.PERIOD, B.AREA_CODE, B.DISTRICT_CODE, B.PRODUCT_GROUP
+ ORDER BY B.YEAR,
+          B.PERIOD,
+          /*B.AREA_CODE,*/
+          TO_NUMBER(B.DISTRICT_CODE)

@@ -1,0 +1,39 @@
+declare
+  int_rate float;
+  pv float;
+  principle float;
+  pmt float;
+  nper float;
+  int_pmt float;
+  prin_pmt float;
+  incrm float;
+  i int;
+  counter int := 0;
+
+begin
+  pv := 23000;
+  pmt := 2032;
+  nper := 15;
+  principle := pv;
+  int_rate := (pmt * nper - principle) / (principle * nper);
+  
+  while true loop
+    for i in 1 .. nper loop
+      int_pmt := principle * int_rate;
+      prin_pmt := pmt - int_pmt;
+      principle := principle - prin_pmt;
+    end loop;
+    counter := counter + 1;
+    
+    if abs(principle) > 0.01 then
+      incrm := principle / (pv * nper * nper);
+      int_rate := int_rate - incrm;
+      principle := pv;
+    else
+      exit;
+    end if;
+  end loop;
+  
+  dbms_output.put_line('Interest Rate is '||round(int_rate,6)||' ,'||counter);
+
+end;

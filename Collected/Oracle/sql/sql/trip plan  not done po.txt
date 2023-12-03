@@ -1,0 +1,36 @@
+select
+l.demand_order_ref1,
+l.CATALOG_NO,
+n.BUY_QTY_DUE,
+l.customer_no
+
+from 
+
+customer_order_line_tab  l,
+IFSAPP.PURCHASE_ORDER_LINE_NEW n
+where 
+ l.CONTRACT ='CTGW'
+and  l.CATALOG_NO=n.PART_NO
+and  n.ORDER_NO=l.demand_order_ref1
+and l.CATALOG_NO
+not in (
+
+SELECT 
+
+o.PART_NO
+
+FROM 
+external_customer_order_tab t2,
+trn_trip_plan_co_line_tab t3,
+purchase_order_line_tab o 
+WHERE l.order_no = t2.order_no
+AND l.order_no = t3.order_no
+and t3.LINE_NO=l.LINE_NO
+and t3.REL_NO=l.REL_NO
+and t2.INTERNAL_PO_NO=o.ORDER_NO
+--AND t1.contract = '$shop_code'
+AND l.rowstate IN ('Invoiced','Delivered','PartiallyDelivered')
+--and to_date(to_char( t1.real_ship_date,'dd-MON-yy')) between '$Date' and '$Date1'
+AND cust_ord_customer_api.get_cust_grp(Customer_Order_API.Get_Customer_No(o.DEMAND_ORDER_NO)) is null
+
+)

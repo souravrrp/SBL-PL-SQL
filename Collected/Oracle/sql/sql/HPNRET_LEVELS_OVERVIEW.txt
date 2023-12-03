@@ -1,0 +1,8 @@
+select
+SITE_ID,
+DISTRICT,
+AREA
+from 
+HPNRET_LEVELS_OVERVIEW t
+where 
+t.CHANNEL in ('Retail 1 Sub Channel','Mega Sub Channel')

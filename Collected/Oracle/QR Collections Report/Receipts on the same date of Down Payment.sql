@@ -1,0 +1,36 @@
+--***** Receipts on the same date of Down Payment
+select p.contract,
+       (select s.area_code
+          from ifsapp.shop_dts_info s
+         where s.shop_code = p.contract) area_code,
+       (select s.district_code
+          from ifsapp.shop_dts_info s
+         where s.shop_code = p.contract) district_code,
+       ph.account_no,
+       (select h.original_acc_no
+          from ifsapp.hpnret_hp_head_tab h
+         where h.account_no = ph.account_no) original_acc_no,
+       p.receipt_no,
+       p.amount,
+       trunc(p.voucher_date) payment_date,
+       p.pay_method,
+       p.rowstate
+  from IFSAPP.HPNRET_PAY_RECEIPT_TAB p
+ inner join IFSAPP.HPNRET_PAY_RECEIPT_HEAD_TAB ph
+    on p.receipt_no = ph.receipt_no
+ inner join (select p2.contract,
+                    h2.account_no,
+                    trunc(p2.voucher_date) payment_date,
+                    p2.receipt_no
+               from IFSAPP.HPNRET_PAY_RECEIPT_TAB p2
+              inner join IFSAPP.HPNRET_PAY_RECEIPT_HEAD_TAB h2
+                 on p2.receipt_no = h2.receipt_no
+              where p2.rowstate = 'Approved'
+                and substr(p2.receipt_no, 4, 3) = '-HF') b
+    on ph.account_no = b.account_no
+   and trunc(p.voucher_date) = b.payment_date
+ where p.rowstate = 'Approved'
+   and trunc(p.voucher_date) between to_date('&from_date', 'YYYY/MM/DD') and
+       to_date('&to_date', 'YYYY/MM/DD')
+   and p.contract = '&SHOP_CODE'
+ order by 2, 6

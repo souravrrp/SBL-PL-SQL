@@ -1,0 +1,27 @@
+--Dealerwise monthly wholesale sales
+SELECT /*W.SITE,
+       W.ORDER_NO,
+       W.LINE_NO,
+       W.REL_NO,*/
+       EXTRACT (YEAR FROM W.SALES_DATE) "YEAR",
+       EXTRACT (MONTH FROM W.SALES_DATE) PERIOD,
+       W.CUSTOMER_NO DEALER_ID,
+       W.CUSTOMER_NAME DEALER_NAME,
+       --W.creator,
+       --W.CUSTOMER_GROUP,
+       /*W.DELIVERY_SITE,
+       W.PRODUCT_CODE,*/
+       --W.PRODUCT_DESC,
+       --W.CATALOG_TYPE,
+       sum(W.SALES_QUANTITY) total_quantity,
+       sum(W.SALES_PRICE) total_sales_price--,
+       /*W.DISCOUNT       "DISCOUNT(%)",
+       W.VAT,
+       W.unit_nsp,
+       W.RSP            "AMOUNT(RSP)"*/
+  FROM ifsapp.sbl_vw_wholesale_sales W
+ WHERE W.SALES_DATE between to_date('&from_date', 'yyyy/mm/dd') and
+       to_date('&to_date', 'yyyy/mm/dd')
+   and W.SITE in ('JWSS', 'SAOS', 'SCSM', 'SWSS', 'WSMO')
+   group by w.CUSTOMER_NO, w.CUSTOMER_NAME
+   order by 2

@@ -1,0 +1,28 @@
+select * from INFO_SERVICES_RPT t
+where t.result_key = 3015114
+
+select t.result_key,
+  --t.s1,
+  --t.s2,
+  t.s4,
+  t.s8,
+  t.s9,
+  t.s10,
+  t.s11,
+  t.s14, 
+  t.n1,
+  t.n2, 
+  t.s15 
+from INFO_SERVICES_RPT t
+where t.result_key = 2973506 and
+t.s4 = 'DSCP'
+
+select max(a.RESULT_KEY)
+from IFSAPP.ARCHIVE a
+where a.REPORT_TITLE='Sales Analysis Report'
+
+select trunc(a.exec_time)
+from IFSAPP.ARCHIVE a
+where --a.result_key =  and
+  a.report_title like 'Sales Analysis%' and
+  trunc(a.exec_time) = to_date('2/25/2014', 'MM/DD/YYYY')

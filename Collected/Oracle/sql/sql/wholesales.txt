@@ -1,0 +1,15 @@
+select 
+t.ORDER_NO,
+t.WANTED_DELIVERY_DATE "SALE DATE",
+c.CATALOG_NO,
+customer_order_line_api.Get_Sale_Price_Total(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "SALE PRICE",
+customer_order_line_api.Get_Total_Discount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "DISCOUNT",
+customer_order_line_api.Get_Total_Tax_Amount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "TAX PRICE"
+from
+customer_order_tab t,
+customer_order_line_tab c
+where
+c.ORDER_NO=t.ORDER_NO
+and t.WANTED_DELIVERY_DATE between '01-Jan-2013' and '31-Jan-2013'
+and cust_ord_customer_api.get_cust_grp(t.CUSTOMER_NO) like '003'
+and t.ROWSTATE in ('Invoiced','Delivered')

@@ -4,7 +4,7 @@
          t.customer_no,
          IFSAPP.CUSTOMER_INFO_API.Get_Name (t.customer_no)              CUSTOMER_NAME,
          r.VALUE                                                        MOBILE_NO,
-         ifsapp.HPNRET_HP_HEAD_API.Get_Total_Out_Bal (t.order_no, 1)    outstanding_balance
+         ifsapp.HPNRET_HP_HEAD_API.Get_Total_Out_Bal (t.order_no, 1)    BALANCE
     FROM IFSAPP.SBL_JR_SALES_DTL_INV t, IFSAPP.CUSTOMER_INFO_COMM_METHOD r
    WHERE     t.customer_no = r.customer_id
          AND t.status = 'HireSale'
@@ -22,7 +22,7 @@ UNION ALL
          p.customer_no,
          ifsapp.customer_info_api.Get_Name (p.customer_no),
          r.VALUE                                                        MOBILE_NO,
-         ifsapp.HPNRET_HP_HEAD_API.Get_Total_Out_Bal (p.order_no, 1)    outstanding_balance
+         ifsapp.HPNRET_HP_HEAD_API.Get_Total_Out_Bal (p.order_no, 1)    BALANCE
     FROM IFSAPP.SBL_JR_SALES_DTL_PKG_COMP p, IFSAPP.CUSTOMER_INFO_COMM_METHOD r
    WHERE     p.customer_no = r.customer_id
          AND p.status = 'HireSale'

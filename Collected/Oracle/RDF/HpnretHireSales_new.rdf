@@ -1,0 +1,1424 @@
+-----------------------------------------------------------------------------
+--
+--  Logical unit: <<< Enter your logical unit description here >>>
+--
+--  File:         TEMPLATE.RDF
+--  Version:      Foundation1 2.2
+--
+--  Date    Sign     History
+--  ------  ----     -----------------------------------------------------------
+--  16/10/2006  saprlk   Created.
+--  26/12/2006  nowilk   Add Sorting column field to Sort data according to the status
+--  12/02/2007  kalwlk   Change the reavert revert balance
+--  22/02/2007  kalwlk   Change Revert Reversed Lines and Commisions
+--  26/02/2007  Kalwlk   Change ExchangedOut Lines
+--  04/06/2008  Shpelk   Merge SSL Changes and Remove service charge when cash conversion
+--  10062008    Krsalk   Bug Fix - Remove Cash Con Serv Chg From Report,Customer_type bug fix.
+--  091204      Krsalk   Bug Fix - RSP and OEM_NO added.
+--  110804      Krsalk   C_G1047131-1 Hire Sale Report modifications, Changes added.
+-----------------------------------------------------------------------------
+
+define MODULE             = HPNRET
+define LU                 = HpnretHpDtl
+define PKG                = HPNRET_HIRE_SALES1_RPI
+
+define TABLE              = INFO_SERVICES_RPT
+define VIEW               = HPNRET_HIRE_SALES1_REP
+define METHOD             = Report_Overview
+
+-----------------------------------------------------------------------------
+-- PACKAGE SPECIFICATION:
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG specification
+
+CREATE OR REPLACE PACKAGE &PKG AS
+
+module_ CONSTANT VARCHAR2(6) := '&MODULE';
+lu_name_ CONSTANT VARCHAR2(25) := '&LU';
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 );
+
+--nowilk
+PROCEDURE Get_First_Day (
+   first_day_ OUT VARCHAR2 );
+
+PROCEDURE Get_Last_Day (
+   last_day_ OUT VARCHAR2 );
+--end nowilk
+
+PROCEDURE Get_Def_Site (
+   site_    OUT VARCHAR2 );
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- REPORTS
+-----------------------------------------------------------------------------
+
+PROMPT Creating report view &VIEW
+
+CREATE OR REPLACE VIEW &VIEW AS
+SELECT RESULT_KEY                              RESULT_KEY,
+       ROW_NO                                  ROW_NO,
+       d1                                      RUN_DATE,
+       s1                                      RUN_USER,
+       s2                                      PERIOD_FROM_1,
+       s3                                      PERIOD_TO_1,
+       s4                                      SHOP_CODE,
+       s5                                      SHOP_NAME,
+       s6                                      SALESMAN_CODE,
+       s7                                      SALESMAN_NAME,
+       s8                                      CUSTOMER_TYPE,
+       s9                                      ACC_SCHEME,
+       s10                                     CURRENT_ACC,
+       s11                                     ORIGINAL_ACC,
+       s12                                     PREVIOUS_ACC,
+       s13                                     RCT_NO,
+       d2                                      SALES_DATE,
+       s14                                     PRODUCT_CODE,
+       n1                                      UNITS,
+       s15                                     COMPS,
+       s16                                     SERIAL_NOS,
+       n2                                      CASH_PRICE,
+       n3                                      SURAKSHA_PRICE,
+       n4                                      SANASUMA_VALUE,
+       n5                                      CP_SURAK,
+       n6                                      CP_SANASUMA,
+       n7                                      FULL_SERVICE_PRICE,
+       n8                                      SEVICE_CHARGE,
+       n9                                      NET_SELLING_PRICE,
+       n10                                     DOWN_PAY,
+       n11                                     AMT_FINANCED,
+       n12                                     BB_HIRE_PRICE,
+       n13                                     GROSS_HIRE_VAL,
+       n14                                     TOTAL_CASH,
+       n15                                     COMMIS,
+       n16                                     RET_REV_BAL,
+       s17                                     RV_RE_SALE_ACC,
+       n17                                     TERM_LEN_CONTARCT,
+       n18                                     MTHY_PAY,
+       s18                                     CUST_NO,
+       s19                                     CUST_NAME,
+       s20                                     CUST_ADD_DESC,
+       s21                                     FLAG_ACC_STATUS,
+       s22                                     REMARKS,
+       s23                                     FLAG_ACC_LINE_STATUS,
+       d3                                      DATE_REVERETED,
+       n19                                     FST_PAYMENT,
+       s24                                     S_SALES_DATE,
+       s25                                     S_DATE_REVERETED,
+       n20                                     SELLING_COMIS,
+       n21                                     QTY_FREE_ITEM,
+       n22                                     QTY_NON_FREE_ITEM,
+       s26                                     GRP_CODE,
+       s27                                     GRP_NAME,
+       s28                                     GRP_ADDRESS,
+       n23                                     SORT_COL,
+       s29                                     SHEET_SERIAL_NO,
+       s30                                     PRODUCT_FAMILY,
+       s31                                     PRODUCT_FAMILY_DESC,
+       n24                                     RSP_PRICE,
+       s32                                     OEM_NO                                     
+FROM  &TABLE
+WITH  read only;
+
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=&LU^
+   ^METHOD=&PKG..&METHOD^MODE=PLSQL1.2^TABLE=&TABLE^TITLE=Hire Sales Report^LAYOUTS=HPNRETHIRESALES.QRP=Hire Sales Report^';
+
+COMMENT ON COLUMN &VIEW..result_key IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..row_no IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..run_date IS
+   'FLAGS=A----^TITLE=Run Date :^ITEM_NAME=iRunDate^DATATYPE=DATE/DATETIME^';
+COMMENT ON COLUMN &VIEW..run_user IS
+   'FLAGS=A----^TITLE=User :^ITEM_NAME=iRunUser^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..period_from_1 IS
+   'FLAGS=A----^TITLE=Period From :^ITEM_NAME=iPeriodFrom^DATATYPE=STRING^QUERY=Period From:^STATUS=Format must be  (YYYY/MM/DD)^QFLAGS=MC---^QVALUE=YYYY/MM/DD^';
+COMMENT ON COLUMN &VIEW..period_to_1 IS
+   'FLAGS=A----^TITLE=To :^ITEM_NAME=iPeriodTo^DATATYPE=STRING^QUERY=Period To:^STATUS=Format must be  (YYYY/MM/DD)^QFLAGS=MC---^QVALUE=YYYY/MM/DD^';
+COMMENT ON COLUMN &VIEW..shop_code IS
+   'FLAGS=A----^TITLE=Shop Code :^ITEM_NAME=iShopCode^DATATYPE=STRING^QUERY=Shop Code:^STATUS=Shop Code.^QFLAGS=OC--L^QVALUE=%^';
+COMMENT ON COLUMN &VIEW..shop_name IS
+   'FLAGS=A----^TITLE=Shop Name :^ITEM_NAME=iShopName^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..salesman_code IS
+   'FLAGS=A----^TITLE=Salesman :^ITEM_NAME=iSalesmanCode^DATATYPE=STRING^QUERY=Salesman Code:^STATUS=Salesman Code^QFLAGS=OC--L^QVALUE=%^';
+COMMENT ON COLUMN &VIEW..salesman_name IS
+   'FLAGS=A----^TITLE=Salesman Name :^ITEM_NAME=iSalesmanName^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..customer_type IS
+   'FLAGS=A----^TITLE=Cust.Type :^ITEM_NAME=iCustomerType^DATATYPE=STRING^QUERY=Customer Type:^STATUS=Customer Type.^QFLAGS=OC--L^QVALUE=%^';
+COMMENT ON COLUMN &VIEW..acc_scheme IS
+   'FLAGS=A----^TITLE=Scheme^ITEM_NAME=iAccScheme^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..current_acc IS
+   'FLAGS=A----^TITLE=Current Acc.^ITEM_NAME=iCurrentAcc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..original_acc IS
+   'FLAGS=A----^TITLE=Original Acc.^ITEM_NAME=iOriginalAcc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..previous_acc IS
+   'FLAGS=A----^TITLE=Prev.Acc.^ITEM_NAME=iPreviousAcc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..rct_no IS
+   'FLAGS=A----^TITLE=Rct.No.^ITEM_NAME=iRctNo^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..sales_date IS
+   'FLAGS=A----^TITLE=Date^ITEM_NAME=iSalesDate^DATATYPE=DATE/DATE^';
+COMMENT ON COLUMN &VIEW..product_code IS
+   'FLAGS=A----^TITLE=Product^ITEM_NAME=iProductCode^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..units IS
+   'FLAGS=A----^TITLE=Units^ITEM_NAME=iUnits^DATATYPE=NUMBER/NUMBER^';
+COMMENT ON COLUMN &VIEW..comps IS
+   'FLAGS=A----^TITLE=Components^ITEM_NAME=iComps^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..serial_nos IS
+   'FLAGS=A----^TITLE=Serials^ITEM_NAME=iSerialNos^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..cash_price IS
+   'FLAGS=A----^TITLE=Cash Price^ITEM_NAME=iCashPrice^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..suraksha_price IS
+   'FLAGS=A----^TITLE=Suraksha^ITEM_NAME=iSurakshaPrice^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..sanasuma_value IS
+   'FLAGS=A----^TITLE=Senasuma^ITEM_NAME=iSanasumaValue^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..cp_surak IS
+   'FLAGS=A----^TITLE=CP+Surak^ITEM_NAME=iCpSurak^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..cp_sanasuma IS
+   'FLAGS=A----^TITLE=CP+Senasu^ITEM_NAME=iCpSanasuma^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..full_service_price IS
+   'FLAGS=A----^TITLE=Full Ser.Pr.^ITEM_NAME=iFullServicePrice^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..sevice_charge IS
+   'FLAGS=A----^TITLE=Serv.Chg.^ITEM_NAME=iSeviceCharge^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..net_selling_price IS
+   'FLAGS=A----^TITLE=Net Sel.Pr.^ITEM_NAME=iNetSellingPrice^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..down_pay IS
+   'FLAGS=A----^TITLE=Down Pay.^ITEM_NAME=iDownPay^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..amt_financed IS
+   'FLAGS=A----^TITLE=Amt Fin.^ITEM_NAME=iAmtFinanced^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..bb_hire_price IS
+   'FLAGS=A----^TITLE=BB Hire^ITEM_NAME=iBbHirePrice^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..gross_hire_val IS
+   'FLAGS=A----^TITLE=Grs.Hire^ITEM_NAME=iGrossHireVal^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..total_cash IS
+   'FLAGS=A----^TITLE=Tot. Cash^ITEM_NAME=iTotalCash^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..commis IS
+   'FLAGS=A----^TITLE=Commis.^ITEM_NAME=iCommis^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..ret_rev_bal IS
+   'FLAGS=A----^TITLE=Ret.Rev.Bal.^ITEM_NAME=iRetRevBal^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..rv_re_sale_acc IS
+   'FLAGS=A----^TITLE=Rv.Re.Sale Acc.^ITEM_NAME=iRvReSaleAcc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..term_len_contarct IS
+   'FLAGS=A----^TITLE=Term^ITEM_NAME=iTermLenContarct^DATATYPE=NUMBER/NUMBER^';
+COMMENT ON COLUMN &VIEW..mthy_pay IS
+   'FLAGS=A----^TITLE=Mth.Pay.^ITEM_NAME=iMthyPay^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..cust_no IS
+   'FLAGS=A----^TITLE=Cust.No^ITEM_NAME=iCustNo^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..cust_name IS
+   'FLAGS=A----^TITLE=Cust. Name^ITEM_NAME=iCustName^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..cust_add_desc IS
+   'FLAGS=A----^TITLE=Cust. Add.^ITEM_NAME=iCustAddDesc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..flag_acc_status IS
+   'FLAGS=A----^TITLE=Acc.Status^ITEM_NAME=iFlagAccStatus^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..remarks IS
+   'FLAGS=A----^TITLE=Remarks^ITEM_NAME=iRemarks^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..flag_acc_line_status IS
+   'FLAGS=A----^TITLE=Acc.Line Status^ITEM_NAME=iFlagAccLineStatus^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..date_revereted IS
+   'FLAGS=A----^TITLE=Rev. Date^ITEM_NAME=iDateRevereted^DATATYPE=DATE/DATE^';
+COMMENT ON COLUMN &VIEW..fst_payment IS
+   'FLAGS=A----^TITLE=Fst Payment^ITEM_NAME=iFstPayment^DATATYPE=NUMBER/CURRENCY^';
+COMMENT ON COLUMN &VIEW..s_sales_date IS
+   'FLAGS=A----^TITLE=S Sales Date^ITEM_NAME=iSSalesDate^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..s_date_revereted IS
+   'FLAGS=A----^TITLE=S Date Revereted^ITEM_NAME=iSDateRevereted^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..selling_comis IS
+   'FLAGS=A----^TITLE=Selling Commis.^ITEM_NAME=iSellingComis^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..qty_free_item IS
+   'FLAGS=A----^TITLE=Free Item Qty^ITEM_NAME=iQtyFreeItem^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..qty_non_free_item IS
+   'FLAGS=A----^TITLE=Item Qty^ITEM_NAME=iQtyNonFreeItem^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..grp_code IS
+   'FLAGS=A----^TITLE=Grp. Code^ITEM_NAME=iGrpCode^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..grp_name IS
+   'FLAGS=A----^TITLE=Grp. Name^ITEM_NAME=iGrpName^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..grp_address IS
+   'FLAGS=A----^TITLE=Grp. Address^ITEM_NAME=iGrpAddress^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..sort_col IS
+   'FLAGS=A----^TITLE=Sorting Col^ITEM_NAME=iSortCol^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..sheet_serial_no IS
+   'FLAGS=A----^TITLE=Man.Rec^ITEM_NAME=iSheetSerialNo^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..product_family IS
+   'FLAGS=A----^TITLE=Product Family^ITEM_NAME=iProductFamily^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..product_family_desc IS
+   'FLAGS=A----^TITLE=product family desc^ITEM_NAME=iProductFamilyDesc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..rsp_price IS
+   'FLAGS=A----^TITLE=Rsp Price^ITEM_NAME=iRspPrice^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..oem_no IS
+   'FLAGS=A----^TITLE=Oem No^ITEM_NAME=iOemNo^DATATYPE=STRING^';
+
+BEGIN
+Report_Sys.Define_Report_('&VIEW', '&MODULE', '&LU', 'Hire Sales Report', '&TABLE', '&PKG..&METHOD', 0);
+Report_SYS.Define_Report_Layout_('&VIEW', 'HpnretHireSales.qrp','Hire Sales Report','A4','SHOP_CODE,FLAG_ACC_LINE_STATUS,PRODUCT_FAMILY');
+Report_SYS.Refresh_('&VIEW');
+END;
+/
+
+-----------------------------------------------------------------------------
+-- PACKAGE IMPLEMENTATION
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG implementation
+
+CREATE OR REPLACE PACKAGE BODY &PKG AS
+
+PROCEDURE Get_Def_Site (
+   site_    OUT VARCHAR2 )
+IS
+  -- company_    VARCHAR2(20);
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', 'Get_Def_Site');
+   site_ := User_Allowed_Site_API.Get_Default_Site();
+END Get_Def_Site;
+
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 )
+IS
+   result_key_                 NUMBER;
+   row_no_                     NUMBER := 1;
+   state_                      VARCHAR2(35);
+   l_cash_price_               NUMBER ;
+   l_serv_charge_              NUMBER ;
+   l_dwn_pay_                  NUMBER ;
+   l_amt_fin_                  NUMBER ;
+   l_bb_hire_price_            NUMBER ;
+   l_gross_hire_val_           NUMBER ;
+   l_cp_surak_                 NUMBER ;
+   l_cp_sanasuma_              NUMBER ;
+   l_full_serv_price_          NUMBER ;
+   l_net_sel_price_            NUMBER ;
+   l_tot_cash_                 NUMBER ;
+   sanasuma_value_             NUMBER ;
+   suraksha_price_             NUMBER ;
+   l_mon_pay_                  NUMBER ;
+   pay_rct_no_                 VARCHAR2(30);
+   serial_no_                  VARCHAR2(10000);
+   komp_list_                  VARCHAR2(10000):= '';
+   invoiced_date_              DATE;
+   l_non_disc_cach_p_          NUMBER;
+   l_disc_percentage_          NUMBER;
+   l_comis_sel_                NUMBER;
+   l_comis_                    NUMBER;
+   hp_line_                    VARCHAR2(8);
+   acc_rev_                    NUMBER;
+   ret_rev_bal_                NUMBER ;
+   prev_line_                  VARCHAR2(8);
+   prev_line_variated_         NUMBER := 0;
+   prev_acc_                   VARCHAR2(12);
+   shop_code_                  VARCHAR2(5);
+   salesman_                   VARCHAR2(20);
+   period_from_                VARCHAR2(20);
+   period_to_                  VARCHAR2(20);
+   customer_type_              VARCHAR2(20); 
+   grp_code_                   VARCHAR2(20);
+   grp_name_                   VARCHAR2(5000);
+   grp_addr_                   VARCHAR2(5000);
+   cus_bil_add_id_             VARCHAR2(2);
+   rev_acc_                    VARCHAR2(12);
+   ord_line_                   VARCHAR2(8);
+   ord_line_item_              NUMBER;
+   ord_rel_                    VARCHAR2(8);
+   grp_sal_no_                 VARCHAR2(30);
+   f_qty_                      NUMBER := 0;
+   qty_other_                  NUMBER := 0;  
+   sort_col_                   NUMBER := 0;  
+   total_other_qty_            NUMBER := 0;  
+   hp_head_rec_                HPNRET_HP_HEAD_API.Public_Rec;
+   hp_dtl_rec_                 HPNRET_HP_DTL_API.Public_Rec;
+   prev_line1_                 VARCHAR2(8);
+   l_comis_neg_                NUMBER;
+   l_comis_sel_neg_            NUMBER;
+   reverted_                   NUMBER;
+   cancell_acc_                NUMBER;
+   rev_line_no_                NUMBER;
+   revert_rev_                 BOOLEAN := FALSE;
+   prev_acc_no_                VARCHAR2(20);
+   other_comm_                 NUMBER;
+   other_sel_comm_             NUMBER;
+   closed_                     BOOLEAN := FALSE;
+   closed_lines_               NUMBER;
+   sheet_serial_no_            VARCHAR2(20);
+   
+   --(+)  091204      Krsalk(Start)
+   oem_no_                     VARCHAR2(150);
+   rsp_                        NUMBER;
+   --(+)  091204      Krsalk(End)
+
+   CURSOR get_rep_line(cont_ IN VARCHAR2, from_ IN VARCHAR2, to_ IN VARCHAR2) IS   
+         SELECT order_no,line_no,line_item_no,REL_NO,real_ship_date,reverted_date,qty_invoiced,dock_code,sale_cat,part_no,state,cash_price,discount,service_charge,down_payment,amt_finance,hire_price,qty,mon_pay,ord_type,cat_type 
+            FROM
+            (select   C.order_no    order_no, 
+                  C.line_no         line_no,
+                  C.line_item_no    line_item_no,
+                  C.REL_NO          REL_NO,
+                  C.real_ship_date  real_ship_date,
+                  null              reverted_date,
+                  c.qty_invoiced    qty_invoiced,
+                  C.base_sale_unit_price  cash_price, 
+                  C.dock_code       dock_code,
+                  1                 sale_cat,
+                  C.catalog_no      part_no,
+                  'Active'          state,
+                  'CO'              ord_type,
+                  C.discount        discount,
+                  0                 service_charge,
+                  0                 down_payment,
+                  0                 amt_finance,
+                  0                 hire_price,
+                  C.buy_qty_due     qty,
+                  0                 mon_pay,
+                  C.catalog_type    cat_type
+         FROM customer_order_line_tab C
+         WHERE C.CATALOG_type <> 'KOMP' --'BAB01'
+         AND C.contract = cont_
+         AND   trunc(C.real_ship_date) between TO_DATE(from_,'YYYY/MM/DD') and TO_DATE(to_,'YYYY/MM/DD')
+         AND substr(order_no,instr(order_no,'-',-1,1)+1,1) = 'H'
+   UNION
+
+   --  to get the variated lines 
+         SELECT   H.ACCOUNT_NO         order_no,
+                  H.line_no            line_no,
+                  H.account_rev        line_item_no,
+                  NULL                 REL_NO,
+                  H.Variated_Date      real_ship_date,
+                  h.reverted_date      reverted_date,
+                  H.QUANTITY           qty_invoiced,
+                  h.cash_price         cash_price,
+                  NULL                 dock_code,
+                  2                    sale_cat,
+                  h.catalog_no         part_no,
+                  h.rowstate           state,
+                  'HP'                 ord_type,
+                  h.discount           discount,
+                  h.service_charge     service_charge,
+                  h.down_payment       down_payment,
+                  h.amt_finance        amt_finance,
+                  h.hire_price         hire_price,
+                  h.quantity           qty,
+                  h.install_amt        mon_pay,
+                  h.catalog_type       cat_type
+         FROM Hpnret_Hp_Dtl_tab H
+         WHERE h.Rowstate IN ('CashConverted','ExchangedIn','Returned','TermChanged','AssumeClosed','Reverted','RevertReversed','Closed')
+         AND H.CATALOG_type <> 'KOMP'
+         AND H.CONTRACT = cont_  
+         AND H.CATALOG_type <> 'KOMP'
+         AND (TRUNC(H.Variated_Date) between TO_DATE(from_,'YYYY/MM/DD') and TO_DATE(to_,'YYYY/MM/DD')
+         --080604 shpelk (Start)
+         OR TRUNC(H.Reverted_Date) between TO_DATE(from_,'YYYY/MM/DD') and TO_DATE(to_,'YYYY/MM/DD'))                                                           
+         OR (H.REFERENCE_HP IS NOT NULL AND TRUNC(H.CLOSED_DATE) between TO_DATE(from_,'YYYY/MM/DD') and TO_DATE(to_,'YYYY/MM/DD') AND H.CONTRACT = cont_ AND H.CATALOG_type <> 'KOMP' AND rowstate NOT IN ('DiscountClosed')
+         AND (SELECT 1
+              FROM hpnret_hp_head_tab h2 WHERE h2.account_no = H.Reference_Hp AND h2.rowstate ='Cancelled') IS NULL )      
+         --080604 shpelk (End)
+   UNION
+   --to get the cancelled lines
+         SELECT   H.ACCOUNT_NO         order_no,
+                  H.line_no            line_no,
+                  H.account_rev        line_item_no,
+                  NULL                 REL_NO,
+                  H.Variated_Date      real_ship_date,
+                  h.reverted_date      reverted_date,
+                  H.QUANTITY           qty_invoiced,
+                  0                    cash_price,
+                  NULL                 dock_code,
+                  2                    sale_cat,
+                  h.catalog_no         part_no,
+                  h.rowstate           state,
+                  'OTHER'              ord_type,
+                  0                    discount,
+                  0                    service_charge,
+                  0                    down_payment,
+                  0                    amt_finance,
+                  0                    hire_price,
+                  h.quantity           qty,
+                  0                    mon_pay,
+                  h.catalog_type       cat_type
+         FROM Hpnret_Hp_Dtl_tab H
+         WHERE h.Rowstate IN ('Cancelled','Planned','Released','Reserved')
+         AND H.CATALOG_type <> 'KOMP'
+         AND TRUNC(H.Sales_Date) between TO_DATE(from_,'YYYY/MM/DD') and TO_DATE(to_,'YYYY/MM/DD')
+         AND H.CONTRACT = cont_  
+    )
+   ORDER BY state,order_no;
+      
+   CURSOR get_prev_line_rev(acc_ IN VARCHAR2,line_ IN VARCHAR2) IS
+      SELECT 1
+      FROM hpnret_hp_dtl_tab
+      WHERE account_no = acc_
+      AND line_no = line_
+      AND reverted_date IS NOT NULL;
+
+   CURSOR get_prev_acc(acc_ IN VARCHAR2) IS
+      SELECT account_no
+      FROM hpnret_hp_dtl_tab
+      WHERE reference_hp = acc_
+      AND rowstate = 'RevertReversed';
+
+   CURSOR get_comm_neg(acc_ IN VARCHAR2, line_ IN VARCHAR2) IS
+      SELECT SUM(comm_calc_amount) 
+      FROM commission_value_detail_tab 
+      WHERE comm_calc_amount < 0
+      AND collection_type = 'DP'
+      AND entitlement_type = 'CC' 
+      AND reverse_reason NOT IN ('SALES RETURNS','EXCHANGE','CASH CONVERSION')
+      AND acc_line_no = line_
+      AND account_no = acc_;
+        
+
+   CURSOR get_comm_pos(acc_ IN VARCHAR2, line_ IN VARCHAR2) IS
+      SELECT SUM(comm_calc_amount) 
+      FROM commission_value_detail_tab 
+      WHERE comm_calc_amount > 0
+      AND collection_type = 'DP'
+      AND entitlement_type = 'CC' 
+      AND acc_line_no = line_
+      AND account_no = acc_ ;
+     
+
+   CURSOR get_sell_comm_neg(acc_ IN VARCHAR2, line_ IN VARCHAR2) IS
+      SELECT SUM(comm_calc_amount) 
+      FROM commission_value_detail_tab 
+      WHERE comm_calc_amount < 0 
+      AND  entitlement_type IN ('SHPS','AHPS')
+      AND reverse_reason NOT IN ('SALES RETURNS','EXCHANGE','CASH CONVERSION')
+      AND acc_line_no = line_ 
+      AND account_no = acc_ ;
+      
+
+   CURSOR get_sell_comm_pos(acc_ IN VARCHAR2, line_ IN VARCHAR2) IS
+      SELECT SUM(comm_calc_amount) 
+      FROM commission_value_detail_tab 
+      WHERE comm_calc_amount > 0 
+      AND entitlement_type IN ('SHPS','AHPS')
+      AND acc_line_no = line_ 
+      AND account_no = acc_ ;
+      
+
+   CURSOR get_rev_acc_(acc_ IN VARCHAR2, line_ IN VARCHAR2) IS
+      SELECT reference_hp
+      FROM hpnret_hp_dtl_tab
+      WHERE line_no = line_
+      AND account_no = acc_;
+
+   CURSOR get_grp_addr (grp_code_ IN VARCHAR2) IS
+     SELECT t.address_line1||' ,'||t.address_line2
+     FROM hpnret_group_tab t
+     WHERE t.group_code = grp_code_;
+
+   --kalwlk
+   CURSOR get_komps(acc_ IN VARCHAR2, line_ IN VARCHAR2) IS 
+      --SELECT catalog_no
+      SELECT catalog_no,line_no
+      FROM hpnret_hp_dtl_tab 
+      WHERE pkg_line_no = line_
+      AND catalog_type = 'KOMP'
+      AND account_no = acc_;
+
+   CURSOR get_doc_address (customer_no_ IN VARCHAR2)IS
+      SELECT addr_no
+      FROM   CUST_ORD_CUSTOMER_ADDRESS_TAB
+      WHERE CUST_ORD_CUSTOMER_ADDRESS_API.Is_Bill_Location(customer_no_, addr_no) = 1
+      AND   CUST_ORD_CUSTOMER_ADDRESS_API.Is_Valid(customer_no_, addr_no) = 1;
+
+
+   CURSOR get_rct_no(acc_no_ IN VARCHAR2) IS
+     SELECT receipt_no
+     FROM   Hpnret_Pay_Receipt_Head_Tab
+     WHERE receipt_no LIKE ('%-HF%')
+     AND account_no = acc_no_
+     AND rowstate IN ( 'Printed','Approved'); --kalwlk
+     --AND rowstate != 'Cancelled';
+
+   CURSOR get_revert_acc(acc_no_ IN VARCHAR2)IS
+       SELECT 1
+       FROM Hpnret_Hp_Dtl_Tab
+       WHERE account_no = acc_no_
+       AND rowstate = 'RevertReversed'
+       AND catalog_type = 'KOMP';
+
+
+   CURSOR get_cancell_acc(acc_ IN VARCHAR2) IS
+      SELECT 1 
+      FROM commission_value_detail_tab 
+      WHERE  reverse_reason = 'CANCEL RECEIPT'
+      AND account_no = acc_ ; 
+
+   
+   CURSOR get_comm_other(acc_ IN VARCHAR2,line_ IN NUMBER) IS
+      SELECT comm_calc_amount 
+      FROM commission_value_detail_tab 
+      WHERE reverse_reason IN ('SALES RETURNS','CASH CONVERSION','EXCHANGE')
+      AND collection_type = 'DP'
+      AND entitlement_type = 'CC'
+      AND acc_line_no = line_
+      AND account_no = acc_;
+   
+     
+   CURSOR get_sel_comm_other_(acc_ IN VARCHAR2,line_ IN NUMBER) IS
+      SELECT comm_calc_amount 
+      FROM commission_value_detail_tab 
+      WHERE reverse_reason IN ('SALES RETURNS','CASH CONVERSION','EXCHANGE')
+      AND entitlement_type IN ('SHPS','AHPS')
+      AND acc_line_no = line_
+      AND account_no = acc_;
+   
+
+   CURSOR get_revt_lines(acc_ IN VARCHAR2,line_no_ IN NUMBER) IS  
+      SELECT line_no
+      FROM hpnret_hp_dtl_tab 
+      WHERE  catalog_type = 'KOMP'
+      AND account_no = acc_
+      AND pkg_line_no = line_no_
+      AND rowstate = 'RevertReversed'; 
+
+
+   CURSOR get_closed_lines(acc_ IN VARCHAR2,line_no_ IN NUMBER) IS
+      SELECT 1
+      FROM hpnret_hp_dtl_tab 
+      WHERE account_no = acc_
+      AND Hpnret_Hp_Dtl_Api.Get_Reference_Hp(acc_,1,line_no_) IS NOT NULL
+      AND Hpnret_Hp_Head_api.Get_Objstate(reference_hp,1) = 'Active';
+      
+   CURSOR get_allowed_sites(shop_code_ IN VARCHAR2) IS
+     SELECT DISTINCT v.contract
+     FROM User_Allowed_Site v
+     WHERE v.userid = Fnd_Session_API.Get_Fnd_User AND v.contract LIKE shop_code_;
+     
+   CURSOR get_serial_no(order_no_ IN VARCHAR2,part_no_ IN VARCHAR2) IS
+     SELECT v.serial_no
+     FROM Inventory_Transaction_Hist2 v
+     WHERE v.order_no = order_no_ AND v.part_no = part_no_;
+
+BEGIN
+    --Error_Sys.Record_General(lu_name_,'report_attr_ = '||report_attr_||', parameter_attr_ = '||parameter_attr_);
+   
+    result_key_    := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY', report_attr_));
+    shop_code_     := Client_SYS.Get_Item_Value('SHOP_CODE', parameter_attr_);
+    
+    salesman_      := NVL(Client_SYS.Get_Item_Value('SALESMAN_CODE', parameter_attr_),'%');
+    period_from_   := Client_SYS.Get_Item_Value('PERIOD_FROM_1', parameter_attr_);
+    period_to_     := Client_SYS.Get_Item_Value('PERIOD_TO_1', parameter_attr_);
+    customer_type_ := NVL(Client_SYS.Get_Item_Value('CUSTOMER_TYPE', parameter_attr_), '%'); 
+     
+--(+) 10062008 Krsalk Bug Fix(START)
+    IF (customer_type_ <> '%') THEN
+       IF (UPPER(customer_type_) IN ('NORMAL','EMPLOYEE','INSTITUTE','GROUP','ALL')) THEN
+          customer_type_ := UPPER(customer_type_);
+       ELSE
+          customer_type_ := '%';
+       END IF;
+--(+) 10062008 Krsalk Bug Fix(END)
+    END IF;   
+      total_other_qty_ := 0;
+      FOR site_rec_ IN get_allowed_sites(shop_code_) LOOP
+        shop_code_:= site_rec_.contract;
+        User_Allowed_Site_API.Exist(Fnd_Session_API.Get_Fnd_User, shop_code_);
+          FOR rec_ IN get_rep_line(shop_code_,period_from_,period_to_) LOOP  
+      
+             state_ :=  rec_.state;
+             komp_list_ := '';
+             prev_line_variated_ := 0;
+             grp_code_ := '';
+             grp_name_ := '';
+             grp_addr_ := '';
+             f_qty_    := 0;
+             qty_other_ := 0;
+             total_other_qty_ := 0;
+             pay_rct_no_ := '';
+             rev_acc_ := '';
+             revert_rev_ := FALSE;
+      
+             hp_head_rec_ := Hpnret_Hp_Head_API.Get(rec_.order_no, 1);
+      
+             IF (rec_.cash_price = 0) THEN
+                f_qty_ := rec_.qty;
+                
+             ELSE
+                qty_other_ := rec_.qty;
+                
+             END IF;
+             
+             l_non_disc_cach_p_       := rec_.cash_price;
+             l_disc_percentage_       := rec_.discount;
+             l_cash_price_            := NVL(l_non_disc_cach_p_,0) - NVL(((l_disc_percentage_/100)*l_non_disc_cach_p_),0);
+      
+             --Get the group sale information
+             grp_sal_no_       := hp_head_rec_.group_sale_no;
+             IF (grp_sal_no_ IS NOT NULL) THEN
+                grp_code_         := Hpnret_Group_Sale_Api.Get_Group_Code(grp_sal_no_);
+                grp_name_         := Hpnret_Group_Api.Get_Group_Name(grp_code_);
+                OPEN get_grp_addr(grp_code_);
+                FETCH get_grp_addr INTO grp_addr_;
+                CLOSE get_grp_addr;
+             END IF; 
+      
+             --Get the customer address
+             OPEN get_doc_address(hp_head_rec_.id);
+             FETCH get_doc_address INTO cus_bil_add_id_;
+             CLOSE get_doc_address;
+      
+             --Get the first Payment receipt no
+             OPEN get_rct_no(rec_.order_no);
+             FETCH get_rct_no INTO pay_rct_no_;
+             IF (get_rct_no%NOTFOUND) THEN
+                 pay_rct_no_ := '-';
+             END IF;
+             CLOSE get_rct_no;  
+      
+             -- Get the sheet serial No
+      
+             sheet_serial_no_ := hpnret_pay_receipt_head_api.Get_Sheet_Serial_No(pay_rct_no_,Site_Api.Get_Company(shop_code_));
+      
+      
+             OPEN get_revert_acc(rec_.order_no);
+             FETCH get_revert_acc INTO reverted_;
+             CLOSE  get_revert_acc;
+      
+             IF  reverted_ IS NULL THEN
+                reverted_ := 0;
+             END IF;
+      
+             OPEN get_closed_lines(rec_.order_no,rec_.line_no);
+             FETCH get_closed_lines INTO closed_lines_;
+                 IF (rec_.state = 'Closed' AND closed_lines_ IS NULL)  THEN
+                    closed_ :=  FALSE;
+                     --trace_sys.message('444444444 Account no ===== >> '||rec_.order_no||'State ======>>'||rec_.state||'closed_lines_ ===>>'||closed_lines_);
+                 ELSE
+                    closed_ := TRUE;
+                 END IF;
+             CLOSE get_closed_lines;
+           
+             IF (rec_.ord_type = 'CO') THEN      --fetches the newly invoiced accounts for the time period
+      
+                --trace_sys.message('3333333333 Account no ===== >> '||rec_.order_no||'State ======>>'||rec_.state||'closed_lines_ ===>>'||closed_lines_);
+      
+                Hpnret_Hp_Dtl_Api.Get_Order_Line(acc_rev_,hp_line_,rec_.order_no,rec_.line_no,rec_.line_item_no,rec_.rel_no);
+                Hpnret_Hp_Dtl_Api.Get_Insr_Ext_Warrfrom_Charges(suraksha_price_,sanasuma_value_,rec_.order_no,acc_rev_,hp_line_);
+      
+                hp_dtl_rec_ := Hpnret_Hp_Dtl_API.Get(rec_.order_no,1,hp_line_);
+      
+                l_mon_pay_               := NVL(hp_dtl_rec_.install_amt,0);
+                l_serv_charge_           := NVL(hp_dtl_rec_.service_charge,0);                
+                l_dwn_pay_               := NVL(hp_dtl_rec_.down_payment,0);                
+                l_amt_fin_               := NVL(hp_dtl_rec_.amt_finance,0);
+                l_bb_hire_price_         := NVL(hp_dtl_rec_.hire_price,0);
+                l_cp_surak_              := NVL(l_cash_price_,0) + NVL(suraksha_price_,0);
+                l_cp_sanasuma_           := NVL(l_cash_price_,0) + NVL(sanasuma_value_,0);
+                l_full_serv_price_       := NVL(l_cash_price_,0) + NVL(suraksha_price_,0) + NVL(sanasuma_value_,0);
+                l_net_sel_price_         := NVL(l_cash_price_,0) + NVL(suraksha_price_,0) + NVL(sanasuma_value_,0) + NVL(l_serv_charge_,0);
+                l_tot_cash_              := NVL(l_dwn_pay_,0) + NVL(l_serv_charge_,0);
+                invoiced_date_           := rec_.real_ship_date;
+                serial_no_               := Hpnret_Non_Serial_Res_API.Get_Ref_Nofor_Line(rec_.order_no,rec_.line_no,rec_.rel_no,rec_.line_item_no);
+                l_gross_hire_val_        := NVL(Hpnret_Hp_Dtl_Api.Get_Gross_Hire_Value(rec_.order_no,1,hp_line_) ,0);
+                ret_rev_bal_             := '';
+                rev_line_no_             := 0;            
+                prev_acc_no_             := '';
+      
+                IF (Hpnret_Hp_Dtl_API.Get_Objstate(rec_.order_no,1,hp_line_)='Invoiced') THEN
+                   state_ := 'Invoiced';
+                END IF;
+                
+                prev_acc_no_ := CONCAT(substr(shop_code_,0,3),SUBSTR(hp_head_rec_.previous_account,INSTR(hp_head_rec_.previous_account,'-',-1),10));
+      
+                IF (rec_.cat_type='PKG') THEN
+                   FOR komps_ IN get_komps(rec_.order_no,hp_line_) LOOP
+                      komp_list_ := komp_list_||'.'||komps_.catalog_no;
+                   END LOOP;
+                END IF;  
+      
+                OPEN get_comm_pos(rec_.order_no,hp_line_);
+                FETCH get_comm_pos INTO l_comis_; 
+                IF (get_comm_pos%NOTFOUND) THEN
+                   l_comis_ := 0;  
+                END IF;
+      
+                CLOSE get_comm_pos; 
+      
+                OPEN get_sell_comm_pos(rec_.order_no,hp_line_);
+                FETCH get_sell_comm_pos INTO l_comis_sel_;
+                IF (get_sell_comm_pos%NOTFOUND) THEN
+                   l_comis_sel_ := 0;
+                END IF;
+                CLOSE get_sell_comm_pos;
+      
+                OPEN get_comm_neg(rec_.order_no,rec_.line_no);
+                FETCH get_comm_neg INTO l_comis_neg_; 
+                IF (get_comm_neg%NOTFOUND) THEN
+                   l_comis_neg_ := 0;
+                END IF;
+                CLOSE get_comm_neg; 
+      
+                OPEN get_cancell_acc(rec_.order_no);
+                FETCH get_cancell_acc INTO cancell_acc_; 
+                  IF (get_cancell_acc%NOTFOUND)  THEN
+                      cancell_acc_ := 0;
+                  END IF;
+                CLOSE get_cancell_acc;
+      
+                OPEN  get_comm_other(rec_.order_no,hp_line_);
+                FETCH get_comm_other INTO other_comm_; 
+                  IF (get_comm_other%NOTFOUND)  THEN
+                      other_comm_ := 0;
+                  END IF;
+                CLOSE get_comm_other;
+      
+                IF (cancell_acc_ = 1) THEN
+                    l_comis_ := NVL((NVL(l_comis_,0) + NVL(l_comis_neg_,0)),0) ;
+                ELSE
+                   l_comis_ := NVL(l_comis_,0);
+                END IF;
+      
+                OPEN  get_sel_comm_other_(rec_.order_no,hp_line_);
+                FETCH get_sel_comm_other_ INTO other_sel_comm_; 
+                 IF (get_sel_comm_other_%NOTFOUND)  THEN
+                     other_sel_comm_ := 0;
+                 END IF;
+                CLOSE get_sel_comm_other_;
+                
+                
+                OPEN get_sell_comm_neg(rec_.order_no,rec_.line_no);
+                FETCH get_sell_comm_neg INTO l_comis_sel_neg_;
+                IF (get_sell_comm_neg%NOTFOUND) THEN
+                   l_comis_sel_neg_ := 0;
+                END IF;
+                CLOSE get_sell_comm_neg; 
+      
+                prev_line_ := Hpnret_Hp_Dtl_API.Get_Previous_Line_No(rec_.order_no,1,hp_line_);
+      
+                IF (cancell_acc_ = 1) THEN
+                   l_comis_sel_ := NVL((NVL(l_comis_sel_,0) + NVL(l_comis_sel_neg_ ,0)),0);   
+                END IF;  
+               
+      
+                
+                --OPEN get_revt_lines(prev_acc_no_,rec_.line_no);
+                OPEN get_revt_lines(prev_acc_no_,prev_line_);
+                FETCH get_revt_lines INTO rev_line_no_;
+      
+                IF (get_revt_lines%NOTFOUND) THEN
+                    rev_line_no_ := 0;
+                ELSE
+                   rev_line_no_ := 1;
+                END IF;
+      
+      
+                CLOSE get_revt_lines;
+                
+                         
+                
+                 IF (hp_head_rec_.exchange_out=1 AND prev_line_ IS NULL) THEN
+                   --trace_sys.message('State ===== >> '||state_);
+                   state_ := 'ExchangedOut';
+                 
+                   IF (prev_line_ IS NOT NULL) THEN
+                      prev_line_variated_ := 1;
+                   ELSE
+                      prev_line_variated_ := 0;
+                   END IF;
+      
+                ELSIF (hp_head_rec_.assume_open=1) THEN
+                   state_ := 'AssumeOpen';
+                
+               -- ELSIF (hp_head_rec_.revert_reversed=1 AND hpnret_hp_dtl_api.get_objstate(hp_head_rec_.previous_account,1,hp_line_) = 'RevertReversed') THEN
+                   
+                --ELSIF ((hp_head_rec_.revert_reversed=1 AND hpnret_hp_dtl_api.get_objstate(hp_head_rec_.previous_account,1,hp_line_) = 'RevertReversed' AND rec_.cat_type != 'PKG')
+                 --       OR (hp_head_rec_.revert_reversed=1 AND rev_line_no_ = 1 AND rec_.cat_type = 'PKG')) THEN
+      
+                  ELSIF ((hp_head_rec_.revert_reversed=1 AND hpnret_hp_dtl_api.get_objstate(prev_acc_no_,1,prev_line_) = 'RevertReversed' AND rec_.cat_type != 'PKG')
+                    OR (hp_head_rec_.revert_reversed=1 AND rev_line_no_ = 1 AND rec_.cat_type = 'PKG')) THEN
+      
+                    state_ := 'RevertReversed';  
+      
+                   prev_line_ := Hpnret_Hp_Dtl_API.Get_Previous_Line_No(rec_.order_no,1,hp_line_);
+                   
+                  
+      
+                   OPEN get_prev_acc(rec_.order_no);
+                   FETCH get_prev_acc INTO prev_acc_;
+                   CLOSE get_prev_acc;                                                  
+      
+                   OPEN get_prev_line_rev(prev_acc_,prev_line_);
+                   FETCH get_prev_line_rev INTO prev_line_variated_;
+                   IF (get_prev_line_rev%NOTFOUND) THEN         
+                     prev_line_variated_ := 1;
+                   ELSE
+                     prev_line_variated_ := 0;
+                   END IF;
+                   CLOSE get_prev_line_rev;
+      
+                   --make the values null for reverted lines
+                   l_tot_cash_              := '';
+                   l_cash_price_            := '';
+                   l_serv_charge_           := '';
+                   l_dwn_pay_               := '';
+                   l_amt_fin_               := '';
+                   l_bb_hire_price_         := '';
+                   l_gross_hire_val_        := '';
+                   l_cp_surak_              := '';
+                   l_cp_sanasuma_           := '';
+                   l_full_serv_price_       := '';
+                   l_net_sel_price_         := '';
+                   l_mon_pay_               := '';
+                   --To show the Revert Reverse Balance
+                   
+                                
+                   IF rec_.cat_type = 'PKG' THEN  
+                      FOR rec1 IN get_komps(rec_.order_no,rec_.line_no) LOOP
+                         prev_line1_ := Hpnret_Hp_Dtl_API.Get_Previous_Line_No(rec_.order_no,1,rec1.line_no);
+                         ret_rev_bal_ := NVL( NVL(ret_rev_bal_,0) + NVL(Hpnret_Pay_Dtl_API.Get_Outstanding_Balance(Site_Api.Get_Company(shop_code_),prev_acc_,1,prev_line1_,Hpnret_Hp_Dtl_Api.Get_Ref_Pay_Rev(prev_acc_,1,prev_line1_)),0),0);
+                      END LOOP;
+                   ELSE
+                     ret_rev_bal_    := Hpnret_Pay_Dtl_API.Get_Outstanding_Balance(Site_Api.Get_Company(shop_code_),prev_acc_,1,prev_line_,Hpnret_Hp_Dtl_Api.Get_Ref_Pay_Rev(prev_acc_,1,prev_line_));
+                   END IF;
+                   
+                   f_qty_                   := '';
+                   l_comis_sel_             := '';
+                   l_comis_                 := '';
+                   suraksha_price_          := ''; 
+                   sanasuma_value_          := ''; 
+                ELSIF (hp_head_rec_.transferred_account = 1) THEN
+                   prev_line_variated_ := 1;
+                ELSIF (hp_head_rec_.term_extended = 1) THEN
+                 state_ := 'TermExtended';
+                END IF;
+                --trace_sys.message('111111 Account no ===== >> '||rec_.order_no||'State ======>>'||rec_.state||'closed_lines_ ===>>'||closed_lines_);
+                
+                ELSIF (rec_.ord_type = 'HP') THEN   --fetches the variated accounts during the time period
+      
+                   Hpnret_Hp_Dtl_Api.Get_Insr_Ext_Warrfrom_Charges(suraksha_price_,sanasuma_value_,rec_.order_no,1,rec_.line_no);
+                   l_mon_pay_               := rec_.mon_pay; 
+                   l_serv_charge_           := rec_.service_charge;
+                   l_dwn_pay_               := rec_.down_payment;
+                   l_gross_hire_val_        := NVL(Hpnret_Hp_Dtl_Api.Get_Gross_Hire_Value(rec_.order_no,1,rec_.line_no) ,0);
+                   l_cp_surak_              := NVL(l_cash_price_,0) + NVL(suraksha_price_,0);
+                   l_cp_sanasuma_           := NVL(l_cash_price_,0) + NVL(sanasuma_value_,0);
+                   l_full_serv_price_       := NVL(l_cash_price_,0) + NVL(suraksha_price_,0) + NVL(sanasuma_value_,0);
+                   l_net_sel_price_         := NVL(l_cash_price_,0) + NVL(suraksha_price_,0) + NVL(sanasuma_value_,0) + NVL(l_serv_charge_,0);
+                   l_bb_hire_price_         := rec_.hire_price;
+      
+                   Hpnret_Hp_Dtl_API.Get_Co_Line(ord_line_,ord_line_item_,ord_rel_,rec_.order_no,1,rec_.line_no);
+      
+                   invoiced_date_           := Customer_Order_Line_API.Get_Real_Ship_Date(rec_.order_no,ord_line_,ord_rel_,ord_line_item_);
+                   serial_no_               := Hpnret_Non_Serial_Res_API.Get_Ref_Nofor_Line(rec_.order_no,ord_line_,ord_rel_,ord_line_item_);
+      
+                   IF (rec_.cat_type='PKG') THEN
+                      FOR komps_ IN get_komps(rec_.order_no,rec_.line_no) LOOP
+                         komp_list_ := komp_list_||'.'||komps_.catalog_no;
+                      END LOOP;
+                   END IF;
+      
+                   /*OPEN get_comm_pos(rec_.order_no,hp_line_);
+                   FETCH get_comm_pos INTO l_comis_; 
+                   IF (get_comm_pos%NOTFOUND) THEN
+                      l_comis_ := 0;  
+                   END IF;
+      
+                   CLOSE get_comm_pos; */
+      
+                   OPEN get_sell_comm_pos(rec_.order_no,hp_line_);
+                   FETCH get_sell_comm_pos INTO l_comis_sel_;
+                   IF (get_sell_comm_pos%NOTFOUND) THEN
+                      l_comis_sel_ := 0;
+                   END IF;
+                   CLOSE get_sell_comm_pos;
+      
+      
+                   OPEN get_comm_neg(rec_.order_no,rec_.line_no);
+                   FETCH get_comm_neg INTO l_comis_neg_; 
+                   IF (get_comm_neg%NOTFOUND) THEN
+                      l_comis_neg_ := 0;
+                   END IF;
+                   CLOSE get_comm_neg; 
+      
+                   OPEN  get_comm_other(rec_.order_no,rec_.line_no);
+                   FETCH get_comm_other INTO other_comm_; 
+                     IF (get_comm_other%NOTFOUND)  THEN
+                         other_comm_ := 0;
+                     END IF;
+                   CLOSE get_comm_other;
+                   
+                   l_comis_ := NVL(other_comm_,0);
+                   
+                   OPEN get_cancell_acc(rec_.order_no);
+                   FETCH get_cancell_acc INTO cancell_acc_;
+                     IF (get_cancell_acc%NOTFOUND)  THEN
+                       cancell_acc_ := 0;
+                     END IF;
+                   CLOSE get_cancell_acc;
+      
+                   IF (cancell_acc_ = 1) THEN
+                      l_comis_sel_ :=  NVL(l_comis_sel_ + l_comis_sel_neg_,0);
+                   END IF;
+      
+                   
+                   OPEN get_sell_comm_neg(rec_.order_no,rec_.line_no);
+                   FETCH get_sell_comm_neg INTO l_comis_sel_neg_;
+                   IF (get_sell_comm_neg%NOTFOUND) THEN
+                      l_comis_sel_neg_ := 0;
+                   END IF;
+                   CLOSE get_sell_comm_neg;
+      
+                   OPEN  get_sel_comm_other_(rec_.order_no,rec_.line_no);
+                   FETCH get_sel_comm_other_ INTO other_sel_comm_; 
+                   IF (get_sel_comm_other_%NOTFOUND)  THEN
+                         other_sel_comm_ := 0;
+                   END IF;
+                   CLOSE get_sel_comm_other_;
+      
+                         l_comis_sel_ := NVL(other_sel_comm_,0);
+      
+      
+                          
+                      /*  l_comis_         := - NVL( l_comis_ ,0) ;
+                      l_comis_sel_     := - NVL( l_comis_sel_ ,0) ;
+                      l_comis_neg_     := - NVL( l_comis_neg_ ,0) ;
+                      l_comis_sel_neg_ := - NVL( l_comis_sel_neg_ ,0) ; */
+                    
+      
+                   IF ((rec_.state = 'RevertReversed' OR (rec_.state = 'Closed' AND rec_.reverted_date IS NOT NULL) OR rec_.state = 'Reverted') ) THEN
+                      
+                      IF (TRUNC(rec_.reverted_date) BETWEEN to_date(period_from_,'YYYY/MM/DD') AND to_date(period_to_,'YYYY/MM/DD')) THEN
+                      
+                         state_ := 'Reverted';  
+                         
+      
+                         OPEN get_rev_acc_(rec_.order_no,rec_.line_no);
+                         FETCH get_rev_acc_ INTO rev_acc_;
+                         CLOSE get_rev_acc_;
+         
+                         --make the values null for reverted lines
+                         l_tot_cash_              := '';
+                         l_cash_price_            := '';
+                         l_serv_charge_           := '';
+                         l_dwn_pay_               := '';
+                         l_amt_fin_               := '';
+                         l_bb_hire_price_         := '';
+                         l_gross_hire_val_        := '';
+                         l_cp_surak_              := '';
+                         l_cp_sanasuma_           := '';
+                         l_full_serv_price_       := '';
+                         l_net_sel_price_         := '';
+                         l_mon_pay_               := '';
+                         l_comis_                 := '';
+                         l_comis_sel_             := '';
+                         f_qty_                   := '';  
+                         l_comis_sel_             := '';
+                         l_comis_                 := '';
+                         suraksha_price_          := ''; 
+                         sanasuma_value_          := ''; 
+                         --To show the Revert Reverse Balance
+                         ret_rev_bal_ := '';
+                         IF rec_.cat_type = 'PKG' THEN  
+                            FOR rec1 IN get_komps(rec_.order_no,rec_.line_no) LOOP
+                              -- prev_line1_ := Hpnret_Hp_Dtl_API.Get_Previous_Line_No(rec_.order_no,1,rec1.line_no);
+                               ret_rev_bal_ :=  ( NVL( NVL( ret_rev_bal_,0) +NVL((Hpnret_Pay_Dtl_API.Get_Outstanding_Balance(Site_Api.Get_Company(shop_code_),rec_.order_no,1,rec1.line_no,Hpnret_Hp_Dtl_Api.Get_Ref_Pay_Rev(rec_.order_no,1,rec1.line_no))),0),0));
+            
+                            END LOOP;
+                               ret_rev_bal_ := - NVL(ret_rev_bal_,0);
+                         ELSE
+                           ret_rev_bal_    := -(Hpnret_Pay_Dtl_API.Get_Outstanding_Balance(Site_Api.Get_Company(shop_code_),rec_.order_no,1,rec_.line_no,Hpnret_Hp_Dtl_Api.Get_Ref_Pay_Rev(rec_.order_no,1,rec_.line_no)));      
+                         END IF;
+                    --  ret_rev_bal_             := -(Hpnret_Pay_Dtl_API.Get_Outstanding_Balance(Site_Api.Get_Company(shop_code_),rec_.order_no,1,rec_.line_no,Hpnret_Hp_Dtl_Api.Get_Ref_Pay_Rev(rec_.order_no,1,rec_.line_no)));
+                      ELSE
+                          
+                         revert_rev_ := TRUE;
+      
+                      END IF;
+                       --trace_sys.message('2222222 Account no ===== >> '||rec_.order_no||'State ======>>'||rec_.state||'closed_lines_ ===>>'||closed_lines_);
+                     
+                   ELSE
+                      --080604 shpelk (Start)
+                      IF rec_.state = 'CashConverted' THEN
+                         l_serv_charge_  := 0;
+                      END IF;
+                      --080604 shpelk (End)
+                      OPEN get_closed_lines(rec_.order_no,rec_.line_no);
+                      FETCH get_closed_lines INTO closed_lines_;
+      
+                      IF (rec_.state = 'Closed' AND closed_lines_ IS NULL)  THEN
+                         closed_ :=  FALSE;
+                      ELSE
+                         closed_ := TRUE;
+                      --trace_sys.message('11111111 Account no ===== >> '||rec_.order_no||'State ======>>'||rec_.state||'closed_lines_ ===>>'||closed_lines_);
+                      --make the values minus for other variations (term changes, assume close, returns, cash convertions, exchange ins)
+                      l_tot_cash_              := -(NVL(l_dwn_pay_,0) + NVL(l_serv_charge_,0));
+                      l_cash_price_            := -(l_cash_price_);
+                      l_serv_charge_           := -(l_serv_charge_);
+                      l_dwn_pay_               := -(l_dwn_pay_);
+                      l_amt_fin_               := -(rec_.amt_finance);
+                      l_bb_hire_price_         := -(rec_.hire_price);
+                      l_gross_hire_val_        := -(l_gross_hire_val_);
+                      l_cp_surak_              := -(l_cp_surak_);
+                      l_cp_sanasuma_           := -(l_cp_sanasuma_);
+                      l_full_serv_price_       := -(l_full_serv_price_);
+                      l_net_sel_price_         := -(l_net_sel_price_);
+                      l_mon_pay_               := -(l_mon_pay_);
+                      
+                    --  Trace_sys.message('##f_qty_'||f_qty_);
+      
+                      f_qty_                   := -(f_qty_);
+                      suraksha_price_          := -(suraksha_price_); 
+                      sanasuma_value_          := -(sanasuma_value_);
+                      ret_rev_bal_             := '';
+                   
+                      l_comis_         :=  NVL( l_comis_,0) ;
+                      l_comis_sel_     :=  NVL( l_comis_sel_,0) ;
+                      l_comis_neg_     :=  NVL( l_comis_neg_,0) ;
+                      l_comis_sel_neg_ :=  NVL( l_comis_sel_neg_,0) ;
+                     END IF; 
+                     CLOSE get_closed_lines;
+                   END IF;
+      
+             ELSE  --fetches the Released, Reserved and Cancelled Lines
+      
+                     
+                IF (rec_.cat_type='PKG') THEN
+                   FOR komps_ IN get_komps(rec_.order_no,rec_.line_no) LOOP
+                      komp_list_ := komp_list_||'.'||komps_.catalog_no;
+                   END LOOP;
+                END IF;
+                
+                l_mon_pay_               := 0; 
+                l_serv_charge_           := 0;
+                l_dwn_pay_               := 0;
+                l_gross_hire_val_        := 0;
+                l_cp_surak_              := 0;
+                l_cp_sanasuma_           := 0;
+                l_full_serv_price_       := 0;
+                l_net_sel_price_         := 0;
+                l_bb_hire_price_         := 0; 
+                l_tot_cash_              := 0;
+                l_cash_price_            := 0;
+                l_amt_fin_               := 0;
+                l_comis_                 := 0;
+                l_comis_sel_             := 0;
+                f_qty_                   := 0;  
+                qty_other_               := 0;
+                suraksha_price_          := 0;
+                sanasuma_value_          := 0; 
+                ret_rev_bal_             :='';
+                     
+                END IF;
+      
+          /*  IF state_ = 'Cancelled' THEN
+              sort_col_  := 0;     
+            ELSIF state_ = 'Planned' THEN
+               sort_col_ := 1;     
+            ELSIF state_ = 'Released'  THEN
+               sort_col_ := 2;     
+            ELSIF state_ = 'Reserved'  THEN
+               sort_col_ := 3;     
+            ELSIF state_ = 'Invoiced'  THEN
+               sort_col_ := 4;   
+            ELSIF state_ = 'Active'  THEN
+               sort_col_ := 5; 
+            ELSIF state_ = 'Returned'  THEN
+               sort_col_ := 6;   
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'CashConverted'  THEN
+               sort_col_ := 7;  
+               qty_other_ := -(qty_other_);   */
+      
+      
+           /* ELSIF state_ = 'ExchangedIn'  THEN
+               sort_col_ := 8; 
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'ExchangedOut'  THEN
+               sort_col_ := 8; 
+            ELSIF state_ = 'AssumeOpen'  THEN
+               sort_col_ := 9;     
+            ELSIF state_ = 'AssumeClosed'  THEN
+               sort_col_ := 9; 
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'TermChanged'  THEN
+               sort_col_ := 10;
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'TermExtended'  THEN
+               state_ := 'TermChanged'; 
+               sort_col_ := 10;
+               qty_other_ := +(qty_other_);
+            ELSIF state_ = 'Reverted'  THEN
+               sort_col_ := 11;  
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'RevertReversed'  THEN
+               sort_col_ := 12;  
+            ELSIF ( state_ = 'Closed') THEN
+               sort_col_ := 13; 
+               qty_other_ := -(qty_other_);
+            ELSE
+               sort_col_ := 13;
+            END IF; */
+      
+           /* ELSIF state_ = 'ExchangedIn'  THEN
+               sort_col_ := 8; 
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'ExchangedOut'  THEN
+               sort_col_ := 9; 
+            ELSIF state_ = 'AssumeOpen'  THEN
+               sort_col_ := 10;     
+            ELSIF state_ = 'AssumeClosed'  THEN
+               sort_col_ := 11; 
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'TermChanged'  THEN
+               sort_col_ := 12;
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'TermExtended'  THEN
+               state_ := 'TermChanged'; 
+               sort_col_ := 13;
+               qty_other_ := +(qty_other_);
+            ELSIF state_ = 'Reverted'  THEN
+               sort_col_ := 14;  
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'RevertReversed'  THEN
+               sort_col_ := 15;  
+            ELSIF ( state_ = 'Closed') THEN
+               sort_col_ := 16; 
+               qty_other_ := -(qty_other_);
+            ELSE
+               sort_col_ := 16;
+            END IF;  */
+      
+         --  trace_sys.message('state_::::'||state_||':::sort_col_:::::'||sort_col_);
+      
+            IF state_ = 'Cancelled'  THEN
+               sort_col_  := concat(10,substr(hp_head_rec_.original_acc_no,6)) ;     
+            ELSIF state_ = 'Planned' THEN
+               sort_col_  := concat(11,substr(hp_head_rec_.original_acc_no,6)) ;         
+            ELSIF state_ = 'Released'THEN
+               sort_col_  := concat(12,substr(hp_head_rec_.original_acc_no,6)) ;        
+            ELSIF state_ = 'Reserved'THEN
+               sort_col_  := concat(13,substr(hp_head_rec_.original_acc_no,6)) ;         
+            ELSIF state_ = 'Invoiced'THEN
+               sort_col_  := concat(14,substr(hp_head_rec_.original_acc_no,6)) ;       
+            ELSIF state_ = 'Active'  THEN
+               sort_col_  := concat(15,substr(hp_head_rec_.original_acc_no,6)) ;      
+            ELSIF state_ = 'Returned'THEN
+               sort_col_  := concat(16,substr(hp_head_rec_.original_acc_no,6)) ;       
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'CashConverted'THEN
+               sort_col_  := concat(17,substr(hp_head_rec_.original_acc_no,6)) ;       
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'ExchangedIn'  THEN
+               sort_col_  := concat(18,substr(hp_head_rec_.original_acc_no,6)) ;     
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'ExchangedOut' THEN
+              sort_col_  := concat(18,substr(hp_head_rec_.original_acc_no,6)) ;      
+            ELSIF state_ = 'AssumeOpen'   THEN
+               sort_col_  := concat(19,substr(hp_head_rec_.original_acc_no,6)) ;          
+            ELSIF state_ = 'AssumeClosed' THEN
+               sort_col_  := concat(20,substr(hp_head_rec_.original_acc_no,6)) ;      
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'TermChanged'  THEN
+               sort_col_  := concat(21,substr(hp_head_rec_.original_acc_no,6)) ;     
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'TermExtended' THEN
+               state_ := 'TermChanged'; 
+               sort_col_  := concat(22,substr(hp_head_rec_.original_acc_no,6)) ;     
+               qty_other_ := +(qty_other_);
+            ELSIF state_ = 'Reverted'  THEN
+               sort_col_  := concat(23,substr(hp_head_rec_.original_acc_no,6)) ;       
+               qty_other_ := -(qty_other_);
+            ELSIF state_ = 'RevertReversed' THEN
+               sort_col_  := concat(24,substr(hp_head_rec_.original_acc_no,6)) ;      
+            ELSIF ( state_ = 'Closed') THEN
+               sort_col_  := concat(25,substr(hp_head_rec_.original_acc_no,6)) ;      
+               qty_other_ := -(qty_other_);
+            ELSE
+               sort_col_  := concat(26,substr(hp_head_rec_.original_acc_no,6)) ;     
+            END IF;
+        
+            --trace_sys.message('55555555 Account no ===== >> '||rec_.order_no||'State ======>>'||rec_.state||'closed_lines_ ===>>'||closed_lines_);
+          IF (prev_line_variated_ = 0) THEN
+            IF ((state_ IN ('Invoiced','Active','Returned','AssumeOpen','AssumeClosed','TermChanged','ExchangedIn','ExchangedOut','CashConverted','Reverted','RevertReversed','Closed')) AND (rec_.cash_price != 0)) THEN
+               total_other_qty_ := total_other_qty_ + qty_other_;
+            END IF;
+                
+            IF ((hp_head_rec_.salesman_code=salesman_ OR salesman_='%') AND (hp_head_rec_.customer_type=customer_type_ OR customer_type_='%')) THEN
+               --080604 shpelk (Start)
+               --IF NOT revert_rev_ AND  closed_ THEN
+               IF rec_.Reverted_Date >= TO_DATE(period_from_,'YYYY/MM/DD') OR rec_.Reverted_Date IS NULL  THEN
+               --080604 shpelk (End)
+               
+               --(+)  091204      Krsalk(Start)
+               OPEN get_serial_no(rec_.order_no,rec_.part_no);
+                 FETCH get_serial_no INTO serial_no_;
+               CLOSE get_serial_no;
+               oem_no_:=Serial_Oem_Conn_API.Get_Oem_No(rec_.part_no,serial_no_);
+               rsp_   :=l_cash_price_+Customer_Order_API.Get_Total_Tax_Amount(rec_.order_no);                                                             
+               --(+)  091204      Krsalk(End)
+                          
+               INSERT INTO INFO_SERVICES_RPT ( result_key, row_no, parent_row_no,
+                                                             d1                                      ,--RUN_DATE,
+                                                             s1                                      ,--RUN_USER,
+                                                             s2                                      ,--PERIOD_FROM,
+                                                             s3                                      ,--PERIOD_TO,
+                                                             s4                                      ,--SHOP_CODE,
+                                                             s5                                      ,--SHOP_NAME,
+                                                             s6                                      ,--SALESMAN_CODE,
+                                                             s7                                      ,--SALESMAN_NAME,
+                                                             s8                                      ,--CUSTOMER_TYPE,
+                                                             s9                                      ,--ACC_SCHEME,
+                                                             s10                                     ,--CURRENT_ACC,
+                                                             s11                                     ,--ORIGINAL_ACC,
+                                                             s12                                     ,--PREVIOUS_ACC,
+                                                             s13                                     ,--RCT_NO,
+                                                             d2                                      ,--SALES_DATE,
+                                                             s14                                     ,--PRODUCT_CODE,
+                                                             n1                                      ,--UNITS,
+                                                             s15                                     ,--COMPS,
+                                                             s16                                     ,--SERIAL_NOS,
+                                                             n2                                      ,--CASH_PRICE,
+                                                             n3                                      ,--SURAKSHA_PRICE,
+                                                             n4                                      ,--SANASUMA_VALUE,
+                                                             n5                                      ,--CP_SURAK,
+                                                             n6                                      ,--CP_SANASUMA,
+                                                             n7                                      ,--FULL_SERVICE_PRICE,
+                                                             n8                                      ,--SEVICE_CHARGE,
+                                                             n9                                      ,--NET_SELLING_PRICE,
+                                                             n10                                     ,--DOWN_PAY,
+                                                             n11                                     ,--AMT_FINANCED,
+                                                             n12                                     ,--BB_HIRE_PRICE,
+                                                             n13                                     ,--GROSS_HIRE_VAL,
+                                                             n14                                     ,--TOTAL_CASH,
+                                                             n15                                     ,--COMMIS,
+                                                             n16                                     ,--RET_REV_BAL,
+                                                             s17                                     ,--RV_RE_SALE_ACC,
+                                                             n17                                     ,--TERM_LEN_CONTARCT,
+                                                             n18                                     ,--MTHY_PAY,
+                                                             s18                                     ,--CUST_NO,
+                                                             s19                                     ,--CUST_NAME,
+                                                             s20                                     ,--CUST_ADD_DESC,
+                                                             s21                                     ,--FLAG_ACC_STATUS,
+                                                             s22                                     ,--REMARKS,
+                                                             s23                                     ,--FLAG_ACC_LINE_STATUS,
+                                                             d3                                      ,--DATE_REVERETED
+                                                             n19                                     ,--FST_PAYMENT
+                                                             s24                                     ,--salesdate - string
+                                                             s25                                     ,--date reverted - string
+                                                             n20                                     ,--SELLING_COMIS
+                                                             n21                                     ,--QTY_FREE_ITEM
+                                                             n22                                     ,--QTY_NON_FREE_ITEM
+                                                             s26                                     ,--GRP_CODE,
+                                                             s27                                     ,--GRP_NAME,
+                                                             s28                                     , --GRP_ADDRESS
+                                                             n23                                     ,--sorting column 
+                                                             s29                                     , -- SheetSerialNo
+                                                             s30                                     ,
+                                                             s31                                     ,
+                                                             n24                                     ,
+                                                             s32
+                             )
+                             VALUES ( result_key_, row_no_, 0,
+                                                            Site_Api.Get_Site_Date(shop_code_)       ,--RUN_DATE,
+                                                            Fnd_Session_Api.Get_Fnd_User             ,--RUN_USER,
+                                                            period_from_                             ,--PERIOD_FROM,
+                                                            period_to_                               ,--PERIOD_TO,
+                                                            shop_code_                               ,--SHOP_CODE,
+                                                            Site_Api.Get_Description(shop_code_)     ,--SHOP_NAME,
+                                                            salesman_                                ,--SALESMAN_CODE,
+                                                            ''                                       ,--SALESMAN_NAME,
+                                                            customer_type_                           ,--CUSTOMER_TYPE,
+                                                            Hpnret_Bb_Main_Head_Api.Get_Hpnret_Bb_Sales_Type(Hpnret_Hp_Head_Api.Get_Budget_Book_Id(rec_.order_no,1)) ,--ACC_SCHEME,
+                                                            rec_.order_no                            ,--CURRENT_ACC,
+                                                            hp_head_rec_.original_acc_no             ,--ORIGINAL_ACC,
+                                                            hp_head_rec_.previous_account            ,--PREVIOUS_ACC,
+                                                            pay_rct_no_                              ,--RCT_NO,
+                                                            nvl(invoiced_date_,Hpnret_Hp_Head_Api.Get_Sales_Date(rec_.order_no,1))                           ,--SALES_DATE,
+                                                            rec_.part_no                            ,--CATALOG NO,
+                                                            rec_.qty                                ,--UNITS,
+                                                            komp_list_                              ,--COMPS,
+                                                            serial_no_                              ,--SERIAL_NOS,
+                                                            l_cash_price_                           ,--CASH_PRICE,
+                                                            suraksha_price_                         ,--SURAKSHA_PRICE,
+                                                            sanasuma_value_                         ,--SANASUMA_VALUE,
+                                                            l_cp_surak_                             ,--CP_SURAK,
+                                                            l_cp_sanasuma_                          ,--CP_SANASUMA,
+                                                            l_full_serv_price_                      ,--FULL_SERVICE_PRICE,
+                                                            l_serv_charge_                          ,--SEVICE_CHARGE,
+                                                            l_net_sel_price_                        ,--NET_SELLING_PRICE,
+                                                            l_dwn_pay_-NVL(sanasuma_value_,0)       ,--DOWN_PAY,
+                                                            l_amt_fin_                              ,--AMT_FINANCED,
+                                                            l_bb_hire_price_                        ,--BB_HIRE_PRICE,
+                                                            l_gross_hire_val_                       ,--GROSS_HIRE_VAL,
+                                                            l_tot_cash_                             ,--TOTAL_CASH,
+                                                            l_comis_                                ,--COMMIS,
+                                                            ret_rev_bal_                            ,--RET_REV_BAL,
+                                                            rev_acc_                                ,--RV_RE_SALE_ACC,
+                                                            hp_head_rec_.length_of_contract         ,--TERM_LEN_CONTARCT,
+                                                            l_mon_pay_                              ,--MTHY_PAY,
+                                                            hp_head_rec_.id                         ,--CUST_NO,
+                                                            customer_info_api.get_name(Hpnret_Hp_Head_Api.Get_Id(rec_.order_no,1)) ,--CUST_NAME,
+                                                            customer_info_address_api.Get_Address1(Hpnret_Hp_Head_Api.Get_Id(rec_.order_no,1), cus_bil_add_id_) || ', ' ||
+                                                            customer_info_address_api.Get_Address2(Hpnret_Hp_Head_Api.Get_Id(rec_.order_no,1), cus_bil_add_id_)            ,--CUST_ADD_DESC,
+                                                            Hpnret_Hp_Head_API.Get_Objstate(rec_.order_no,1)  ,--FLAG_ACC_STATUS,
+                                                            hp_head_rec_.remarks                    ,--REMARKS,
+                                                            state_                                  ,--FLAG_ACC_LINE_STATUS,
+                                                            rec_.reverted_date                      , --DATE_REVERETED
+                                                            l_tot_cash_                             , --FST_PAYMENT
+                                                            TO_CHAR(nvl(invoiced_date_,Hpnret_Hp_Head_Api.Get_Sales_Date(rec_.order_no,1)),'YYYY/MM/DD'), -- salesdate string
+                                                            TO_CHAR(rec_.reverted_date ,'YYYY/MM/DD')  ,-- revert date - string
+                                                            l_comis_sel_                            ,--SELLING_COMIS
+                                                            f_qty_                                  ,--QTY_FREE_ITEM
+                                                            total_other_qty_,--qty_other_                              ,--QTY_NON_FREE_ITEM
+                                                            grp_code_                               ,--GRP_CODE,
+                                                            grp_name_                               ,--GRP_NAME,
+                                                            grp_addr_                               ,--GRP_ADDRESS
+                                                            sort_col_                               ,--Sort_Column
+                                                            sheet_serial_no_                        ,--Sheet_Serial_No
+                                                            Inventory_Part_API.Get_Part_Product_Family(shop_code_,rec_.part_no),
+                                                            Inventory_Product_Family_API.Get_Description(Inventory_Part_API.Get_Part_Product_Family(shop_code_,rec_.part_no)),
+                                                            rsp_,
+                                                            oem_no_
+                                      ); 
+                                      row_no_ := row_no_+1;
+               END IF;
+                END IF;
+                 END IF;
+          END LOOP;  
+    END LOOP;  
+
+
+  END &METHOD;
+
+  --nowilk This will find the start/end date of the current month
+   PROCEDURE Get_First_Day (
+      first_day_ OUT VARCHAR2 )
+   IS
+   BEGIN
+      --Bug # 15677 (START)
+      General_SYS.Init_Method(lu_name_, '&PKG', 'Get_First_Day');
+      --Bug # 15677 (END)
+      SELECT '01/'||to_char( sysdate, 'MM/YYYY')
+      INTO first_day_
+      FROM DUAL;
+   END Get_First_Day;
+
+
+   PROCEDURE Get_Last_Day (
+      last_day_ OUT VARCHAR2 )
+   IS
+   BEGIN
+      --Bug # 15677 (START)
+      General_SYS.Init_Method(lu_name_, '&PKG', 'Get_Last_Day');
+      --Bug # 15677 (END)
+      SELECT to_char( last_day( sysdate), 'DD/MM/YYYY')
+      INTO last_day_
+      FROM DUAL;
+   END Get_Last_Day;
+--end nowilk
+  
+  END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- END
+-----------------------------------------------------------------------------

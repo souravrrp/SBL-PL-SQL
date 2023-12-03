@@ -1,0 +1,464 @@
+CREATE OR REPLACE PACKAGE BODY HPNRET_SALE_ANALYSIS_SHD_RPI AS
+
+PROCEDURE Report_Overview (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 )
+IS
+   result_key_                                       NUMBER;
+   row_no_                                           NUMBER := 1;
+   site_code_                                        VARCHAR2(5);
+   fdate_                                            DATE;
+   tdate_                                            DATE;
+   usr_                                              VARCHAR2(30);
+   sales_man_                                        VARCHAR2(20);
+   get_all_salesman_                                 NUMBER:= 0;
+   site_desc_                                        VARCHAR2(20);
+   sales_man_name_                                   VARCHAR2(100);
+   part_no_                                          VARCHAR2(25);
+   total_disc_chash_price_                           NUMBER := 0;
+   total_ord_qty_                                    NUMBER := 0;
+   flag_                                             BOOLEAN;
+   temp_hp_line_                                     VARCHAR2(8);
+   temp_row_st_                                      VARCHAR2(2000);
+   part_desc_                                        VARCHAR2(35);
+   d_insert_rec_                                     BOOLEAN := FALSE;
+   d_acc_no_                                         VARCHAR2(20);
+   d_acc_rev_                                        NUMBER;
+   d_acc_line_                                       VARCHAR2(8);
+   d_status_                                         VARCHAR2(2000);
+   line_no_                                          VARCHAR2(8);
+
+
+   TYPE Public_Rec IS RECORD
+   (
+       part_desc            VARCHAR2(200),
+       PART_NO              VARCHAR2(50),
+       CASH_VALUE           NUMBER,
+       SALES_UNITS          NUMBER,
+       ORDER_NO             VARCHAR2(20),
+       ORDER_DATE           VARCHAR2(20),
+       prod_cat             VARCHAR2(5),
+       cat_desc             VARCHAR2(200),
+       oem_no               VARCHAR2(1000),
+       status               VARCHAR2(25)
+   );
+
+ insert_rec_              Public_Rec;
+
+   CURSOR get_allowed_sites(shop_code_ IN VARCHAR2) IS
+     SELECT v.contract
+     FROM User_Allowed_Site_Lov v
+     WHERE v.contract LIKE shop_code_;
+
+   FUNCTION Insert_rec (rec_ IN Public_Rec) RETURN BOOLEAN
+   IS
+   BEGIN
+
+        INSERT INTO INFO_SERVICES_RPT
+        (result_key,
+         row_no,
+         parent_row_no,
+         s1,
+         s2,
+         s3,
+         s4,
+         s5,
+         s6,
+         s7,
+         s8,
+         n1,
+         n2,
+         s9,
+         s10,
+         s11,
+         s12,
+         s13,
+         s14,
+         s15)
+
+      VALUES
+         (result_key_,
+         row_no_,
+         0,
+         to_char(fdate_,'YYYY/MM/DD'),
+         to_char(tdate_,'YYYY/MM/DD'),
+         usr_,
+         site_code_,
+         site_desc_,
+         sales_man_,
+         sales_man_name_,
+         rec_.part_desc,
+         round(rec_.CASH_VALUE),
+         rec_.SALES_UNITS,
+         rec_.part_no,
+         rec_.ORDER_NO,
+         rec_.ORDER_DATE,
+         rec_.prod_cat,
+         rec_.cat_desc,
+         rec_.oem_no,
+         rec_.status);
+
+         row_no_ := row_no_ + 1;
+         return true;
+   END Insert_rec;
+
+   PROCEDURE insert_hp_recs_new (cat_no_ IN VARCHAR2,
+                                 site_   IN VARCHAR2,
+                                 from_date_ IN DATE,
+                                 to_date_   IN DATE)
+
+   IS
+      rec_to_insert_ Public_Rec;
+      l_non_disc_cach_p_ NUMBER:=0;
+      pkg_line_                                         varchar2(8);
+      PKG_PART_CASHpRICE_                               number := 0;
+      currency_code_                                    VARCHAR2(3);
+      l_disc_percentage_                                NUMBER := 0;
+      l_cash_price_                                     NUMBER := 0;
+      SUM_KOMP_CACH_PRICE_                              number := 0;
+      komp_line_count_                                  number;
+
+
+      CURSOR get_pkg_komp_sum_cash_pr (acc_no_ in varchar2, pkg_line_ in varchar2) is
+                     SELECT  SUM(NVL(t.cash_price,0)), count(t.line_no)
+                     FROM    Hpnret_Hp_Dtl_Tab t
+                     WHERE   t.account_no = acc_no_
+                     AND     t.account_rev = 1
+                     AND     t.pkg_line_no = pkg_line_;
+
+
+      CURSOR org_sales IS
+      SELECT order_no,line_no,line_item_no,REL_NO,real_ship_date,qty_invoiced,base_sale_unit_price,dock_code,sale_cat,part_no,catalog_type,status FROM
+         (select   C.order_no  order_no,
+               C.line_no   line_no,
+               C.line_item_no  line_item_no,
+               C.REL_NO    REL_NO,
+               C.real_ship_date  real_ship_date,
+               c.qty_invoiced qty_invoiced,
+               C.base_sale_unit_price  base_sale_unit_price,
+               C.dock_code dock_code,
+               1           sale_cat,
+               c.catalog_no   part_no,
+               c.catalog_type_db catalog_type,
+               decode(substr(c.order_no,4,2),'-R','Cash Sale'
+                                            ,'-H','Hire Sale') status
+      from customer_order_line C
+      where C.contract = site_
+      and   trunc(C.real_ship_date) between from_date_ and to_date_
+      AND c.catalog_type_db <> 'KOMP'
+      AND (c.demand_code_db IS NULL OR c.demand_code_db IN ('PO','WO'))
+      AND (get_all_salesman_ = 1 OR Customer_Order_Api.Get_Salesman_Code(C.order_no) = sales_man_)
+UNION
+      SELECT   H.ACCOUNT_NO   order_no,
+               H.line_no      line_no,
+               H.account_rev  line_item_no,
+               '1'            rel_no,
+               H.Variated_Date   real_ship_date,
+               H.QUANTITY        qty_invoiced,
+               NULL              base_sale_unit_price,
+               NULL           dock_code,
+               2 sale_cat,
+               h.catalog_no part_no,
+               h.catalog_type catalog_type,
+               h.rowstate status
+      FROM Hpnret_Hp_Dtl_tab H
+      WHERE h.Rowstate IN ('CashConverted','ExchangedIn','Returned')
+      AND h.catalog_type <> 'KOMP'
+      AND TRUNC(H.Variated_Date) BETWEEN from_date_ AND to_date_
+      AND H.CONTRACT = site_
+      AND (get_all_salesman_ = 1 OR  Hpnret_Hp_Head_Api.Get_Salesman_Code(H.ACCOUNT_NO,H.account_rev) = sales_man_)
+      UNION
+       SELECT  C.order_no  order_no,
+               C.line_no   line_no,
+               C.line_item_no  line_item_no,
+               C.REL_NO    REL_NO,
+               C.real_ship_date  real_ship_date,
+               c.qty_invoiced qty_invoiced,
+               C.base_sale_unit_price  base_sale_unit_price,
+               NULL        dock_code,
+               1           sale_cat,
+               c.catalog_no   part_no,
+               c.catalog_type_db catalog_type,
+               'RevertReversed' status
+      FROM customer_order_line C
+      WHERE C.contract = site_
+      AND   trunc(C.real_ship_date) BETWEEN from_date_ AND to_date_
+      AND c.catalog_type_db <> 'KOMP'
+      AND (SELECT COUNT(1)
+           FROM Hpnret_Hp_Dtl_Tab x1
+           WHERE x1.account_no = c.order_no
+           AND x1.reverted_date IS NULL
+           AND x1.variated_date IS NULL
+           AND x1.location_no = 'REVERTS') > 0
+      AND (c.demand_code_db IS NULL OR c.demand_code_db IN ('PO','WO'))
+      AND (get_all_salesman_ = 1 OR Customer_Order_Api.Get_Salesman_Code(C.order_no) = sales_man_)
+      UNION
+      SELECT   H.ACCOUNT_NO    order_no,
+               H.line_no       line_no,
+               H.account_rev   line_item_no,
+               '1'             rel_no,
+               H.Reverted_Date real_ship_date,
+               H.QUANTITY      qty_invoiced,
+               NULL            base_sale_unit_price,
+               NULL            dock_code,
+               2 sale_cat,
+               h.catalog_no part_no,
+               h.catalog_type catalog_type,
+               'Reverted' status
+      FROM Hpnret_Hp_Dtl_tab H
+      WHERE h.Rowstate IN ('Reverted','RevertReversed')
+      AND h.catalog_type <> 'KOMP'
+      AND TRUNC(H.Reverted_Date) BETWEEN from_date_ AND to_date_
+      AND H.CONTRACT = site_
+      AND (get_all_salesman_ = 1 OR  Hpnret_Hp_Head_Api.Get_Salesman_Code(H.ACCOUNT_NO,H.account_rev) = sales_man_)
+      UNION
+      SELECT   DISTINCT rml.order_no      order_no ,
+               NULL              line_no,
+               NULL              line_item_no,
+               NULL              rel_no,
+               NULL              real_ship_date,
+               NULL              qty_invoiced,
+               NULL              base_sale_unit_price,
+               NULL              dock_code,
+               3                 sale_cat,
+               NULL              part_no,
+               NULL              catalog_type,
+               rml.rowstate      status
+                     FROM     return_material_line_tab rml
+                     WHERE    rmL.rowstate = 'ReturnCompleted'
+                     AND  identity_invoice_info_api.get_identity_type(Site_API.Get_Company(rml.contract),return_material_api.Get_Customer_No(rml.rma_no),'Customer') = 'EXTERN'
+                     AND  RML.CATALOG_NO IS NOT NULL
+                     AND      TRUNC(rmL.Date_Returned) BETWEEN from_date_ AND to_date_
+                     AND      RML.contract    = site_
+                     AND      substr(RML.order_no,5,1) ='R'
+               AND (get_all_salesman_ = 1 OR Customer_Order_Api.Get_Salesman_Code(RML.order_no) = sales_man_))
+      ORDER BY Inventory_Part_Api.Get_Part_Product_Family(site_, part_no),part_no;
+
+    dock_code__ VARCHAR2(35);
+    hp_line_no_ VARCHAR2(8);
+    hp_rev_no_ NUMBER;
+
+    CURSOR get_co_lines(order_no_ IN VARCHAR2) IS
+      SELECT t.catalog_no,t.contract,t.real_ship_date,t.base_sale_unit_price,t.qty_invoiced,
+             t.line_no,t.rel_no,t.line_item_no
+      FROM Customer_Order_line_tab t
+      WHERE t.order_no = order_no_ AND t.catalog_type <> 'KOMP'
+      AND   t.rowstate <> 'Cancelled';
+
+    tax_amt_ NUMBER;
+    line_item_no_ NUMBER;
+    oem_no_       VARCHAR2(1000);
+
+    CURSOR get_oem_no(order_no_ IN VARCHAR2,part_no_ IN VARCHAR2)IS
+      SELECT Serial_Oem_Conn_API.Get_Oem_No(t.part_no,t.serial_no) oem_no
+      FROM Customer_Order_Reservation_Tab t
+      WHERE t.order_no = order_no_ AND t.part_no = part_no_;
+
+   BEGIN
+
+         FOR rec_ IN org_sales LOOP
+
+            rec_to_insert_.part_no     := rec_.part_no;
+            rec_to_insert_.part_desc   := Sales_Part_API.Get_Catalog_Desc(site_code_,rec_.part_no);
+
+            IF  rec_.sale_cat = 1 THEN
+
+            dock_code__ := nvl(rec_.dock_code,'TEST');
+
+               IF substr(rec_.order_no,5,1)='H' THEN
+                   IF dock_code__ <> 'NS' THEN
+
+
+                     Hpnret_Hp_Dtl_Api.get_order_line(hp_rev_no_,hp_line_no_,rec_.order_no,rec_.line_no,rec_.line_item_no,rec_.REL_NO);
+
+                     l_non_disc_cach_p_         := NVL(Hpnret_Hp_Dtl_Api.Get_Cash_Price(rec_.order_no,hp_rev_no_,hp_line_no_),0);
+
+                     IF (Sales_Part_Type_API.Encode(Hpnret_Hp_Dtl_Api.Get_Catalog_Type(rec_.order_no,hp_rev_no_,hp_line_no_))='KOMP') then
+                        pkg_line_           :=  Hpnret_Hp_Dtl_Api.Get_Pkg_Line_No(rec_.order_no,hp_rev_no_,hp_line_no_);
+
+                        PKG_PART_CASHpRICE_ :=  nvl(Hpnret_Hp_Dtl_Api.Get_Cash_Price(rec_.order_no,hp_rev_no_,hp_line_no_),0)
+                                             - nvl(((Hpnret_Hp_Dtl_Api.Get_Discount(rec_.order_no,hp_rev_no_,hp_line_no_)/100)*Hpnret_Hp_Dtl_Api.Get_Cash_Price(rec_.order_no,hp_rev_no_,hp_line_no_)),0);
+
+                        OPEN  get_pkg_komp_sum_cash_pr(rec_.order_no,pkg_line_);
+                         FETCH get_pkg_komp_sum_cash_pr INTO SUM_KOMP_CACH_PRICE_, komp_line_count_;
+                        CLOSE get_pkg_komp_sum_cash_pr;
+
+                        IF ((nvl(SUM_KOMP_CACH_PRICE_,0)) = 0) THEN
+                           l_non_disc_cach_p_  := 0;
+                        ELSE
+                           IF NVL(komp_line_count_,0)!=0 THEN
+                             l_non_disc_cach_p_ := pkg_part_cashprice_;
+                           ELSE
+                             l_non_disc_cach_p_ := 0;
+                           END IF;
+                        END IF;
+
+
+                        currency_code_      := Customer_Order_Api.Get_Currency_Code(rec_.order_no);
+                        l_non_disc_cach_p_  := ROUND(l_non_disc_cach_p_, Currency_Code_API.Get_Currency_Rounding(Site_API.Get_Company(site_), currency_code_));
+
+                      END IF;
+                        OPEN get_oem_no(rec_.order_no,rec_.part_no);
+                          FETCH get_oem_no INTO oem_no_;
+                        CLOSE get_oem_no;
+                        tax_amt_:= nvl(Customer_order_line_api.Get_Total_Tax_Amount(rec_.order_no,
+                                                        rec_.line_no,
+                                                        rec_.rel_no,
+                                                        rec_.line_item_no),0);
+
+                        l_disc_percentage_         := NVL(Hpnret_Hp_Dtl_Api.Get_Discount(rec_.order_no,hp_rev_no_,hp_line_no_),0);
+                        l_cash_price_              := NVL(l_non_disc_cach_p_,0) - NVL(((l_disc_percentage_/100)*l_non_disc_cach_p_),0);
+                        rec_to_insert_.CASH_VALUE  := (l_cash_price_*rec_.qty_invoiced)+tax_amt_;
+                        rec_to_insert_.ORDER_DATE  := to_char(Hpnret_Hp_Head_Api.Get_Sales_Date(rec_.order_no,1), 'YYYY/MM/DD');
+                        rec_to_insert_.SALES_UNITS := rec_.qty_invoiced;
+                        rec_to_insert_.ORDER_NO    := rec_.order_no;
+                        rec_to_insert_.oem_no      := oem_no_;
+                        rec_to_insert_.status      := rec_.status;
+
+                        IF(l_cash_price_ = 0)THEN
+                         rec_to_insert_.CASH_VALUE  := 0;
+                        END IF;
+                        flag_ := Insert_rec(rec_to_insert_);
+                        oem_no_:= NULL;
+                   END IF;
+                  ELSE
+                     rec_to_insert_.CASH_VALUE  := nvl(rec_.base_sale_unit_price,0)*nvl(rec_.qty_invoiced,0) +
+                                                   nvl(Customer_order_line_api.Get_Total_Tax_Amount(rec_.order_no,
+                                                        rec_.line_no,
+                                                        rec_.rel_no,
+                                                        rec_.line_item_no),0 )-
+                                                   nvl(Hpnret_Cust_Order_Line_API.Get_Tot_Discount_Base( rec_.order_no,
+                                                        rec_.line_no,
+                                                        rec_.rel_no,
+                                                        rec_.line_item_no),0);
+
+                     rec_to_insert_.ORDER_DATE  := TO_CHAR(rec_.real_ship_date,'YYYY/MM/DD');
+                     rec_to_insert_.SALES_UNITS := rec_.qty_invoiced;
+                     rec_to_insert_.ORDER_NO    := rec_.order_no;
+                     rec_to_insert_.status      := rec_.status;
+                      rec_to_insert_.oem_no := NULL;
+                     FOR  oem_rec_ IN get_oem_no(rec_.order_no,rec_.part_no) LOOP
+                      rec_to_insert_.oem_no      := rec_to_insert_.oem_no||' '||oem_rec_.oem_no||'  ';
+                     END LOOP;
+                     IF(rec_.base_sale_unit_price = 0)THEN
+                         rec_to_insert_.CASH_VALUE  := 0;
+                     END IF;
+                     flag_ := Insert_rec(rec_to_insert_);
+                     rec_to_insert_.oem_no := NULL;
+                  END IF;
+         ELSIF rec_.sale_cat = 2 THEN
+            l_non_disc_cach_p_         := NVL(Hpnret_Hp_Dtl_Api.Get_Cash_Price(rec_.order_no,REC_.line_item_no,rec_.line_no),0);
+                                   if (Sales_Part_Type_API.Encode(Hpnret_Hp_Dtl_Api.Get_Catalog_Type(rec_.order_no,REC_.line_item_no,rec_.line_no))='KOMP') then
+                                       pkg_line_           :=  Hpnret_Hp_Dtl_Api.Get_Pkg_Line_No(rec_.order_no,REC_.line_item_no,rec_.line_no);
+
+                                       PKG_PART_CASHpRICE_ :=  nvl(Hpnret_Hp_Dtl_Api.Get_Cash_Price(rec_.order_no,REC_.line_item_no,rec_.line_no),0)
+                                                               -
+                                                                nvl(((Hpnret_Hp_Dtl_Api.Get_Discount(rec_.order_no,REC_.line_item_no,rec_.line_no)/100)*Hpnret_Hp_Dtl_Api.Get_Cash_Price(rec_.order_no,REC_.line_item_no,rec_.line_no)),0);
+
+                                       open get_pkg_komp_sum_cash_pr(rec_.order_no,pkg_line_);
+                                       fetch get_pkg_komp_sum_cash_pr into SUM_KOMP_CACH_PRICE_, komp_line_count_;
+                                       close get_pkg_komp_sum_cash_pr;
+
+
+                                       IF ((nvl(SUM_KOMP_CACH_PRICE_,0)) = 0) THEN
+                                          l_non_disc_cach_p_  := 0;
+                                       ELSE
+                                          IF NVL(komp_line_count_,0)!=0 THEN
+                                            l_non_disc_cach_p_ := pkg_part_cashprice_;
+                                          ELSE
+                                            l_non_disc_cach_p_ := 0;
+                                          END IF;
+                                       END IF;
+
+                                       currency_code_      := Customer_Order_Api.Get_Currency_Code(rec_.order_no);
+                                       l_non_disc_cach_p_  := ROUND(l_non_disc_cach_p_, Currency_Code_API.Get_Currency_Rounding(Site_API.Get_Company(site_), currency_code_));
+                                   end if;
+                                   l_disc_percentage_         := NVL(Hpnret_Hp_Dtl_Api.Get_Discount(rec_.order_no,REC_.line_item_no,rec_.line_no),0);
+                                   l_cash_price_              := NVL(l_non_disc_cach_p_,0) - NVL(((l_disc_percentage_/100)*l_non_disc_cach_p_),0);
+
+                                   IF(rec_.catalog_type='INV')THEN
+                                     line_item_no_:=0;
+                                   ELSIF(rec_.catalog_type='PKG')THEN
+                                     line_item_no_ :=-1;
+                                   END IF;
+
+                                   OPEN get_oem_no(rec_.order_no,rec_.part_no);
+                                     FETCH get_oem_no INTO oem_no_;
+                                   CLOSE get_oem_no;
+
+                                   tax_amt_:= Customer_Order_Line_API.Get_Total_Tax_Amount(rec_.order_no,rec_.line_no,rec_.rel_no,line_item_no_);
+
+                                   rec_to_insert_.CASH_VALUE  := -(l_cash_price_+tax_amt_);
+                                   rec_to_insert_.SALES_UNITS := NVL(-Hpnret_Hp_Dtl_Api.Get_Quantity(rec_.order_no,REC_.line_item_no,rec_.line_no),0);
+                                   rec_to_insert_.ORDER_NO    := rec_.order_no;
+                                   rec_to_insert_.ORDER_DATE  := TO_CHAR(TRUNC(rec_.real_ship_date),'YYYY/MM/DD');
+                                   rec_to_insert_.oem_no      := oem_no_;
+                                   rec_to_insert_.status      := rec_.status;
+                                   flag_ := Insert_rec(rec_to_insert_);
+                                   oem_no_:= NULL;
+
+          ELSIF rec_.sale_cat = 3 THEN
+            FOR co_rec_ IN get_co_lines(rec_.order_no) LOOP
+               OPEN get_oem_no(rec_.order_no,co_rec_.catalog_no);
+                 FETCH get_oem_no INTO oem_no_;
+               CLOSE get_oem_no;
+               tax_amt_:= Customer_Order_Line_API.Get_Total_Tax_Amount(rec_.order_no,co_rec_.line_no,co_rec_.rel_no,co_rec_.line_item_no);
+               rec_to_insert_.order_no    := rec_.order_no;
+               rec_to_insert_.part_no     := co_rec_.catalog_no;
+               rec_to_insert_.part_desc   := Sales_Part_API.Get_Catalog_Desc(co_rec_.contract,co_rec_.catalog_no);
+               rec_to_insert_.order_date  := TO_CHAR(co_rec_.real_ship_date,'YYYY/MM/DD');
+               rec_to_insert_.cash_value  := -(NVL(co_rec_.base_sale_unit_price*co_rec_.qty_invoiced,0)+tax_amt_);
+               rec_to_insert_.sales_units := -1*co_rec_.qty_invoiced;
+               rec_to_insert_.oem_no      := oem_no_;
+               rec_to_insert_.status      := rec_.status;
+               flag_ := Insert_rec(rec_to_insert_);
+               oem_no_:= NULL;
+             END LOOP;
+            END IF;
+            END LOOP;
+   END insert_hp_recs_new;
+
+BEGIN
+
+   result_key_      := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY', report_attr_));
+   site_code_       := UPPER(Client_Sys.Get_Item_Value('SITE',parameter_attr_));
+   sales_man_       := UPPER(Client_Sys.Get_Item_Value('SALES_MAN',parameter_attr_));
+   usr_             := fnd_session_api.Get_Fnd_User();
+
+   fdate_           := TRUNC(SYSDATE)-1;
+   tdate_           := TRUNC(SYSDATE)-1;
+
+   sales_man_name_  := sales_part_salesman_api.Get_Name(sales_man_);
+
+      IF (sales_man_ IS NULL OR sales_man_='%') THEN
+       get_all_salesman_ := 1;
+       sales_man_ := 'All';
+      END IF;
+      FOR site_rec_ IN get_allowed_sites(site_code_)LOOP
+        site_code_ := site_rec_.contract;
+        site_desc_ := site_api.Get_Description(site_code_);
+        User_Allowed_Site_API.Exist(usr_, site_code_);
+        insert_hp_recs_new(part_no_,site_code_,fdate_,tdate_);
+      END LOOP;
+
+   INSERT INTO INFO_SERVICES_RPT (result_key,
+                               row_no,
+                               parent_row_no)
+
+                       values (result_key_,
+                               row_no_,
+                               0);
+
+END Report_Overview;
+
+PROCEDURE Get_Def_Site (
+   site_    OUT VARCHAR2 )
+IS
+BEGIN
+   General_SYS.Init_Method(lu_name_, 'HPNRET_SALE_ANALYSIS_SHD_RPI', 'Get_Def_Site');
+   site_ := User_Allowed_Site_API.Get_Default_Site();
+END Get_Def_Site;
+
+END HPNRET_SALE_ANALYSIS_SHD_RPI;
+
+

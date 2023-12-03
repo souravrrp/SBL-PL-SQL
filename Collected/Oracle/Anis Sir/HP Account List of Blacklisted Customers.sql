@@ -1,0 +1,17 @@
+--HP Account List of Blacklisted Customers
+select H.CONTRACT,
+       H.ACCOUNT_NO,
+       H.ACCOUNT_REV,
+       H.SALES_DATE,
+       H.LENGTH_OF_CONTRACT,
+       H.CLOSED_DATE,
+       H.BUDGET_BOOK_ID,
+       B.ID CUSTOMER_ID,
+       B.FIRST_NAME,
+       H.ROWSTATE
+  from IFSAPP.HPNRET_HP_HEAD_TAB H
+ RIGHT JOIN (select C.ID, C.FIRST_NAME, C.BLACK_LISTED_CUS
+               from IFSAPP.HPNRET_CUSTOMER_GUARANTOR_TAB C
+              WHERE C.BLACK_LISTED_CUS = 'TRUE') B
+    ON H.ID = B.ID
+ ORDER BY H.ID

@@ -1,0 +1,32 @@
+-- Order No against Voucher No
+select i.voucher_type_ref, i.voucher_no_ref, t.c1 order_no
+  from ifsapp.invoice_item_tab t, ifsapp.INVOICE_TAB i
+ where t.invoice_id = i.invoice_id
+   and t.c1 is not null
+   and i.voucher_type_ref = 'F'
+   and i.voucher_no_ref in ('1800330417',
+                            '1800989221',
+                            '1800779052',
+                            '1800088856',
+                            '1800613867',
+                            '1800317414',
+                            '1800219169',
+                            '1800287971',
+                            '1800168322',
+                            '1800503938',
+                            '1800016187',
+                            '1800011528',
+                            '1800166888',
+                            '1800143425',
+                            '1800214005',
+                            '1800199351',
+                            '1800313201',
+                            '1800321499',
+                            '1800426549',
+                            '1800412935',
+                            '1800439106',
+                            '1800517187',
+                            '1800742101',
+                            '1800629239')
+ group by i.voucher_type_ref, i.voucher_no_ref, t.c1
+ order by i.voucher_type_ref, i.voucher_no_ref, t.c1

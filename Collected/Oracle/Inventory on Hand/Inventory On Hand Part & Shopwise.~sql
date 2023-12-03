@@ -1,0 +1,40 @@
+--Inventory on Hand Part & Shopwise
+select S.AREA_CODE,
+       S.DISTRICT_CODE,
+       S.SHOP_CODE,
+       I.PART_NO,
+       P.PRODUCT_FAMILY,
+       P.BRAND,
+       sum(I.QTY_ONHAND) QTY_ONHAND,
+       /*sum(I.QTY_RESERVED) QTY_RESERVED,
+       sum(I.QTY_IN_TRANSIT) QTY_IN_TRANSIT*/
+       (SELECT T.SALE_PRICE_NSP
+          from IFSAPP.SBL_LATEST_PRICE_LIST T
+         where T.PRICE_LIST_NO = '1'
+           and T.SALE_PART_NO = I.part_no) UNIT_NSP,
+       sum(I.QTY_ONHAND) *
+       (SELECT T.SALE_PRICE_NSP
+          from IFSAPP.SBL_LATEST_PRICE_LIST T
+         where T.PRICE_LIST_NO = '1'
+           and T.SALE_PART_NO = I.part_no) TOTAL_NSP
+  from IFSAPP.INVENTORY_PART_IN_STOCK_TAB I
+ inner join IFSAPP.SBL_JR_PRODUCT_DTL_INFO p
+    on i.part_no = p.product_code
+ inner join IFSAPP.SHOP_DTS_INFO S
+    on i.contract = s.shop_code
+ WHERE i.qty_onhand > 0
+   and ifsapp.inventory_part_api.Get_Part_Product_Family(i.contract, i.part_no) not in
+       ('RBOOK', 'GIFT VOUCHER')
+   and ifsapp.inventory_part_api.Get_Part_Product_Code(i.contract, i.part_no) !=
+       'RAW'
+   and ifsapp.inventory_part_api.Get_Second_Commodity(i.contract, i.part_no) not like
+       'S-%'
+   and i.contract LIKE '&SITE'
+   and i.part_no like /*'&PART_NO'*/ 'SGTV-%'
+ group by S.AREA_CODE,
+          S.DISTRICT_CODE,
+          S.SHOP_CODE,
+          P.PRODUCT_FAMILY,
+          P.BRAND,
+          I.PART_NO
+ order by 1, 2, 3, 5, 6, 4

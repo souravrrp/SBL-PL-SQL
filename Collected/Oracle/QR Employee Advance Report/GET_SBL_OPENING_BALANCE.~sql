@@ -1,0 +1,59 @@
+create or replace function GET_SBL_OPENING_BALANCE(
+       e_id       in varchar2,
+       acct_head  in varchar2,
+       from_date  in date) return number
+
+is
+
+    cursor get_open_bal_before_2015(e_id in varchar2, acct_head in varchar2) is
+      select  (o.debit - o.credit) opening_balance
+      from    SBL_OPENING_BALANCE_2015 o
+      where   o.id = e_id
+      and     o.account_head = acct_head;
+
+    cursor get_open_bal_after_2015(e_id in varchar2, acct_head in varchar2, from_date in date) is
+      select nvl(sum(v.Debit), 0) - nvl(sum(v.Credit), 0)
+      from   ifsapp.SBL_LEDGER_ITEMS v
+      where  v.identity = e_id
+      and    v.Account_Head = acct_head
+      --and    v.ledger_date >= to_date('2015/1/1', 'YYYY/MM/DD')
+      and    v.ledger_date < from_date
+      group by v.identity;
+
+    no_of_acct             number;
+    open_bal_before        number;
+    open_bal_after         number;
+    opening_balance        number;
+
+begin
+
+    select count(o.id) into no_of_acct
+      from sbl_opening_balance_2015 o
+     where o.id = e_id
+       and o.account_head = acct_head;
+
+    if no_of_acct != 0 then
+      open get_open_bal_before_2015(e_id, acct_head);
+      fetch get_open_bal_before_2015 into open_bal_before;
+      close get_open_bal_before_2015;
+    else
+      open_bal_before:= 0;
+    end if;
+
+    select count(v.identity) into no_of_acct
+    from   ifsapp.SBL_LEDGER_ITEMS v
+    where  v.identity = e_id
+    and    v.Account_Head = acct_head
+    and    v.ledger_date < from_date;
+    
+    if no_of_acct != 0 then
+      open get_open_bal_after_2015(e_id, acct_head, from_date);
+      fetch get_open_bal_after_2015 into open_bal_after;
+      close get_open_bal_after_2015;
+    else
+      open_bal_after:= 0;
+    end if;
+
+    opening_balance:= open_bal_before + open_bal_after;
+    return opening_balance;
+end GET_SBL_OPENING_BALANCE;

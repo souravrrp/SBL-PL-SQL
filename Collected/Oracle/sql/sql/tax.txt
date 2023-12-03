@@ -1,0 +1,123 @@
+select   C.order_no  order_no, 
+               C.line_no   line_no,
+               C.line_item_no  line_item_no,
+               C.REL_NO    REL_NO,
+               C.real_ship_date  real_ship_date,
+               c.qty_invoiced qty_invoiced,
+               C.base_sale_unit_price  base_sale_unit_price, 
+               C.dock_code dock_code,
+               1           sale_cat,
+               c.catalog_no   part_no,
+               c.catalog_type_db catalog_type,
+               decode(substr(c.order_no,4,2),'-R','Cash Sale'
+                                            ,'-H','Hire Sale') status  ,
+		customer_order_line_api.Get_Sale_Price_Total(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) SALE_PRICE,
+		(SELECT SUM(t.discount_amount)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = c.order_no
+ AND t.line_no = c.LINE_NO
+ AND t.rel_no =  c.REL_No
+ AND t.line_item_no = c.LINE_ITEM_NO ) DISCOUNT,
+ customer_order_line_api.Get_Total_Tax_Amount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) TAX_PRICE , 
+ 
+  ( select distinct  h.VAT_RECEIPT from IFSAPP.HPNRET_PAY_RECEIPT_head_tab h where h.ACCOUNT_NO=c.ORDER_NO and h.VAT_RECEIPT is not null  and ROWNUM <= 1) VAT_RECEIPT,
+  ( select
+   distinct  p.VAT_RECEIPT 
+   from  hpnret_co_pay_head_tab p ,
+   hpnret_co_pay_dtl_tab d
+   where
+   p.PAY_NO=d.PAY_NO
+   and d.ORDER_NO= c.order_no
+   and d.PAY_LINE_NO=1
+   and p.ROWSTATE in ('Approved','Printed')  
+   and p.VAT_RECEIPT is not null
+   and ROWNUM <= 1
+   
+   ) VAT_RECEIPT2        
+      from customer_order_line C
+      where  c.CONTRACT in
+(select 
+shop_code from shop_dts_info)
+	  and trunc(C.real_ship_date) between to_date('&Date','dd/mm/yyyy') and to_date('&Date1','dd/mm/yyyy')
+     AND c.catalog_type_db <> 'KOMP'
+      AND (c.demand_code_db IS NULL OR c.demand_code_db IN ('PO','WO'))
+	  and C.dock_code is null
+  
+UNION
+      SELECT   H.ACCOUNT_NO   order_no,
+               H.line_no      line_no,
+               H.account_rev  line_item_no,
+               '1'            rel_no,
+               H.Variated_Date   real_ship_date,
+               H.QUANTITY        qty_invoiced,
+               NULL              base_sale_unit_price,
+               NULL           dock_code,
+               2 sale_cat,
+               h.catalog_no part_no,
+               h.catalog_type catalog_type,
+               h.rowstate status  ,
+			   (-1)*customer_order_line_api.Get_Sale_Price_Total(h.Account_No, h.REF_LINE_NO, h.REF_REL_NO ,h.REF_LINE_ITEM_NO) SALE_PRICE,
+(SELECT SUM(t.discount_amount)*(-1)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = h.Account_No
+ AND t.line_no = h.REF_LINE_NO
+ AND t.rel_no =  h.REF_REL_No
+ AND t.line_item_no = h.REF_LINE_ITEM_NO ) DISCOUNT,
+(-1)*customer_order_line_api.Get_Total_Tax_Amount(h.Account_No, h.REF_LINE_NO, h.REF_REL_NO ,h.REF_LINE_ITEM_NO) TAX_PRICE,
+ ( select distinct  h.VAT_RECEIPT from IFSAPP.HPNRET_PAY_RECEIPT_head_tab h where h.ACCOUNT_NO=h.ACCOUNT_NO and h.VAT_RECEIPT is not null   and ROWNUM <= 1) VAT_RECEIPT,
+ '  ' VAT_RECEIPT2            
+      FROM Hpnret_Hp_Dtl_tab H
+      WHERE h.Rowstate IN ('CashConverted','ExchangedIn','Returned')
+      AND h.catalog_type <> 'KOMP'
+	  AND  trunc(h.VARIATED_DATE) between to_date('&Date','dd/mm/yyyy') and to_date('&Date1','dd/mm/yyyy')
+    
+      AND H.CONTRACT in
+	  (select 
+	  		  shop_code from shop_dts_info)
+     
+        
+UNION
+      SELECT   DISTINCT rml.order_no      order_no ,
+               NULL              line_no,
+               NULL              line_item_no,
+               NULL              rel_no,
+               NULL              real_ship_date,
+               NULL              qty_invoiced,
+               NULL              base_sale_unit_price,
+               NULL              dock_code,
+               3                 sale_cat,
+               NULL              part_no,
+               NULL              catalog_type,
+               rml.rowstate      status,
+			   (-1)*customer_order_line_api.Get_Sale_Price_Total(rml.order_no, rml.LINE_NO, rml.REL_NO ,rml.LINE_ITEM_NO) SALE_PRICE,
+(SELECT SUM(t.discount_amount)*(-1)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = rml.order_no
+ AND t.line_no = rml.LINE_NO
+ AND t.rel_no =  rml.REL_No
+ AND t.line_item_no = rml.LINE_ITEM_NO ) DISCOUNT,
+(-1)*customer_order_line_api.Get_Total_Tax_Amount(rml.order_no, rml.LINE_NO, rml.REL_NO ,rml.LINE_ITEM_NO) TAX_PRICE,
+ ( select distinct  h.VAT_RECEIPT from IFSAPP.HPNRET_PAY_RECEIPT_head_tab h where rml.ORDER_NO=h.ACCOUNT_NO and h.VAT_RECEIPT is not null  and ROWNUM <= 1) VAT_RECEIPT,
+  ( select
+   distinct  p.VAT_RECEIPT 
+   from  hpnret_co_pay_head_tab p ,
+   hpnret_co_pay_dtl_tab d
+   where
+   p.PAY_NO=d.PAY_NO
+   and d.ORDER_NO= rml.order_no
+   and d.PAY_LINE_NO=1
+   and p.ROWSTATE in ('Approved','Printed')  
+   and p.VAT_RECEIPT is not null
+   and ROWNUM <= 1
+   
+   ) VAT_RECEIPT2
+                     FROM     return_material_line_tab rml
+                     WHERE    rmL.rowstate = 'ReturnCompleted'
+                     AND  identity_invoice_info_api.get_identity_type(Site_API.Get_Company(rml.contract),return_material_api.Get_Customer_No(rml.rma_no),'Customer') = 'EXTERN'
+                     AND  RML.CATALOG_NO IS NOT NULL
+					 
+					and  trunc(rmL.Date_Returned) between to_date('&Date','dd/mm/yyyy') and to_date('&Date1','dd/mm/yyyy')
+                     AND      RML.contract  in
+	  				 		  (select 
+	  		  				  		  shop_code from shop_dts_info)
+                     AND      substr(RML.order_no,5,1) ='R'  

@@ -1,0 +1,70 @@
+--*****Dealer Closing Balance Transfer Procedure
+begin
+  insert into SBL_DEALER_BALANCE
+    select '&YEAR' "YEAR",
+           '&PERIOD' "PERIOD",
+           b.dealer_id,
+           b.dealer_name,
+           sum(b.balance_amt) close_balance
+      from (select g.party_type_id dealer_id, --***** Wholesale Dealerwise Balance (Posted Vouchers)
+                   IFSAPP.CUSTOMER_INFO_API.Get_Name(g.party_type_id) dealer_name,
+                   (nvl(sum(g.debet_amount), 0) -
+                   nvl(sum(g.credit_amount), 0)) balance_amt
+              from ifsapp.GEN_LED_VOUCHER_ROW_TAB g
+             where g.account in ('10070010',
+                                 '10070020',
+                                 '10070030',
+                                 '10070040',
+                                 '20020012')
+               and g.voucher_type in
+                   ('N', 'F', 'B', 'I', 'U', 'G', 'K', 'CB')
+               and g.reference_serie in ('CD',
+                                         'CR',
+                                         'WSADV',
+                                         'SI',
+                                         'CF',
+                                         'CI',
+                                         'EX',
+                                         'TRADV',
+                                         'WSADVRF',
+                                         'CUPOA')
+               and g.voucher_date <=
+                   last_day(to_date('&YEAR' || '/' || '&PERIOD' || '/1',
+                                    'YYYY/MM/DD'))
+               and g.party_type_id like '&DEALER_ID'
+             group by g.party_type_id
+            
+            union
+            
+            --***** Wholesale Dealerwise Balance (Non Posted Vouchers)
+            select v.party_type_id dealer_id,
+                   IFSAPP.CUSTOMER_INFO_API.Get_Name(v.party_type_id) dealer_name,
+                   (nvl(sum(v.debet_amount), 0) -
+                   nvl(sum(v.credit_amount), 0)) balance_amt
+              from ifsapp.VOUCHER_ROW_TAB v
+             where v.account in ('10070010',
+                                 '10070020',
+                                 '10070030',
+                                 '10070040',
+                                 '20020012')
+               and v.voucher_type in
+                   ('N', 'F', 'B', 'I', 'U', 'G', 'K', 'CB')
+               and v.reference_serie in ('CD',
+                                         'CR',
+                                         'WSADV',
+                                         'SI',
+                                         'CF',
+                                         'CI',
+                                         'EX',
+                                         'TRADV',
+                                         'WSADVRF',
+                                         'CUPOA')
+               and v.voucher_date <=
+                   last_day(to_date('&YEAR' || '/' || '&PERIOD' || '/1',
+                                    'YYYY/MM/DD'))
+               and v.party_type_id like '&DEALER_ID'
+             group by v.party_type_id) b
+     group by b.dealer_id, b.dealer_name
+     order by 1;
+  commit;
+end;

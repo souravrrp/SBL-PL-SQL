@@ -1,0 +1,11 @@
+select * from TEMP_INVENTORY_PART_TAB;
+
+delete from TEMP_INVENTORY_PART_TAB;
+commit;
+
+EXECUTE TRANFER_TO_INVENTORY_PART('SCOM');
+
+select * from TEMP_SALES_PART_TAB;
+
+delete from TEMP_SALES_PART_TAB;
+commit;

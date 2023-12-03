@@ -1,0 +1,4 @@
+select *
+  from IFSAPP.SBL_LATEST_PRICE_LIST T
+ where T.PRICE_LIST_NO = '&PRICE_LIST_NO'
+   and T.SALE_PART_NO LIKE '%&CATALOG_NO%'

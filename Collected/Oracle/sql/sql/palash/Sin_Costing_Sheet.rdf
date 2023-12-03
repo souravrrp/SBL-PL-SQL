@@ -1,0 +1,434 @@
+-----------------------------------------------------------------------------
+--
+--  Logical unit: <<< Enter your logical unit description here >>>
+--
+--  File:         ReportTemplate.RDF
+--  Version:      Foundation1 2.2
+--
+--  Date    Sign  History
+--  ------  ----  -----------------------------------------------------------
+--
+-----------------------------------------------------------------------------
+
+define MODULE             = HPNRET
+define LU                 = HpnretCustomerOrder
+define PKG                = SIN_COSTING_SHT_RPI
+
+define TABLE              = INFO_SERVICES_RPT
+define VIEW               = SIN_COSTING_SHT_REP
+define METHOD             = Report_Overview
+
+-----------------------------------------------------------------------------
+-- PACKAGE SPECIFICATION:
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG specification
+
+CREATE OR REPLACE PACKAGE &PKG AS
+
+module_ CONSTANT VARCHAR2(6) := '&MODULE';
+lu_name_ CONSTANT VARCHAR2(25) := '&LU';
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 );
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- REPORTS
+-----------------------------------------------------------------------------
+
+PROMPT Creating report view &VIEW
+
+CREATE OR REPLACE VIEW &VIEW AS
+SELECT RESULT_KEY                              RESULT_KEY,
+       ROW_NO                                  ROW_NO,
+       s1                                      PO_NO,
+       s2                                      VESSEL,
+       s3                                      PART_NO,
+       s4                                      CHARGE_TYPE,
+       n1                                      RECEIVED_QTY,
+       n2                                      UNIT_PRICE,
+       n3                                      FOB_PRICE,
+       n4                                      CUR_RATE,
+       n5                                      CHARGE_AMT,         
+       d1                                      SHIPMENT_DATE,
+       s5                                      SHIPMENT_NO,
+       s6                                      CURRANCY_CODE,
+       s7                                      MMONTH,
+       s8                                      MYEAR,
+       s9                                      E_CODE,
+       n6                                      PRV_COST,
+       n7                                      LAN_COST,
+       s10                                     PART_DES,
+       n8                                      LINE_NO,
+       n9                                      RELEASE_NO,
+       s11                                     CHARGE_BY
+FROM  &TABLE
+WITH  read only;
+
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=&LU^
+   ^METHOD=&PKG..&METHOD^MODE=PLSQL1.2^TABLE=&TABLE^TITLE=Report Title^';
+
+COMMENT ON COLUMN &VIEW..result_key IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..row_no IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..po_no IS
+   'FLAGS=A----^TITLE=Po No^ITEM_NAME=iPoNo^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..vessel IS
+   'FLAGS=A----^TITLE=Vessel^ITEM_NAME=iVessel^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..part_no IS
+   'FLAGS=A----^TITLE=Part No^ITEM_NAME=iPartNo^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..charge_type IS
+   'FLAGS=A----^TITLE=Charge Type^ITEM_NAME=iChargeType^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..Received_Qty IS
+   'FLAGS=A----^TITLE=Received Qty^ITEM_NAME=iReceivedQty^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..unit_price IS
+   'FLAGS=A----^TITLE=Unit Price^ITEM_NAME=iUnitPrice^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..fob_price IS
+   'FLAGS=A----^TITLE=Fob Price^ITEM_NAME=iFobPrice^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..cur_rate IS
+   'FLAGS=A----^TITLE=Cur Rate^ITEM_NAME=iCurRate^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..charge_amt IS
+   'FLAGS=A----^TITLE=Charge Amt^ITEM_NAME=iChargeAmt^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..shipment_date IS
+   'FLAGS=A----^TITLE=Shipment Date^ITEM_NAME=iShipmentDate^DATATYPE=DATE^';
+COMMENT ON COLUMN &VIEW..shipment_no IS
+   'FLAGS=A----^TITLE=Shipment No^ITEM_NAME=iShipmentNo^DATATYPE=STRING^QUERY=Shipment No:^QFLAGS=MC---^';
+COMMENT ON COLUMN &VIEW..currancy_code IS
+   'FLAGS=A----^TITLE=Currancy Code^ITEM_NAME=iCurrancyCode^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..mmonth IS
+   'FLAGS=A----^TITLE=Mmonth^ITEM_NAME=iMmonth^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..myear IS
+   'FLAGS=A----^TITLE=Myear^ITEM_NAME=iMyear^DATATYPE=STRING^';   
+COMMENT ON COLUMN &VIEW..e_code IS
+   'FLAGS=A----^TITLE=Expense Code^ITEM_NAME=iECode^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..Prv_Cost IS
+   'FLAGS=A----^TITLE=Previous Cost^ITEM_NAME=iPrvCost^DATATYPE=NUMBER^'; 
+COMMENT ON COLUMN &VIEW..Lan_Cost IS
+   'FLAGS=A----^TITLE=Landing Cost^ITEM_NAME=iLanCost^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..Part_Des IS
+   'FLAGS=A----^TITLE=Part Description^ITEM_NAME=iPartDes^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..line_no IS
+   'FLAGS=A----^TITLE=Line No^ITEM_NAME=iLineNo^DATATYPE=NUMBER^'; 
+COMMENT ON COLUMN &VIEW..release_no IS
+   'FLAGS=A----^TITLE=Release No^ITEM_NAME=iReleaseNo^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..charge_by IS
+   'FLAGS=A----^TITLE=Charge By^ITEM_NAME=iChargeBy^DATATYPE=STRING^';
+   
+BEGIN
+   Report_Sys.Define_Report_('&VIEW', '&MODULE', '&LU', 'Shipping Costing Sheet', '&TABLE', '&PKG..&METHOD', 0);
+   Report_SYS.Define_Report_Layout_('&VIEW', 'SinCostingSht.qrp','ReportTemplatePortrate','A4','PART_NO,LINE_NO,RELEASE_NO,CHARGE_BY');
+   
+   Report_SYS.Refresh_('&VIEW');
+END;
+/
+
+-----------------------------------------------------------------------------
+-- PACKAGE IMPLEMENTATION
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG implementation
+
+CREATE OR REPLACE PACKAGE BODY &PKG AS
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 )
+IS
+   result_key_  NUMBER;
+   row_no_      NUMBER := 1;
+   shipment     VARCHAR2(4);
+   prv_cost     NUMBER;
+   lan_cost     NUMBER;
+   part_no_     VARCHAR2(50);
+   line_no_     VARCHAR2(11);
+   release_no_  VARCHAR2(11);
+   chk_ord_no_  VARCHAR2(11);
+   chk_line_no_ VARCHAR2(11);
+   chk_rel_no_  VARCHAR2(11);
+   check_       BOOLEAN := FALSE;
+
+   CURSOR get_details(shipment IN VARCHAR2) IS
+        SELECT sl.order_no,
+               sh.shipment_date,
+               sh.note,
+               pl.part_no,
+               ifsapp.purchase_part_api.Get_Description(po.contract,pl.part_no) Part_Des,
+               sl.received_qty,
+               pl.fbuy_unit_price,
+               pl.fbuy_unit_price * sl.received_qty "FOB_PRICE",
+               upper(pc.description) Description,
+               substr(upper(pc.description),(instr((pc.description),'#')+1),length(pc.description)) E_Code,
+               NVL(sh.curr_rate,1) rate_authorized,
+               pc.charge_amount,
+               po.currency_code,
+               upper(to_char(sh.shipment_date,'month'))mmonth,
+               to_char(sh.shipment_date,'YYYY')myear,
+               po.contract,
+               po.date_entered,
+               sl.line_no,
+               sl.release_no,
+               decode(pc.connect_to_line_no,NULL,'NoNe','Full') flag
+        FROM   ifsapp.purinv_shipments sh,
+               ifsapp.purinv_ship_poline sl,
+               ifsapp.purchase_order_charge pc,
+               ifsapp.purchase_order po,
+               ifsapp.purchase_order_line_part pl
+        WHERE  sh.shipment_id = shipment
+        AND    sh.shipment_id = sl.shipment_id
+        AND    sl.order_no = pc.order_no
+        AND    sl.line_no = pc.connect_to_line_no
+        AND    sl.release_no = pc.connect_to_rel_no
+        AND    pc.order_no = po.order_no
+        AND    sl.order_no = pl.order_no
+        AND    sl.line_no = pl.line_no
+        AND    sl.release_no = pl.release_no
+        ORDER BY pl.part_no, sl.line_no,sl.release_no,substr(upper(pc.description),(instr((pc.description),'#')+1),length(pc.description));
+        
+   CURSOR get_lan_cost(or_po IN VARCHAR2 , line_no IN NUMBER , release_no IN NUMBER ) IS   
+        SELECT SUM(lc.charge_amount)
+        FROM ifsapp.purchase_order_charge lc
+        WHERE lc.order_no = or_po
+        AND lc.connect_to_line_no = line_no
+        AND lc.connect_to_rel_no = release_no;
+        
+   CURSOR get_prev_cost(Xpart_no IN VARCHAR2, Or_PO IN VARCHAR2 , contract_ IN VARCHAR2 , po_date IN DATE ) IS 
+        SELECT 
+            SUM(((SELECT SUM(pc.charge_amount)
+                FROM ifsapp.purchase_order_charge pc
+                WHERE pc.order_no = pm.order_no
+                AND pc.connect_to_line_no = pm.line_no
+                AND pc.connect_to_rel_no = pm.release_no)/pm.buy_qty_due)+(pm.fbuy_unit_price* ifsapp.purinv_ship_poline_api.Get_Rate_Authorized(pm.order_no, pm.line_no,pm.release_no, ifsapp.purchase_order_charge_api.Get_Shipment_Id(pm.order_no,1)))) "Prv_Cost"
+        FROM ifsapp.purchase_order_line_part pm
+        WHERE pm.part_no = XPart_No
+        AND pm.contract = contract_
+        AND substr(pm.order_no,1,1) LIKE substr(Or_PO,1,1)
+        AND trunc(ifsapp.purchase_order_api.Get_Wanted_Receipt_Date(pm.order_no)) < trunc(to_date(PO_Date,'YYYY/MM/DD'),'MONTH')
+        AND trunc(ifsapp.purchase_order_api.Get_Wanted_Receipt_Date(pm.order_no)) = ( SELECT trunc(MAX(ifsapp.purchase_order_api.Get_Wanted_Receipt_Date(pp.order_no)))
+                                FROM ifsapp.purchase_order_line_part pp
+                                WHERE pp.part_no = XPart_No
+                                AND pp.contract = contract_
+                                AND substr(pp.order_no,1,1) LIKE substr(Or_PO,1,1)
+                                AND pp.state  NOT IN ('Cancelled','Planned','Released')
+                                AND pp.order_no NOT IN Or_PO
+                                AND ifsapp.purchase_order_api.Get_Wanted_Receipt_Date(pp.order_no) < trunc(to_date(PO_Date,'YYYY/MM/DD'),'MONTH')
+                                GROUP BY pp.part_no)
+       AND pm.fbuy_unit_price > 0.01;
+           
+ CURSOR get_excluded_cost_per_amt(po_no_ VARCHAR2,qty_ NUMBER,part_no_ VARCHAR2,contract_ VARCHAR2) IS     
+       SELECT t.charge_type,t.charge_amount,(t.charge_amount*qty_)/decode(Inventory_Part_Config_API.Get_Estimated_Material_Cost(contract_,part_no_,'*'),0,1000,Inventory_Part_Config_API.Get_Estimated_Material_Cost(contract_,part_no_,'*')) per_amount
+       FROM purchase_order_charge_tab t 
+       WHERE t.order_no = po_no_ 
+       AND t.distribute_charge_by = 'PER_AMOUNT';
+ 
+ CURSOR get_excluded_cost_per_line(po_no_ VARCHAR2) IS     
+       SELECT t.charge_type,t.charge_amount
+       FROM purchase_order_charge_tab t 
+       WHERE t.order_no = po_no_ 
+       AND t.distribute_charge_by = 'PER_LINE';
+       
+BEGIN
+   result_key_ := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY', report_attr_));
+   shipment := Client_SYS.Get_Item_Value('SHIPMENT_NO',parameter_attr_);
+   
+      FOR rec_ IN get_details(shipment) LOOP
+      prv_cost := 0 ; 
+      lan_cost := 0;
+      OPEN get_prev_cost(rec_.part_no,rec_.order_no,rec_.contract,rec_.date_entered);
+      FETCH get_prev_cost INTO prv_cost;
+      CLOSE get_prev_cost;
+      
+      OPEN get_lan_cost(rec_.order_no,rec_.line_no, rec_.release_no);
+      FETCH get_lan_cost INTO lan_cost;
+      CLOSE get_lan_cost;
+      
+      INSERT INTO INFO_SERVICES_RPT(result_key,
+                  row_no,
+                  parent_row_no,
+                  s1,             --PO_NO
+                  s2,             --VESSEL
+                  s3,             --PART_NO
+                  s4,             --CHARGE_TYPE
+                  n1,             --RECEIVED_QTY
+                  n2,             --UNIT_PRICE
+                  n3,             --FOB_PRICE
+                  n4,             --CUR_RATE
+                  n5,             --CHARGE_AMT         
+                  d1,             --SHIPMENT_DATE
+                  s5,             --SHIPMENT_NO
+                  s6,             --CURRANCY_CODE,
+                  s7,             --MMONTH,
+                  s8,             --MYEAR
+                  s9,             --E_CODE  
+                  n6,             --prv_cost  
+                  n7,             --LAN_COST      
+                  s10,            --Part_Des,
+                  n8,             --Line_No
+                  n9,             --Release_No
+                  s11)
+               VALUES(result_key_,
+                  row_no_,
+                  0,
+                  rec_.order_no,
+                  rec_.note,
+                  rec_.part_no,
+                  rec_.description,
+                  rec_.received_qty,
+                  rec_.fbuy_unit_price,
+                  rec_.fob_price,
+                  rec_.rate_authorized,
+                  rec_.charge_amount,
+                  rec_.shipment_date,
+                  shipment,
+                  rec_.currency_code,
+                  rec_.mmonth,
+                  rec_.myear,
+                  rec_.e_code,
+                  prv_cost,
+                  lan_cost+((rec_.received_qty* rec_.fbuy_unit_price)*rec_.rate_authorized),
+                  rec_.Part_Des,
+                  rec_.line_no,
+                  rec_.release_no,
+                  rec_.flag);
+            row_no_:= row_no_+1;
+            IF(chk_ord_no_ <> rec_.order_no OR chk_line_no_ <> rec_.line_no OR chk_rel_no_ <> rec_.release_no) THEN
+             chk_ord_no_  := rec_.order_no;
+             chk_line_no_ := rec_.line_no;
+             chk_rel_no_  := rec_.release_no;
+             check_ := TRUE;
+            END IF;
+            IF(chk_ord_no_ IS NULL AND chk_line_no_ IS NULL AND chk_rel_no_ IS NULL)THEN
+             chk_ord_no_  := rec_.order_no;
+             chk_line_no_ := rec_.line_no;
+             chk_rel_no_  := rec_.release_no;
+             check_ := TRUE;
+            END IF;
+  IF(check_) THEN       
+   FOR excluded_cost_ IN get_excluded_cost_per_amt(rec_.order_no,rec_.received_qty,rec_.part_no,rec_.contract) LOOP          
+     INSERT INTO INFO_SERVICES_RPT(result_key,
+                  row_no,
+                  parent_row_no,
+                  s1,             --PO_NO
+                  s2,             --VESSEL
+                  s3,             --PART_NO
+                  s4,             --CHARGE_TYPE
+                  n1,             --RECEIVED_QTY
+                  n2,             --UNIT_PRICE
+                  n3,             --FOB_PRICE
+                  n4,             --CUR_RATE
+                  n5,             --CHARGE_AMT         
+                  d1,             --SHIPMENT_DATE
+                  s5,             --SHIPMENT_NO
+                  s6,             --CURRANCY_CODE,
+                  s7,             --MMONTH,
+                  s8,             --MYEAR
+                  s9,             --E_CODE  
+                  n6,             --prv_cost  
+                  n7,             --LAN_COST      
+                  s10,            --Part_Des,
+                  n8,             --Line_No
+                  n9,             --Release_No
+                  s11)
+               VALUES(result_key_,
+                  row_no_,
+                  0,
+                  rec_.order_no,
+                  rec_.note,
+                  rec_.part_no,
+                  excluded_cost_.charge_type,
+                  rec_.received_qty,
+                  rec_.fbuy_unit_price,
+                  rec_.fob_price,
+                  rec_.rate_authorized,
+                  excluded_cost_.per_amount,
+                  rec_.shipment_date,
+                  shipment,
+                  rec_.currency_code,
+                  rec_.mmonth,
+                  rec_.myear,
+                  excluded_cost_.charge_type,
+                  0,
+                  0,
+                  rec_.Part_Des,
+                  rec_.line_no,
+                  rec_.release_no,
+                  rec_.flag);
+                  
+            row_no_:= row_no_+1;
+      END LOOP;
+      FOR cost_per_line_rec_ IN get_excluded_cost_per_line(rec_.order_no) LOOP
+        INSERT INTO INFO_SERVICES_RPT(result_key,
+                  row_no,
+                  parent_row_no,
+                  s1,             --PO_NO
+                  s2,             --VESSEL
+                  s3,             --PART_NO
+                  s4,             --CHARGE_TYPE
+                  n1,             --RECEIVED_QTY
+                  n2,             --UNIT_PRICE
+                  n3,             --FOB_PRICE
+                  n4,             --CUR_RATE
+                  n5,             --CHARGE_AMT         
+                  d1,             --SHIPMENT_DATE
+                  s5,             --SHIPMENT_NO
+                  s6,             --CURRANCY_CODE,
+                  s7,             --MMONTH,
+                  s8,             --MYEAR
+                  s9,             --E_CODE  
+                  n6,             --prv_cost  
+                  n7,             --LAN_COST      
+                  s10,            --Part_Des,
+                  n8,             --Line_No
+                  n9,             --Release_No
+                  s11)
+               VALUES(result_key_,
+                  row_no_,
+                  0,
+                  rec_.order_no,
+                  rec_.note,
+                  rec_.part_no,
+                  cost_per_line_rec_.charge_type,
+                  rec_.received_qty,
+                  rec_.fbuy_unit_price,
+                  rec_.fob_price,
+                  rec_.rate_authorized,
+                  cost_per_line_rec_.charge_amount,
+                  rec_.shipment_date,
+                  shipment,
+                  rec_.currency_code,
+                  rec_.mmonth,
+                  rec_.myear,
+                  cost_per_line_rec_.charge_type,
+                  0,
+                  0,
+                  rec_.Part_Des,
+                  rec_.line_no,
+                  rec_.release_no,
+                  rec_.flag);                
+                row_no_:= row_no_+1;    
+      END LOOP;
+      check_ := FALSE;
+    END IF;
+            
+            part_no_ := rec_.part_no;
+            line_no_ := rec_.line_no;
+            release_no_ := rec_.release_no;
+                    
+   END LOOP;
+   
+END &METHOD;
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- END
+-----------------------------------------------------------------------------
+

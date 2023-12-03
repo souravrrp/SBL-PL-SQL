@@ -1,0 +1,9 @@
+--POS Status
+select P.SHOP_CODE,
+       P.BANK_ID,
+       P.TERMINAL_ID,
+       P.FUNCTIONAL,
+       P.USERID,
+       TRUNC(P.ENTRY_DATE) ENTRY_DATE
+  from IFSAPP.SBL_PI_BANK_CARD_POS P
+ ORDER BY P.SHOP_CODE

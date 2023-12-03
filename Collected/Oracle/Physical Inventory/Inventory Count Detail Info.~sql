@@ -1,0 +1,24 @@
+select (select p.product_group 
+          from SBL_PRODUCT_INFO p
+          where p.group_no = (select c.group_no 
+            from SBL_PRODUCT_CATEGORY_INFO c
+            where c.product_code = t.catalog_no)) PRODUCT_CATEGORY,
+    t.catalog_no,
+    t.site,
+    t.qty_onhand,
+    t.qty_saleable,
+    t.qty_revert,
+    t.qty_ber,
+    sl.quantity qty_sale
+from SBL_INVENTORY_COUNTING_DTS t,
+  SBL_SALES_TEMP_FOR_INVENTORY sl
+where t.site = sl.shop_code and
+  t.catalog_no = sl.product_code and
+  t.site like '&Shop_Code' and
+  t.catalog_no in (select c.product_code 
+                    from SBL_PRODUCT_CATEGORY_INFO c 
+                    where c.group_no in (select p.group_no 
+                                        from SBL_PRODUCT_INFO p where p.product_group like '&Product_Category'))
+order by t.site, PRODUCT_CATEGORY, t.catalog_no
+  
+--select * from SBL_SALES_TEMP_FOR_INVENTORY sl

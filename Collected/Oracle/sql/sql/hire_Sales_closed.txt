@@ -1,0 +1,7 @@
+select
+*
+from 
+hpnret_hp_head h
+where 
+h.CLOSED_DATE between to_date('01/02/2013','dd/mm/yyyy') and to_date('28/02/2013','dd/mm/yyyy')
+and h.STATE in ('Closed','CashConverted')

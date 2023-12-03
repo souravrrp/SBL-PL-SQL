@@ -1,0 +1,22 @@
+--Cut Off Balance as per SIS
+select r.contract, r.part_no, r.cf_balance from REP246_TAB r
+where r.stat_year = 2013 and
+r.stat_period_no = 12 and
+r.cf_balance > 0;
+
+--Cut Off Balance in the Inventory
+select * from SBL_INVENTORY_COUNTING_DTS;
+select i.site, i.catalog_no, i.qty_onhand from SBL_INVENTORY_COUNTING_DTS i order by i.site;
+
+--Delete all Cut Off Balance
+delete from SBL_INVENTORY_COUNTING_DTS i;
+commit;
+
+--Inserting fresh Cut Off Balance Data
+insert into SBL_INVENTORY_COUNTING_DTS
+(site, catalog_no, qty_onhand)
+select r.contract, r.part_no, r.cf_balance from REP246_TAB r
+where r.stat_year = 2013 and
+  r.stat_period_no = 12 and
+  r.cf_balance > 0;
+commit;

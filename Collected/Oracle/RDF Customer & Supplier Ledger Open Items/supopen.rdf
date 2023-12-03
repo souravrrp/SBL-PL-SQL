@@ -1,0 +1,1861 @@
+-----------------------------------------------------------------------------
+--
+--  Logical unit: Supplier Open Ledger Items report
+--
+--  File:        SUPOPEN.RDF
+--
+--  Date    Sign  History
+--  ------  ----  -----------------------------------------------------------
+--  970423  JOBJ  Removed invalid define statement
+--  970613  PICZ  Added function Get_Blocked_Codeparts - returns 'TRUE' if
+--                codepart is enabled in company
+--  970616  PICZ  Changed size of LEDGER_ITEM_SERIES_ID to 50 characters; added
+--                LOV for From/To Supplier parameter; name of COMPANY_ID changed
+--                to COMPANY ( standard ), Added column ORDER_COLUMN
+--  970624  PICZ  Added column COMPANY_NAME; added Get_Company_Specific
+--  970711  DAVJ  Added column Dummycodeparts, Dummycodenames to control
+--                appearance of codestring in table page
+--  970711  DAVJ  Modified FUNCTION Codeparts_Ok___
+--  970919  DavJ  Added column print_details and column flag_print_details
+--  971020  PICZ  Improved performace: removed Get_On_Account_Codestr___ nad
+--                Get_Codestring___; using LEDGER_ITEM_TAB instead of view;
+--                rebuilded &METHOD method; added validation of codepart
+--                used as parameters
+--  971030  PICZ  Fixed bug in main SELECT; added table TABLE2, added Store_Codepart_Names
+--                removed unused functions
+--  980108  MABE  Payment module structure rebuilt.
+--  980115  MABE  Upgraded to Foundation1 2.0.0.
+--  980130  MABE  Solution for Get_Ledger_Codestring_Id.          
+--  980306  DAKA  Bug 459 in finance 8.4 corrected
+--  980306  MABE  One more correction to Get_Account_String.
+--  980327  MABE  Added ledger_item_version.
+--  980414  MABE  Corrected bug 3492.
+--  980515  MABE  Removed FEEDBACK and VERIFY                            
+--  980522  MABE  Removing functions from WHERE.
+--  980619  WOBL  Removed reference to Ledger_Item_API.Get_Voucher_Date and
+--                Ledger_Item_API.Get_All_Amounts_Info, added columns
+--                fully_paid_voucher_date, full_curr_amount, full_dom_amount
+--                to main cursor and reference to
+--                Ledger_Item_API.Get_Rest_Amounts_At_date in &METHOD
+--  980623  WOBL  Bug #91 corrected
+--  980630  WOBL  Correction of printing invoice amount column
+--  981026  WOBL  Bug #6405 from version 8.3.1A corrected  comments without end '^'
+--  981030  MABE  Corrected bug no #5900 from 8.3.1A.
+--  981030  MABE  Corrected bug no #6004 from 8.3.1A.
+--  990118  MarK  Expanded IID to 200.
+--  990505  Camk  # 8372 Removed invalid parameter to improve execution behaviour
+--                of the function Ledger_Item_Util_API.Get_Dom_Amount_And_Balance.
+--  990517 PACEPL Bug # 15018  Performance problems. 
+--  990816 PACEPL Removed Party
+--  000122 OVJOSE Added Boe to Supplier Open Item report
+--  000306  PICZ  Call #35093 (changed comments on dummy_codenames and dummy_codeparts)
+--  000310 REANPL Call #35093: Reference on FROM_SUPPLIER column corrected
+--  000405 MAMI   Bug #13206. Codestring added to the table.
+--  000523 MAMI   Call #40673.
+--  000616 REANPL #15677 Missing PRAGMA and Init_Method
+--  000913 Camk   Company Logotype added
+--  001013 MAMIPL Corrected WHERE statement in main loop.
+--  011004 visuus Bug# 24916:Report contains Open Payment documents too..
+--  011018 DAKA   bug 25434 corrected
+--  011220 kagalk MXL: IID 10100 Supplier Ledger Open Item
+--  020102 RAFA   Bug #26240 corrected 
+--  020108 HADAUS Bug# 27057 corrected.
+--  020117 KAGALK modified file to adopt to oracle9
+--  020206  dagalk change view comment layouts line with /paper(A4) etc.
+--  020226 PPer   Bug #27444 corrected. Changed caluculation of rest_dom_amount.
+--  020324 Shsalk Call Id 78617 Corrected.
+--  020807 Kagalk Bug #31218 Corrected.  
+--  020808 AjPelk Bug 29688 , Changed view comments of FROM_SUPPLIER and FROM_SUP_GROUP
+--  020823 mguste Bug #30979 corrected.
+--  020826 AjPelk Bug 29688 , rollback all the Changes 
+--  020829 Kagalk Bug #31218 recorrected. 
+--  021023 Inkase Bug #30610 Corrected. 
+--  021121 Inkase Bug #30610 ReCorrected. 
+--  030320 NiKaLK ITFI108E Added installment level to report
+--  030326 NiKaLK ITFI108E Amount Calculations reviewed.
+--  030829 SAMBLK NOIID Report bug fix. Changed column titles
+--  030917 SHSALK Code parts are added to the cursor when fetching items to the report. 
+--  030918 Risrlk Merged LCS Bug 36883.
+--  040213 Machlk Bug 39993 fixed, Hide blocked code parts in the title page.
+--  040414 Machlk Bug 38990 fixed, Added new texts.
+--  040608 MACHLK Bug 44975 fixed. Report concept modification.  
+--  040730 NiFelk Bug 46008, Corrected.
+--  040811 RAFA   Bug 46369 changed cursor get_open_items to support partly paid invoices after upgrade.
+--  040813 RAFA   Bug 46420 corrected.
+--  040818 TsYolk Bug 37342 Corrected. Due amount for checks did not show.
+--  040920 Shpalk Bug 46364 Added column ORDER_COLUMN_ID in CUST_OPEN_ITEM_REP view.
+--  041005 Atsalk Bug 45759, Modified if condition in Sup_Open_Item.
+--  041028 Shpalk Bug 46799, re-corrected bug 46369 for upgraded databases from 2003-2 to 2004-1.
+-----------------------------------------------------------------------------
+
+define MODULE             = PAYLED                      
+define LU                 = PrintSupplierOpenItems
+define PKG                = SUP_OPEN_ITEM_RPI
+
+define TABLE              = SUP_OPEN_ITEM_RPT
+define TABLE2             = SUP_OPEN_ITEM_NAMES_RPT
+define VIEW               = SUP_OPEN_ITEM_REP
+
+define METHOD             = Sup_Open_Item
+define METHOD2            = Get_Current_Date
+define METHOD3            = Get_Current_Year
+define METHOD4            = Get_Current_Period
+
+-----------------------------------------------------------------------------
+-- PACKAGE SPECIFICATION:     <<< Package name >>>
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG specification
+
+CREATE OR REPLACE PACKAGE &PKG AS
+
+module_ CONSTANT VARCHAR2(6)   := '&MODULE';
+lu_name_ CONSTANT VARCHAR2(25) := '&LU';
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 );
+
+PROCEDURE &METHOD2 (
+   date_    OUT VARCHAR2 );
+
+PROCEDURE &METHOD3 (
+   year_    OUT VARCHAR2 );
+
+PROCEDURE &METHOD4 (
+   period_  OUT VARCHAR2 );
+
+PROCEDURE Get_Defaults_For_Report(
+   def_company_     IN OUT VARCHAR2,
+   def_date_        IN OUT DATE,
+   def_year_        IN OUT VARCHAR2,
+   def_period_      IN OUT VARCHAR2,
+   cust_party_type_ IN OUT VARCHAR2,
+   show_det_yes_    IN OUT VARCHAR2,
+   show_det_no_     IN OUT VARCHAR2 );
+
+PROCEDURE Get_Blocked_Codeparts (
+   code_a_          OUT VARCHAR2,
+   code_b_          OUT VARCHAR2,
+   code_c_          OUT VARCHAR2,
+   code_d_          OUT VARCHAR2,
+   code_e_          OUT VARCHAR2,
+   code_f_          OUT VARCHAR2,
+   code_g_          OUT VARCHAR2,
+   code_h_          OUT VARCHAR2,
+   code_i_          OUT VARCHAR2,
+   code_j_          OUT VARCHAR2,
+   company_         IN  VARCHAR2 );
+PRAGMA restrict_references(Get_Blocked_Codeparts, WNDS, WNPS);
+
+PROCEDURE Get_Company_Specific (
+   code_a_used_           OUT VARCHAR2,
+   code_b_used_           OUT VARCHAR2,
+   code_c_used_           OUT VARCHAR2,
+   code_d_used_           OUT VARCHAR2,
+   code_e_used_           OUT VARCHAR2,
+   code_f_used_           OUT VARCHAR2,
+   code_g_used_           OUT VARCHAR2,
+   code_h_used_           OUT VARCHAR2,
+   code_i_used_           OUT VARCHAR2,
+   code_j_used_           OUT VARCHAR2,
+   code_a_name_           OUT VARCHAR2,
+   code_b_name_           OUT VARCHAR2,
+   code_c_name_           OUT VARCHAR2,
+   code_d_name_           OUT VARCHAR2,
+   code_e_name_           OUT VARCHAR2,
+   code_f_name_           OUT VARCHAR2,
+   code_g_name_           OUT VARCHAR2,
+   code_h_name_           OUT VARCHAR2,
+   code_i_name_           OUT VARCHAR2,
+   code_j_name_           OUT VARCHAR2,
+   company_               IN  VARCHAR2 );
+PRAGMA restrict_references(Get_Company_Specific, WNDS, WNPS);
+
+PROCEDURE Enumerate_Yes_Or_No ( yes_or_no OUT VARCHAR2 );
+PRAGMA restrict_references(Enumerate_Yes_Or_No, WNDS, WNPS);
+
+PROCEDURE Get_Default_Yes_Choice ( yes_ OUT VARCHAR2 );
+PRAGMA restrict_references(Get_Default_Yes_Choice, WNDS, WNPS);
+
+PROCEDURE Get_Default_No_Choice ( no_ OUT VARCHAR2 );
+PRAGMA restrict_references(Get_Default_No_Choice, WNDS, WNPS);
+
+PROCEDURE Store_Codepart_Names (
+   result_key_            IN NUMBER,
+   company_               IN VARCHAR2);
+
+-- Bug 39993, begin
+PROCEDURE Get_Titlepage_Codeparts(
+   show_codestring_       IN OUT VARCHAR2,
+   company_               IN VARCHAR2 );
+-- Bug 39993, end 
+
+FUNCTION Get_Code_Name (
+   result_key_    IN VARCHAR2,
+   code_          IN VARCHAR2 ) RETURN VARCHAR2;
+PRAGMA restrict_references (Get_Code_Name, WNDS, WNPS);
+ 
+PROCEDURE Init;
+ 
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- VIEWS                      <<< Views >>>
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+-- Report:     Supplier Ledger Open Items
+-- Type:       PLSQL1.2
+-- Objects:    TABLE=SUP_OPEN_ITEM_RPT
+--             VIEW=SUP_OPEN_ITEM_REP
+--             METHOD=Sup_Open_Item
+-----------------------------------------------------------------------------
+-- Bug 38990 begin.
+-- Bug 46364, begin        
+PROMPT Creating report view &VIEW
+
+CREATE OR REPLACE VIEW &VIEW AS
+SELECT n.result_key                            RESULT_KEY,
+       ROW_NO                                  ROW_NO,
+       PARTY_NAME                              PARTY_NAME,
+       SUPPLIER_NO                             SUPPLIER_NO,
+       SUPPLIER_NAME                           SUPPLIER_NAME,
+       LEDGER_ITEM_SERIES_ID                   INVOICE_NO_PP_ID,
+       BALANCE_UNTIL_DATE                      BALNCE_UNTIL_DATE,
+       BALANCE_DOM_UNTIL_DATE                  BALNCE_DOM_UNTIL_DATE,
+       INVOICE_OR_PP_DATE                      INVOICE_OR_PP_DATE,
+       DUE_DATE                                DUE_DATE,
+       PAYM_PLAN                               PAYMENT_PLAN,
+       PL_PAY_DATE                             PL_PAY_DATE,
+       AUTHORIZER                              AUTHORIZER,
+       AUTHORIZED                              AUTHORIZED,
+       PAY_TERM_BASE_DATE                      PAY_TERM_BASE_DATE,
+       LEDGER_STATUS                           LEDGER_STATUS,
+       FULL_AMOUNT                             INVOICE_AMOUNT,
+       REST_AMOUNT                             OPEN_AMOUNT,
+       DOM_CURRENCY                            DOM_CURRENCY,
+       CURRENCY_ROWTYPE                        CURRENCY_ROWTYPE,
+       FULL_DOM_AMOUNT                         INVOICE_DOM_AMOUNT,
+       REST_DOM_AMOUNT                         OPEN_DOM_AMOUNT,
+       DUE_DOM_AMOUNT                          DUE_DOM_AMOUNT,
+       NULL                                    GRAND_TOTAL,
+       NULL                                    INV_LABEL,
+       COMPANY_ID                              COMPANY,
+       COMPANY_NAME                            COMPANY_NAME,
+       BALANCE_DATE                            BALANCE_DATE,
+       SYSDATE                                 FROM_DATE,
+       NULL                                    TO_YEAR,
+       NULL                                    TO_PERIOD,
+       NULL                                    FROM_SUPPLIER,
+       NULL                                    FROM_SUP_GROUP,
+       NULL                                    CURRENCY,
+       substr(Invoice_Code_String_API.Decode_Account(codestring),1,10) code_a,
+       substr(Invoice_Code_String_API.Decode_Code_B(codestring),1,10)  code_b,
+       substr(Invoice_Code_String_API.Decode_Code_C(codestring),1,10)  code_c,
+       substr(Invoice_Code_String_API.Decode_Code_D(codestring),1,10)  code_d,
+       substr(Invoice_Code_String_API.Decode_Code_E(codestring),1,10)  code_e,
+       substr(Invoice_Code_String_API.Decode_Code_F(codestring),1,10)  code_f,
+       substr(Invoice_Code_String_API.Decode_Code_G(codestring),1,10)  code_g,
+       substr(Invoice_Code_String_API.Decode_Code_H(codestring),1,10)  code_h,
+       substr(Invoice_Code_String_API.Decode_Code_I(codestring),1,10)  code_i,
+       substr(Invoice_Code_String_API.Decode_Code_J(codestring),1,10)  code_j,
+       Invoice_Code_String_API.Decode_Project_Activity_Id(codestring)  project_activity_id,
+       NULL                                    DATE_TITLE,
+       SUP_INV_TOTAL                           SUP_INV_TOTAL,
+       SUP_OPEN_TOTAL                          SUP_OPEN_TOTAL,
+       ACCOUNTING_CURRENCY                     ACCOUNTING_CURRENCY,
+       rpad(SUPPLIER_NO,25) || to_char(DUE_DATE,'YYYY-MM-DD') ORDER_COLUMN,
+       rpad(SUPPLIER_NO,25) || rpad(LEDGER_ITEM_SERIES_ID,25) || rpad(INSTALLMENT_ID,10)   ORDER_COLUMN_ID,
+       print_details                           FLAG_PRINT_DETAILS,
+       NULL                                    PRINT_DETAILS,
+       NULL                                    EXCLUDE_OPEN_PAY_DOCS,      --Bug # 24916
+       NULL                                    DUMMY_CODENAMES,
+       NULL                                    DUMMY_CODEPARTS,
+       CODE_A_NAME || ':'                      CODE_A_NAME,
+       CODE_B_NAME || ':'                      CODE_B_NAME,
+       CODE_C_NAME || ':'                      CODE_C_NAME,
+       CODE_D_NAME || ':'                      CODE_D_NAME,
+       CODE_E_NAME || ':'                      CODE_E_NAME,
+       CODE_F_NAME || ':'                      CODE_F_NAME,
+       CODE_G_NAME || ':'                      CODE_G_NAME,
+       CODE_H_NAME || ':'                      CODE_H_NAME,
+       CODE_I_NAME || ':'                      CODE_I_NAME,
+       CODE_J_NAME || ':'                      CODE_J_NAME,
+       CURRENT_DUE_DATE                        CURRENT_DUE_DATE,
+       AMOUNT_DUE                              AMOUNT_DUE,
+       INSTALLMENT_ID                          INSTALLMENT_ID,
+       SHOW_DOM_CURRENCY                       SHOW_DOM_CURRENCY,
+       SHOW_VALUE                              SHOW_VALUE,
+       KEEP_VALUE                              KEEP_VALUE
+FROM  sup_open_item_names_rpv n, sup_open_item_rpv t
+WHERE n.result_key = t.result_key (+)
+WITH  read only;
+
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=Supplier Ledger Open Items^';
+
+COMMENT ON COLUMN &VIEW..RESULT_KEY IS
+   'FLAGS=M----^';
+COMMENT ON COLUMN &VIEW..ROW_NO IS
+   'FLAGS=M----^';
+COMMENT ON COLUMN &VIEW..PARTY_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(40)^PROMPT=Party Name: ^TITLE=Party Name: ^ITEM_NAME=iPartyName^';
+COMMENT ON COLUMN &VIEW..SUPPLIER_NO IS
+   'FLAGS=A----^DATATYPE=STRING(50)^PROMPT=Supplier Id: ^TITLE=Supplier Id: ^ITEM_NAME=iSupplierNo^';
+COMMENT ON COLUMN &VIEW..SUPPLIER_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(50)^PROMPT=Name: ^TITLE=Name: ^ITEM_NAME=iSupplierName^';
+COMMENT ON COLUMN &VIEW..INVOICE_NO_PP_ID IS
+   'FLAGS=A----^DATATYPE=STRING(75)^PROMPT=Invoice Id^TITLE=Invoice Id^ITEM_NAME=iInvoiceNoPpId^';
+COMMENT ON COLUMN &VIEW..BALNCE_UNTIL_DATE IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Balance Per^TITLE=Balance Per^ITEM_NAME=iBalanceUntilDt^';
+COMMENT ON COLUMN &VIEW..BALNCE_DOM_UNTIL_DATE IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Amount Due^TITLE=Amount Due^ITEM_NAME=iBalanceDomUntilDt^';
+COMMENT ON COLUMN &VIEW..INVOICE_OR_PP_DATE IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Invoice/Pre Payment Date^TITLE=Pre Pay Date^ITEM_NAME=iInvoiceOrPpDt^';
+COMMENT ON COLUMN &VIEW..DUE_DATE IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Due Date^TITLE=Due Date^ITEM_NAME=iDueDate^';
+COMMENT ON COLUMN &VIEW..PAYMENT_PLAN IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Pay Plan^TITLE=Pay Plan^ITEM_NAME=iPaymPlan^';
+COMMENT ON COLUMN &VIEW..PL_PAY_DATE IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Pl Paym Date^TITLE=Pl Paym Date^ITEM_NAME=iPlPayDate^';
+COMMENT ON COLUMN &VIEW..AUTHORIZER IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=Authorizer^TITLE=Authorizer^ITEM_NAME=iAuthorizer^';
+COMMENT ON COLUMN &VIEW..AUTHORIZED IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=Auth^TITLE=Auth^ITEM_NAME=iAuthorized^';
+COMMENT ON COLUMN &VIEW..PAY_TERM_BASE_DATE IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Pay Term Base Date^TITLE=Pay Term Base Date^ITEM_NAME=iPayTermBaseDate^';
+COMMENT ON COLUMN &VIEW..LEDGER_STATUS IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=Ledger Status^TITLE=Ledger Status^ITEM_NAME=iLedgerStatus^';
+COMMENT ON COLUMN &VIEW..INVOICE_AMOUNT IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Invoice Amount^TITLE=Invoice Amount^ITEM_NAME=iInvoiceAmount^';
+COMMENT ON COLUMN &VIEW..OPEN_AMOUNT IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Open Amount^ITEM_NAME=iOpenAmount^';
+COMMENT ON COLUMN &VIEW..DOM_CURRENCY IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Curr^TITLE=Curr^ITEM_NAME=iDomCurrency^';
+COMMENT ON COLUMN &VIEW..CURRENCY_ROWTYPE IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Curr^TITLE=Curr^ITEM_NAME=iCurrencyRowType^';
+COMMENT ON COLUMN &VIEW..INVOICE_DOM_AMOUNT IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Invoice Amount^TITLE=Invoice Amount^ITEM_NAME=iInvoiceDomAmount^';
+COMMENT ON COLUMN &VIEW..OPEN_DOM_AMOUNT IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Open Amount^TITLE=Open Amount^ITEM_NAME=iOpenDomAmount^';
+COMMENT ON COLUMN &VIEW..DUE_DOM_AMOUNT IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Due Amount^TITLE=Due Amount^ITEM_NAME=iDueDomAmount^';
+COMMENT ON COLUMN &VIEW..GRAND_TOTAL IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=Grand Total^TITLE=Grand Total:^ITEM_NAME=iGrandTotal^';
+COMMENT ON COLUMN &VIEW..INV_LABEL IS
+   'FLAGS=A----^DATATYPE=STRING(30)^PROMPT=Pre-Payment Id^TITLE=Pre-Payment Id^ITEM_NAME=iInvLabel^';
+COMMENT ON COLUMN &VIEW..COMPANY IS
+   'FLAGS=A----^DATATYPE=STRING(20)/UPPERCASE^PROMPT=Company^TITLE=Company^REF=CompanyFinance^QUERY=Company:^QFLAGS=M-S--^QVALUE=:USER_FINANCE_API.Get_Default_Company^ITEM_NAME=iCompany^';
+COMMENT ON COLUMN &VIEW..COMPANY_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(100)^PROMPT=Company Name^TITLE=Company Name^ITEM_NAME=iCompanyName^';
+COMMENT ON COLUMN &VIEW..BALANCE_DATE IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Balance Date^TITLE=Balance Date^ITEM_NAME=iBalanceDate^';   
+COMMENT ON COLUMN &VIEW..FROM_DATE IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=To Date^TITLE=To Date^QUERY=To Date:^QVALUE=:Sup_Open_Item_RPI.Get_Current_Date^QFLAGS=OCS--^ITEM_NAME=iFromDate^';
+COMMENT ON COLUMN &VIEW..TO_YEAR IS
+   'FLAGS=A----^DATATYPE=STRING(4)^PROMPT=To Year^TITLE=To Year^QUERY=To Year:^QVALUE=:Sup_Open_Item_RPI.Get_Current_Year^QFLAGS=OCS--^ITEM_NAME=iToYear^';
+COMMENT ON COLUMN &VIEW..TO_PERIOD IS
+   'FLAGS=A----^DATATYPE=STRING(2)^PROMPT=To Period^TITLE=To Period^QUERY=To Period:^QVALUE=:Sup_Open_Item_RPI.Get_Current_Period^QFLAGS=OCS--^ITEM_NAME=iToPeriod^';
+COMMENT ON COLUMN &VIEW..FROM_SUPPLIER IS
+   'FLAGS=A----^DATATYPE=STRING(20)/UPPERCASE^PROMPT=From/To Supplier^TITLE=From/To Supplier^QUERY=From/To Supplier:^REF=IDENTITY_PAY_INFO_SUPP(COMPANY)^QFLAGS=OCSBL^ITEM_NAME=iFromSupplier^';
+COMMENT ON COLUMN &VIEW..FROM_SUP_GROUP IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=From/To Supplier Group^TITLE=From/To Supplier Group^QUERY=From/To Supplier Group:^REF=INVOICE_SUPPLIER_TYPE_GROUP(COMPANY)^QFLAGS=OCSBL^ITEM_NAME=iFromSupGroup^';
+COMMENT ON COLUMN &VIEW..CURRENCY IS
+   'FLAGS=A----^DATATYPE=STRING(3)/UPPERCASE^PROMPT=Currency^TITLE=Currency^QUERY=Currency:^QFLAGS=OCS--^ITEM_NAME=iCurrency^REF=CURRENCY_CODE(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_A IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code A^TITLE=Code A^QUERY=Code A:^QFLAGS=OCS--^ITEM_NAME=iCodeA^REF=ACCOUNT(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_B IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code B^TITLE=Code B^QUERY=Code B:^QFLAGS=OCS--^ITEM_NAME=iCodeB^REF=CODE_B(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_C IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code C^TITLE=Code C^QUERY=Code C:^QFLAGS=OCS--^ITEM_NAME=iCodeC^REF=CODE_C(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_D IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code D^TITLE=Code D^QUERY=Code D:^QFLAGS=OCS--^ITEM_NAME=iCodeD^REF=CODE_D(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_E IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code E^TITLE=Code E^QUERY=Code E:^QFLAGS=OCS--^ITEM_NAME=iCodeE^REF=CODE_E(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_F IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code F^TITLE=Code F^QUERY=Code F:^QFLAGS=OCS--^ITEM_NAME=iCodeF^REF=CODE_F(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_G IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code G^TITLE=Code G^QUERY=Code G:^QFLAGS=OCS--^ITEM_NAME=iCodeG^REF=CODE_G(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_H IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code H^TITLE=Code H^QUERY=Code H:^QFLAGS=OCS--^ITEM_NAME=iCodeH^REF=CODE_H(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_I IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code I^TITLE=Code I^QUERY=Code I:^QFLAGS=OCS--^ITEM_NAME=iCodeI^REF=CODE_I(COMPANY)^';
+COMMENT ON COLUMN &VIEW..CODE_J IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code J^TITLE=Code J^QUERY=Code J:^QFLAGS=OCS--^ITEM_NAME=iCodeJ^REF=CODE_J(COMPANY)^';
+COMMENT ON COLUMN &VIEW..PROJECT_ACTIVITY_ID IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Project Activity Id^TITLE=Project Activity Id^QUERY=Project Activity Id:^QFLAGS=OCS--^ITEM_NAME=iProjectActivityId^';
+COMMENT ON COLUMN &VIEW..DATE_TITLE IS
+   'FLAGS=A----^DATATYPE=STRING(50)^PROMPT=Invoice Date^TITLE=Invoice Date^ITEM_NAME=iInvoiceDate^';
+COMMENT ON COLUMN &VIEW..SUP_INV_TOTAL IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Invoice Amount^TITLE=Invoice Amount^ITEM_NAME=iSupInvTotal^';
+COMMENT ON COLUMN &VIEW..SUP_OPEN_TOTAL IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Invoice Amount^TITLE=Invoice Amount^ITEM_NAME=iSupOpenTotal^';
+COMMENT ON COLUMN &VIEW..ACCOUNTING_CURRENCY IS
+   'FLAGS=A----^DATATYPE=STRING(3)^PROMPT=Accounting Currency^TITLE=Accounting Currency^ITEM_NAME=iAccountingCurrency^';
+COMMENT ON COLUMN &VIEW..order_column IS
+   'FLAGS=A----^DATATYPE=STRING(100)^PROMPT=Order Column^TITLE=Order Column^ITEM_NAME=iOrderColumn^';
+COMMENT ON COLUMN &VIEW..order_column_id IS
+   'FLAGS=A----^DATATYPE=STRING(100)^PROMPT=Order Column^TITLE=Order Column Id^ITEM_NAME=iOrderColumnId^';   
+COMMENT ON COLUMN &VIEW..FLAG_PRINT_DETAILS IS
+   'FLAGS=A----^DATATYPE=NUMBER^TITLE=Flag Print Details^ITEM_NAME=iFlagPrintDetails^';
+COMMENT ON COLUMN &VIEW..PRINT_DETAILS IS
+   'FLAGS=A----^DATATYPE=STRING(20)^TITLE=Print Details^ENUMERATE=&PKG..Enumerate_Yes_Or_No^QUERY=Print Details:^
+   ^QFLAGS=MCS--^QVALUE=:SUP_OPEN_ITEM_RPI.Get_Default_Yes_Choice^ITEM_NAME=iPrintDetails^';
+COMMENT ON COLUMN &VIEW..EXCLUDE_OPEN_PAY_DOCS IS
+   'FLAGS=A----^DATATYPE=STRING(20)^TITLE=Exclude Open Pay Documents^ENUMERATE=&PKG..Enumerate_Yes_Or_No^QUERY=Exclude Open Pay Documents:^
+   ^QFLAGS=MCS--^QVALUE=:SUP_OPEN_ITEM_RPI.Get_Default_No_Choice^ITEM_NAME=iExOpenPayDocs^';
+COMMENT ON COLUMN &VIEW..dummy_codenames IS
+   'FLAGS=A----^DATATYPE=STRING(1000)^PROMPT=Dummy Codenames^TITLE=Dummy Codenames^ITEM_NAME=iDummyCodenames^';
+COMMENT ON COLUMN &VIEW..dummy_codeparts IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=Dummy Codeparts^TITLE=Dummy Codeparts^ITEM_NAME=iDummyCodeparts^';
+COMMENT ON COLUMN &VIEW..CODE_A_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code A Name^TITLE=Code A Name^ITEM_NAME=iCodeAName^';
+COMMENT ON COLUMN &VIEW..CODE_B_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code B Name^TITLE=Code B Name^ITEM_NAME=iCodeBName^';
+COMMENT ON COLUMN &VIEW..CODE_C_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code C Name^TITLE=Code C Name^ITEM_NAME=iCodeCName^';
+COMMENT ON COLUMN &VIEW..CODE_D_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code D Name^TITLE=Code D Name^ITEM_NAME=iCodeDName^';
+COMMENT ON COLUMN &VIEW..CODE_E_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code E Name^TITLE=Code E Name^ITEM_NAME=iCodeEName^';
+COMMENT ON COLUMN &VIEW..CODE_F_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code F Name^TITLE=Code F Name^ITEM_NAME=iCodeFName^';
+COMMENT ON COLUMN &VIEW..CODE_G_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code G Name^TITLE=Code G Name^ITEM_NAME=iCodeGName^';
+COMMENT ON COLUMN &VIEW..CODE_H_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code H Name^TITLE=Code H Name^ITEM_NAME=iCodeHName^';
+COMMENT ON COLUMN &VIEW..CODE_I_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code I Name^TITLE=Code I Name^ITEM_NAME=iCodeIName^';
+COMMENT ON COLUMN &VIEW..CODE_J_NAME IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code J Name^TITLE=Code J Name^ITEM_NAME=iCodeJName^';
+COMMENT ON COLUMN &VIEW..CURRENT_DUE_DATE IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Pay Plan Date^TITLE=Pay Plan Date^ITEM_NAME=iCurrentDueDate^';
+COMMENT ON COLUMN &VIEW..AMOUNT_DUE IS
+   'FLAGS=A----^DATATYPE=NUMBER^TITLE=Pay Plan Amount^ITEM_NAME=iAmountDue^';
+COMMENT ON COLUMN &VIEW..INSTALLMENT_ID IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Inst. Id^TITLE=Inst. Id^ITEM_NAME=iInstallmentId^';
+COMMENT ON COLUMN &VIEW..show_dom_currency IS
+  'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Show Dom Currency^TITLE=Show Dom Currency^ITEM_NAME=iShowDomCurrency^';
+COMMENT ON COLUMN &VIEW..show_value IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Show Value^TITLE=Show Value^ITEM_NAME=iShowValue^';
+COMMENT ON COLUMN &VIEW..keep_value IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Keep Value^TITLE=Keep Value^ITEM_NAME=iKeepValue^';
+-- Bug 38990 end.
+
+BEGIN
+   Report_Sys.Define_Report_('&VIEW', '&MODULE', '&LU', 'Supplier Ledger Open Items', '&TABLE', '&PKG..&METHOD', 30);
+
+   Report_SYS.Define_Report_Layout_('&VIEW', 'supopen_duedate.QRP','Order by Due Date','A4', 'ORDER_COLUMN');
+   Report_SYS.Define_Report_Layout_('&VIEW', 'supopen_duedate_ltr.QRP','Order by Due Date','LETTER', 'ORDER_COLUMN');
+   Report_SYS.Define_Report_Layout_('&VIEW', 'supopen.QRP','Order by Invoice ID','A4', 'ORDER_COLUMN_ID');
+   Report_SYS.Define_Report_Layout_('&VIEW', 'supopen_ltr.QRP','Order by Invoice ID','LETTER', 'ORDER_COLUMN_ID');  
+-----------------------------------------------------------------------------
+-- REPORT TEXTS               <<< Report1, variables >>>
+-----------------------------------------------------------------------------      
+   Report_SYS.Define_Report_Text_('&VIEW','txtCompany','Company');
+   Report_SYS.Define_Report_Text_('&VIEW','txtBalanceUntilDt','Current Balance');
+   Report_SYS.Define_Report_Text_('&VIEW','txtOrderText1',' - Order by Due Date');
+   Report_SYS.Define_Report_Text_('&VIEW','txtOrderText2','- Order by Invoice Id');
+   Report_SYS.Define_Report_Text_('&VIEW','txtOpenAmt','Open Amount');
+   Report_SYS.Define_Report_Text_('&VIEW','txtOpenAmt2',' in acc Curr');
+   Report_SYS.Define_Report_Text_('&VIEW','txtPayTermBaseDate','Pay Term ,Base Date');
+   Report_SYS.Define_Report_Text_('&VIEW','txtInstId','Inst. ,Id'); 
+   Report_SYS.Define_Report_Text_('&VIEW','txtPayPlanDate','Pay Plan ,Date'); 
+   Report_SYS.Define_Report_Text_('&VIEW','txtInstAmount','Installment,Amount');
+   Report_SYS.Define_Report_Text_('&VIEW','txtOrderTitle','Sorting Order:');
+   Report_SYS.Define_Report_Text_('&VIEW','txtInvoiceId','Invoice Id');
+   Report_SYS.Define_Report_Text_('&VIEW','txtDueDate','Due Date');
+
+END;               
+/ 
+PROMPT Refreshing view &VIEW . Might take some time .
+BEGIN
+   Report_SYS.Refresh_('&VIEW');
+END;
+/
+-- Bug 46364, end
+                                         
+-----------------------------------------------------------------------------
+-- PACKAGE IMPLEMENTATION     <<< Package name >>>
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG implementation
+
+CREATE OR REPLACE PACKAGE BODY &PKG AS
+   true_sign_         CONSTANT VARCHAR2(1) := 'X';
+   false_sign_        CONSTANT VARCHAR2(1) := NULL;
+
+FUNCTION Decode_Boolean___ (
+   value_         IN VARCHAR2,
+   null_as_false_ IN BOOLEAN  ) RETURN VARCHAR2
+IS
+BEGIN
+   IF (value_ = 'TRUE') THEN
+      RETURN true_sign_;
+   ELSIF (value_ = 'FALSE') THEN
+      RETURN false_sign_;
+   ELSIF (value_ IS NULL AND null_as_false_) THEN
+      RETURN false_sign_;
+   ELSE
+      RETURN NULL;
+   END IF;
+END Decode_Boolean___;
+
+
+FUNCTION Codeparts_Ok___ (
+   codestring_                   IN VARCHAR2,
+   code_a_                       IN VARCHAR2,
+   code_b_                       IN VARCHAR2,
+   code_c_                       IN VARCHAR2,
+   code_d_                       IN VARCHAR2,
+   code_e_                       IN VARCHAR2,
+   code_f_                       IN VARCHAR2,
+   code_g_                       IN VARCHAR2,
+   code_h_                       IN VARCHAR2,
+   code_i_                       IN VARCHAR2,
+   code_j_                       IN VARCHAR2,
+   project_activity_id_          IN NUMBER ) RETURN BOOLEAN
+IS
+   code_buff_                    VARCHAR2(20);
+   project_activity_id_buff_     NUMBER;
+BEGIN
+   IF (code_a_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Account(codestring_);
+      IF (code_a_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_b_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_B(codestring_);
+      IF (code_b_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_c_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_C(codestring_);
+      IF (code_c_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_d_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_D(codestring_);
+      IF (code_d_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_e_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_E(codestring_);
+      IF (code_e_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_f_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_F(codestring_);
+      IF (code_f_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_g_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_G(codestring_);
+      IF (code_g_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_h_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_H(codestring_);
+      IF (code_h_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_i_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_I(codestring_);
+      IF (code_i_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_j_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_J(codestring_);
+      IF (code_j_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (project_activity_id_ IS NOT NULL) THEN
+      project_activity_id_buff_ :=  Invoice_Code_String_API.Decode_Project_Activity_Id(codestring_);
+      IF (project_activity_id_ != project_activity_id_buff_ OR project_activity_id_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   RETURN TRUE;
+END Codeparts_Ok___;
+
+PROCEDURE Fetch_Report_Parameters___ (
+   result_key_              IN OUT NUMBER,
+   company_                 IN OUT VARCHAR2,
+   to_date_                 IN OUT DATE,
+   fromtosupplier_          IN OUT VARCHAR2,
+   fromtosupgrp_            IN OUT VARCHAR2,
+   currency_                IN OUT VARCHAR2,
+   to_year_                 IN OUT NUMBER,
+   to_period_               IN OUT NUMBER,
+   print_details_           IN OUT VARCHAR2,
+   exclude_open_pay_docs_   IN OUT VARCHAR2,    
+   code_a_                  IN OUT VARCHAR2,
+   code_b_                  IN OUT VARCHAR2,
+   code_c_                  IN OUT VARCHAR2,
+   code_d_                  IN OUT VARCHAR2,
+   code_e_                  IN OUT VARCHAR2,
+   code_f_                  IN OUT VARCHAR2,
+   code_g_                  IN OUT VARCHAR2,
+   code_h_                  IN OUT VARCHAR2,
+   code_i_                  IN OUT VARCHAR2,
+   code_j_                  IN OUT VARCHAR2,
+   project_activity_id_     IN OUT NUMBER,
+   report_attr_             IN     VARCHAR2,
+   parameter_attr_          IN     VARCHAR2 )
+IS
+   code_part_not_used       EXCEPTION;
+   code_part_               VARCHAR2(1);
+BEGIN
+   result_key_            := CLIENT_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY', report_attr_));
+   company_               := CLIENT_SYS.Get_Item_Value('COMPANY', parameter_attr_);
+   to_date_               := to_date(CLIENT_SYS.Get_Item_Value('FROM_DATE', parameter_attr_),Report_SYS.date_format_);
+   to_year_               := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('TO_YEAR', parameter_attr_));
+   to_period_             := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('TO_PERIOD', parameter_attr_));
+   fromtosupplier_        := CLIENT_SYS.Get_Item_Value('FROM_SUPPLIER', parameter_attr_);
+   fromtosupgrp_          := CLIENT_SYS.Get_Item_Value('FROM_SUP_GROUP', parameter_attr_);
+   currency_              := CLIENT_SYS.Get_Item_Value('CURRENCY', parameter_attr_);
+   print_details_         := CLIENT_SYS.Get_Item_Value('PRINT_DETAILS', parameter_attr_);
+   exclude_open_pay_docs_ := CLIENT_SYS.Get_Item_Value('EXCLUDE_OPEN_PAY_DOCS', parameter_attr_);  --Bug # 24916
+   -- fetch codeparts
+   code_a_                := Client_SYS.Get_Item_Value( 'CODE_A', parameter_attr_ );
+   code_b_                := Client_SYS.Get_Item_Value( 'CODE_B', parameter_attr_ );
+   code_c_                := Client_SYS.Get_Item_Value( 'CODE_C', parameter_attr_ );
+   code_d_                := Client_SYS.Get_Item_Value( 'CODE_D', parameter_attr_ );
+   code_e_                := Client_SYS.Get_Item_Value( 'CODE_E', parameter_attr_ );
+   code_f_                := Client_SYS.Get_Item_Value( 'CODE_F', parameter_attr_ );
+   code_g_                := Client_SYS.Get_Item_Value( 'CODE_G', parameter_attr_ );
+   code_h_                := Client_SYS.Get_Item_Value( 'CODE_H', parameter_attr_ );
+   code_i_                := Client_SYS.Get_Item_Value( 'CODE_I', parameter_attr_ );
+   code_j_                := Client_SYS.Get_Item_Value( 'CODE_J', parameter_attr_ );
+   project_activity_id_   := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('PROJECT_ACTIVITY_ID', parameter_attr_));
+
+   -- and validate codeparts ...
+   IF (code_a_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'A') = 'FALSE') THEN
+         code_part_ := 'A';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_b_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'B') = 'FALSE') THEN
+         code_part_ := 'B';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_c_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'C') = 'FALSE') THEN
+         code_part_ := 'C';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_d_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'D') = 'FALSE') THEN
+         code_part_ := 'D';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_e_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'E') = 'FALSE') THEN
+         code_part_ := 'E';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_f_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'F') = 'FALSE') THEN
+         code_part_ := 'F';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_g_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'G') = 'FALSE') THEN
+         code_part_ := 'G';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_h_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'H') = 'FALSE') THEN
+         code_part_ := 'H';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_i_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'I') = 'FALSE') THEN
+         code_part_ := 'I';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_j_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'J') = 'FALSE') THEN
+         code_part_ := 'J';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+EXCEPTION
+   WHEN code_part_not_used THEN
+      Error_SYS.Record_General(lu_name_,'SUP_OP1: Code part :P1 is not used in company :P2',
+                               code_part_,
+                               company_);
+END Fetch_Report_Parameters___;
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 )
+IS
+
+   result_key_          NUMBER;
+   row_no_              NUMBER := 1;
+   company_             VARCHAR2(20);
+   prev_identity_       VARCHAR2(20) := NULL;
+   curr_                VARCHAR2(20);
+   invoicedamt_         NUMBER;
+   opendamt_            NUMBER;
+   to_year_             NUMBER(4);
+   to_period_           NUMBER(2);
+   to_date_             DATE;
+   dummy_date_          DATE;
+   merge_date_          DATE;
+   fromtosupplier_      VARCHAR2(30);
+   fromtosupgrp_        VARCHAR2(30);
+   currency_            VARCHAR2(30);
+   acc_curr_            VARCHAR2(3);
+   dom_balance_         NUMBER;
+   dom_due_amount_      NUMBER;
+   row_due_amount_      NUMBER;
+   company_name_        VARCHAR2(200);
+   print_details_       VARCHAR2(20);
+   exclude_open_pay_docs_  VARCHAR2(5);      
+   flag_print_details_  NUMBER;
+   supplier_no_         VARCHAR2(20);
+   party_name_          VARCHAR2(100);
+   cl_party_type_       VARCHAR2(200);
+   cl_company_          VARCHAR2(20);
+   party_to_use_        VARCHAR2(20);
+   codestring_          VARCHAR2(2000);
+   codeparts_ok_        BOOLEAN;
+
+   invoice_or_pp_date_  DATE := NULL;
+   due_date_            DATE := NULL;
+   pay_term_base_date_  DATE := NULL;
+   tmp_party_type_      VARCHAR2(20);
+   identity_            VARCHAR2(20); 
+   from_supp_           VARCHAR2(100);
+   to_supp_             VARCHAR2(100);
+
+   logotype_            VARCHAR2(100);
+   code_a_              VARCHAR2(20);
+   code_b_              VARCHAR2(20);
+   code_c_              VARCHAR2(20);
+   code_d_              VARCHAR2(20);
+   code_e_              VARCHAR2(20);
+   code_f_              VARCHAR2(20);
+   code_g_              VARCHAR2(20);
+   code_h_              VARCHAR2(20);
+   code_i_              VARCHAR2(20);
+   code_j_              VARCHAR2(20);
+   project_activity_id_ NUMBER;
+
+   -- variables used to get report row's info ...
+   paym_plan_          VARCHAR2(5);
+   pl_pay_date_        DATE;
+   authorizer_         VARCHAR2(20);
+   authorized_         VARCHAR2(5);
+   row_currency_       VARCHAR2(3);
+   rest_amount_        NUMBER;
+   rest_dom_amount_    NUMBER;
+   first_time_         BOOLEAN;
+
+   tmp_identity_       VARCHAR2(20) := CHR(0);
+   tmp_group_id_       VARCHAR2(20) := CHR(0);
+   switch_             BOOLEAN;
+   tmp_parse_          BOOLEAN;
+
+   amount_due_          NUMBER;
+   current_due_date_    DATE;
+   temp_invoice_id      NUMBER;
+
+   temp_dom_balance_    NUMBER;
+   temp_dom_due_amount  NUMBER;
+
+   temp_rest_dom_amount_ NUMBER := 0;
+    
+   payment_type_code_db_   VARCHAR2(20);
+   voucher_date_           DATE;
+   installment_id_                  NUMBER;
+   invoice_id_                      NUMBER;
+   show_dom_currency_               NUMBER;
+   show_value_                      NUMBER;
+   keep_value_                      NUMBER;
+
+   cur_code_a_          VARCHAR2(20);
+   cur_code_b_          VARCHAR2(20);
+   cur_code_c_          VARCHAR2(20);
+   cur_code_d_          VARCHAR2(20);
+   cur_code_e_          VARCHAR2(20);
+   cur_code_f_          VARCHAR2(20);
+   cur_code_g_          VARCHAR2(20);
+   cur_code_h_          VARCHAR2(20);
+   cur_code_i_          VARCHAR2(20);
+   cur_code_j_          VARCHAR2(20);
+   -- Bug 39993, begin
+   show_codestring_     VARCHAR2(60);
+   -- Bug 39993, end
+   -- Bug 46369, start changed where statement and added union all
+   -- Cursor created to get the Report Values
+   -- Bug 46008, Begin. Fetched curr_amount and dom_amount into the cursor.
+   -- Bug 46799, begin, set installment_id to 0 (oracle problem)
+   CURSOR get_open_items ( cur_code_a_ VARCHAR2,
+                          cur_code_b_ VARCHAR2,
+                          cur_code_c_ VARCHAR2,
+                          cur_code_d_ VARCHAR2,
+                          cur_code_e_ VARCHAR2,
+                          cur_code_f_ VARCHAR2,
+                          cur_code_g_ VARCHAR2,
+                          cur_code_h_ VARCHAR2,
+                          cur_code_i_ VARCHAR2,
+                          cur_code_j_ VARCHAR2 )IS
+      SELECT l.company                                                       company,
+             l.party_type                                                    party_type_db,
+             l.rowtype                                                       rowtype,
+             l.identity                                                      identity,
+             l.ledger_item_series_id                                         ledger_item_series_id,
+             l.ledger_item_id                                                ledger_item_id,
+             l.ledger_item_version                                           ledger_item_version,
+             l.parked_pay_type                                               parked_pay_type,
+             l.currency                                                      currency,
+             l.curr_rate                                                     curr_rate,
+             l.div_factor                                                    div_factor,
+             decode(l.full_curr_amount - l.cleared_curr_amount,   
+                    0, l.fully_paid_voucher_date,             
+                    NULL)                                                    fully_paid_voucher_date,
+             l.full_curr_amount                                              full_curr_amount,
+             l.full_dom_amount                                               full_dom_amount,
+             l.status_id                                                     ledger_status,
+             l.rowstate                                                      rowstate,       
+             l.payment_id                                                    payment_id,
+             l.trans_id                                                      trans_id,
+             l.invoice_id                                                    invoice_id,
+             0                                                               installment_id,
+             l.full_curr_amount                                              amount_due,
+             l.full_curr_amount                                              inst_full_curr_amt,
+             l.full_dom_amount                                               inst_full_dom_amt             
+         FROM  ledger_item_tab l
+         WHERE l.company = company_ 
+         AND l.identity BETWEEN from_supp_ AND to_supp_ 
+         AND ((decode(l.full_curr_amount - l.cleared_curr_amount,       
+                    0, l.fully_paid_voucher_date,                                                         
+                    NULL) > to_date_)                           
+              OR (l.full_curr_amount - l.cleared_curr_amount!=0) )  
+         AND (l.party_type = 'SUPPLIER' 
+              OR (l.party_type = 'COMPANY' AND l.parked_pay_type = 'SUPPLIER'))
+         AND nvl(l.code_a,CHR(0)) LIKE cur_code_a_  
+         AND nvl(l.code_b,CHR(0)) LIKE cur_code_b_
+         AND nvl(l.code_c,CHR(0)) LIKE cur_code_c_
+         AND nvl(l.code_d,CHR(0)) LIKE cur_code_d_
+         AND nvl(l.code_e,CHR(0)) LIKE cur_code_e_
+         AND nvl(l.code_f,CHR(0)) LIKE cur_code_f_
+         AND nvl(l.code_g,CHR(0)) LIKE cur_code_g_
+         AND nvl(l.code_h,CHR(0)) LIKE cur_code_h_
+         AND nvl(l.code_i,CHR(0)) LIKE cur_code_i_
+         AND nvl(l.code_j,CHR(0)) LIKE cur_code_j_  
+         AND is_upgraded ='TRUE'
+      UNION ALL                      
+      SELECT l.company                                                       company,
+             l.party_type                                                    party_type_db,
+             l.rowtype                                                       rowtype,
+             l.identity                                                      identity,
+             l.ledger_item_series_id                                         ledger_item_series_id,
+             l.ledger_item_id                                                ledger_item_id,
+             l.ledger_item_version                                           ledger_item_version,
+             l.parked_pay_type                                               parked_pay_type,
+             l.currency                                                      currency,
+             l.curr_rate                                                     curr_rate,
+             l.div_factor                                                    div_factor,
+             decode(l.full_curr_amount - l.cleared_curr_amount,   
+                    0, l.fully_paid_voucher_date,             
+                    NULL)                                                    fully_paid_voucher_date,
+             l.full_curr_amount                                              full_curr_amount,
+             l.full_dom_amount                                               full_dom_amount,
+             l.status_id                                                     ledger_status,
+             l.rowstate                                                      rowstate,       
+             l.payment_id                                                    payment_id,
+             l.trans_id                                                      trans_id,
+             l.invoice_id                                                    invoice_id,
+             c.installment_id                                                installment_id,
+             c.curr_amount                                                   amount_due,
+             c.curr_amount                                                   inst_full_curr_amt,
+             c.dom_amount                                                    inst_full_dom_amt             
+         FROM  ledger_item_tab l,
+               payment_plan_tab c      
+         WHERE l.company = company_ 
+         AND l.identity BETWEEN from_supp_ AND to_supp_ 
+         AND    l.company               = c.company(+)
+         AND    l.identity              = c.identity(+)
+         AND    l.party_type            = c.party_type(+)
+         AND    l.invoice_id            = c.invoice_id(+)
+         AND ((decode(l.full_curr_amount - l.cleared_curr_amount,       
+                    0, l.fully_paid_voucher_date,                                                         
+                    NULL) > to_date_)                           
+              OR (l.full_curr_amount - l.cleared_curr_amount!=0) )  
+         AND (l.party_type = 'SUPPLIER' 
+              OR (l.party_type = 'COMPANY' AND l.parked_pay_type = 'SUPPLIER'))
+         AND nvl(l.code_a,CHR(0)) LIKE cur_code_a_  
+         AND nvl(l.code_b,CHR(0)) LIKE cur_code_b_
+         AND nvl(l.code_c,CHR(0)) LIKE cur_code_c_
+         AND nvl(l.code_d,CHR(0)) LIKE cur_code_d_
+         AND nvl(l.code_e,CHR(0)) LIKE cur_code_e_
+         AND nvl(l.code_f,CHR(0)) LIKE cur_code_f_
+         AND nvl(l.code_g,CHR(0)) LIKE cur_code_g_
+         AND nvl(l.code_h,CHR(0)) LIKE cur_code_h_
+         AND nvl(l.code_i,CHR(0)) LIKE cur_code_i_
+         AND nvl(l.code_j,CHR(0)) LIKE cur_code_j_
+         AND is_upgraded IS NULL  
+         ORDER BY 1, -- company 
+                  4; -- identity
+   -- Bug 46008, End.
+   -- Bug 46369, end
+   -- Bug 46799, end
+    --get the payment details of the supplier
+    CURSOR  get_supp_payment_plan(ledger_item_series_id_ IN VARCHAR2, 
+                                  ledger_item_id_        IN VARCHAR2,
+                                  ledger_item_version_   IN VARCHAR2)    IS   
+      SELECT  open_amount, due_date
+      FROM LEDGER_ITEM_SU_QRY
+      WHERE company = company_ 
+          AND identity = identity_
+          AND 	ledger_item_series_id = ledger_item_series_id_
+          AND 	ledger_item_id        = ledger_item_id_
+          AND	ledger_item_version   = ledger_item_version_
+          AND objstate !='Cancelled'; 
+
+
+    CURSOR Get_Payment_Type_Code_Db (company_       IN VARCHAR2, 
+                                     party_type_db_ IN VARCHAR2,
+                                     identity_      IN VARCHAR2, 
+                                     payment_id_    IN NUMBER, 
+                                     trans_id_      IN VARCHAR2)
+       IS
+       SELECT payment_type_code_db 
+       FROM   ledger_transaction_su_qry 
+       WHERE  company       = company_
+       AND    party_type_db = party_type_db_
+       AND    identity      = identity_
+       AND    payment_id    = payment_id_
+       AND    trans_id      = trans_id_;
+
+
+       CURSOR Get_Amount_Due_And_Balance(company_       IN VARCHAR2, 
+                                  party_type_db_ IN VARCHAR2,
+                                  identity_      IN VARCHAR2)
+       IS
+       SELECT amount_due, balance
+       FROM   identity_pay_info_su_qry 
+       WHERE  company       = company_
+       AND    party_type_db = party_type_db_
+       AND    identity      = identity_;
+
+       CURSOR  get_payment_plan(company_         IN VARCHAR2, 
+                                  party_type_db_  IN VARCHAR2,
+                                  identity_       IN VARCHAR2,
+                                  invoice_id_     IN NUMBER,
+                                  installment_id_ IN NUMBER) IS
+       SELECT due_date,
+              payment_date,
+              authorized,
+              auth_id
+       FROM   Payment_Plan_Tab
+       WHERE  company               = company_
+       AND    identity              = identity_               
+       AND    party_type            = party_type_db_             
+       AND    invoice_id            = invoice_id_  
+       AND    installment_id        = installment_id_;
+
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', '&METHOD');
+
+   first_time_        := TRUE;
+
+   Fetch_Report_Parameters___( result_key_,
+                               company_, to_date_, fromtosupplier_, fromtosupgrp_,
+                               currency_, to_year_, to_period_, print_details_,exclude_open_pay_docs_,   
+                               code_a_, code_b_, code_c_, code_d_, code_e_, code_f_,
+                               code_g_, code_h_, code_i_, code_j_, project_activity_id_,
+                               report_attr_, parameter_attr_ );
+
+   IF (to_year_ IS NULL) OR (to_period_ IS NULL) THEN
+      merge_date_ := to_date('2010-12-31','YYYY-MM-DD');
+   ELSE
+      Accounting_Period_Api.Get_Period_Date(dummy_date_, merge_date_, company_, to_year_,
+         to_period_);
+   END IF;
+
+   IF to_date_ IS NULL THEN                                                  
+      to_date_ := merge_date_;
+   END IF;
+
+   IF ((to_date_ IS NOT NULL) AND ((to_year_ IS NOT NULL) OR (to_period_ IS NOT NULL))) THEN
+      IF (to_date_ <> merge_date_) THEN
+          Error_SYS.Record_General(lu_name_,'NOTCORRESPOND : To Date does not correspond to the entered period. Please remove either To Date or To Year/Period');
+      END IF;
+   END IF;
+
+   acc_curr_      := Company_Finance_API.Get_Currency_Code(company_);
+   cl_party_type_ := Party_Type_API.Decode( 'SUPPLIER' );
+   cl_company_    := Party_Type_API.Decode( 'COMPANY' );
+   company_name_  := Company_Finance_API.Get_Description(company_);
+
+   IF (Show_Details_API.Encode(print_details_)='TRUE' ) THEN
+      flag_print_details_ := 1;
+   ELSE
+      flag_print_details_ := 0;
+   END IF;
+
+   IF (first_time_) THEN
+      Store_Codepart_Names(result_key_, company_);
+      first_time_ := FALSE;
+   END IF;
+
+   -- Bug 39993, begin
+   Get_Titlepage_Codeparts(show_codestring_, company_ ); 
+   Archive_Variable_API.Set_Variable(result_key_, 'tCodestring', show_codestring_);
+   -- Bug 39993, end
+
+   switch_:=FALSE;
+   IF (Payment_Library_API.Switch_Parse_Parameter(fromtosupplier_,from_supp_,to_supp_)) THEN
+      switch_:=TRUE;  
+   ELSE
+      switch_:=FALSE;   
+   END IF;
+   
+   IF ( code_a_ IS NULL ) THEN
+      cur_code_a_ := '%';
+   ELSE
+      cur_code_a_ := code_a_;
+   END IF;
+   IF ( code_b_ IS NULL ) THEN
+      cur_code_b_ := '%';
+   ELSE
+      cur_code_b_ := code_b_;
+   END IF;
+   IF ( code_c_ IS NULL ) THEN
+      cur_code_c_ := '%';
+   ELSE
+      cur_code_c_ := code_c_;
+   END IF;
+   IF ( code_d_ IS NULL ) THEN
+      cur_code_d_ := '%';
+   ELSE
+      cur_code_d_ := code_d_;
+   END IF;
+   IF ( code_e_ IS NULL ) THEN
+      cur_code_e_ := '%';
+   ELSE
+      cur_code_e_ := code_e_;
+   END IF;
+   IF ( code_f_ IS NULL ) THEN
+      cur_code_f_ := '%';
+   ELSE
+      cur_code_f_ := code_f_;
+   END IF;
+   IF ( code_g_ IS NULL ) THEN
+      cur_code_g_ := '%';
+   ELSE
+      cur_code_g_ := code_g_;
+   END IF;
+   IF ( code_h_ IS NULL ) THEN
+      cur_code_h_ := '%';
+   ELSE
+      cur_code_h_ := code_h_;
+   END IF;
+   IF ( code_i_ IS NULL ) THEN
+      cur_code_i_ := '%';
+   ELSE
+      cur_code_i_ := code_i_;
+   END IF;
+   IF ( code_j_ IS NULL ) THEN
+      cur_code_j_ := '%';
+   ELSE
+      cur_code_j_ := code_j_;
+   END IF;
+
+
+   FOR the_record_ IN get_open_items( cur_code_a_,
+                                      cur_code_b_,
+                                      cur_code_c_,
+                                      cur_code_d_,
+                                      cur_code_e_,
+                                      cur_code_f_,
+                                      cur_code_g_,
+                                      cur_code_h_,
+                                      cur_code_i_,
+                                      cur_code_j_ ) LOOP
+
+      temp_dom_balance_   := 0;
+      temp_dom_due_amount := 0;
+ 
+    voucher_date_ := Ledger_Item_API.Get_Voucher_Date (the_record_.company,
+                                                      the_record_.identity,
+                                                      Party_Type_API.Decode(the_record_.party_type_db),
+                                                      the_record_.ledger_item_series_id,
+                                                      the_record_.ledger_item_id,
+                                                      the_record_.ledger_item_version);
+    
+      IF (voucher_date_ <= to_date_ OR voucher_date_ IS NULL) THEN
+         --Bug 45759, begin, modified the if condition check for exclude_open_pay_docs  
+         IF (Show_Details_API.Encode(exclude_open_pay_docs_)='TRUE' AND           
+              the_record_.rowtype IN ( 'BillOfExchange','CheckLedgerItem') ) THEN 
+            NULL;
+         ELSIF ( (the_record_.rowtype = 'CheckLedgerItem') AND 
+                 (the_record_.rowstate IN ('Spoiled','Voided')) ) THEN
+            NULL;  
+         ELSE  
+            IF (tmp_identity_ != the_record_.identity) THEN
+               tmp_group_id_ := Identity_Invoice_Info_API.Get_Group_Id(the_record_.company,
+                                                                      the_record_.identity,
+                                                                      cl_party_type_); 
+               identity_:=the_record_.identity;
+            END IF;
+            tmp_identity_ := the_record_.identity;
+            IF (switch_) THEN 
+               IF (Report_SYS.Parse_Parameter(identity_, fromtosupplier_) = 'TRUE') THEN
+                  tmp_parse_:=TRUE;
+               ELSE
+                  tmp_parse_:=FALSE;
+               END IF;
+            ELSE
+               tmp_parse_:=TRUE;
+            END IF;
+       
+            IF  tmp_parse_ AND
+               Report_SYS.Parse_Parameter(tmp_group_id_,fromtosupgrp_)     = 'TRUE' AND
+               Report_SYS.Parse_Parameter(the_record_.currency, currency_) = 'TRUE' THEN
+
+               -- check, if within specified time interval ...
+               IF (the_record_.parked_pay_type IS NULL) THEN
+                  party_to_use_ := cl_party_type_;
+               ELSE
+                  party_to_use_ := cl_company_;
+               END IF;
+
+               IF (the_record_.party_type_db = 'SUPPLIER') THEN
+                  tmp_party_type_ := cl_party_type_;
+               ELSIF (the_record_.party_type_db = 'COMPANY') THEN
+                  tmp_party_type_ := cl_company_;
+               END IF;
+
+               pay_term_base_date_ := Invoice_Ledger_Item_API.Get_Pay_Term_Base_Date(the_record_.company,
+                                                           the_record_.identity,
+                                                           tmp_party_type_,
+                                                           the_record_.ledger_item_series_id,
+                                                           the_record_.ledger_item_id,
+                                                           the_record_.ledger_item_version);
+              trace_sys.message('******* pay term base ****'||pay_term_base_date_||'****'||the_record_.rowtype);
+               IF (the_record_.rowtype = 'CheckLedgerItem') THEN
+                  invoice_or_pp_date_ := Check_Ledger_Item_API.Get_Payment_Date(the_record_.company,
+                                                              the_record_.identity,
+                                                              tmp_party_type_,
+                                                              the_record_.ledger_item_series_id,
+                                                              the_record_.ledger_item_id,
+                                                              the_record_.ledger_item_version);
+               ELSIF (the_record_.rowtype = 'InvoiceLedgerItem') THEN
+                  invoice_or_pp_date_ := Invoice_Ledger_Item_API.Get_Ledger_Date(the_record_.company,
+                                                              the_record_.identity,
+                                                              tmp_party_type_,
+                                                              the_record_.ledger_item_series_id,
+                                                              the_record_.ledger_item_id,
+                                                              the_record_.ledger_item_version);
+               ELSIF (the_record_.rowtype = 'OnAccountLedgerItem') THEN
+                  invoice_or_pp_date_ := On_Account_Ledger_Item_API.Get_Ledger_Date(the_record_.company,
+                                                              the_record_.identity,
+                                                              tmp_party_type_,
+                                                              the_record_.ledger_item_series_id,
+                                                              the_record_.ledger_item_id,
+                                                              the_record_.ledger_item_version);
+               ELSIF (the_record_.rowtype = 'BillOfExchange') THEN
+                  invoice_or_pp_date_ := BILL_OF_EXCHANGE_API.Get_Payment_Date(the_record_.company,
+                                                              the_record_.identity,
+                                                              tmp_party_type_,
+                                                              the_record_.ledger_item_series_id,
+                                                              the_record_.ledger_item_id,
+                                                              the_record_.ledger_item_version);
+               END IF;
+
+               IF (the_record_.rowtype = 'CheckLedgerItem') THEN
+                  due_date_ := Check_Ledger_Item_API.Get_Payment_Date(the_record_.company,
+                                                              the_record_.identity,
+                                                              tmp_party_type_,
+                                                              the_record_.ledger_item_series_id,
+                                                              the_record_.ledger_item_id,
+                                                              the_record_.ledger_item_version);               ELSIF (the_record_.rowtype = 'InvoiceLedgerItem') THEN
+                  due_date_ := NVL(Payment_Plan_API.Get_Due_Date(the_record_.company,
+                                                    the_record_.identity,
+                                                    the_record_.party_type_db,
+                                                    the_record_.invoice_id,
+                                                    the_record_.installment_id),
+                                                    Invoice_Ledger_Item_API.Get_Due_Date(the_record_.company,
+                                                                                         the_record_.identity,
+                                                                                         tmp_party_type_,
+                                                                                         the_record_.ledger_item_series_id,
+                                                                                         the_record_.ledger_item_id,
+                                                                                         the_record_.ledger_item_version));
+               ELSIF (the_record_.rowtype = 'OnAccountLedgerItem') THEN
+                  due_date_ := On_Account_Ledger_Item_API.Get_Due_Date(the_record_.company,
+                                                             the_record_.identity,
+                                                             tmp_party_type_,
+                                                             the_record_.ledger_item_series_id,
+                                                             the_record_.ledger_item_id,
+                                                             the_record_.ledger_item_version);
+               ELSIF (the_record_.rowtype = 'BillOfExchange') THEN
+                  due_date_ := BILL_OF_EXCHANGE_API.Get_Due_Date(the_record_.company,
+                                                             the_record_.identity,
+                                                             tmp_party_type_,
+                                                             the_record_.ledger_item_series_id,
+                                                             the_record_.ledger_item_id,
+                                                             the_record_.ledger_item_version);
+               END IF;
+               row_currency_ := the_record_.currency;
+
+               -- Bug 46008, Begin. Added IF condition.
+               IF (the_record_.rowtype = 'InvoiceLedgerItem') THEN
+                  Ledger_Item_API.Get_Rest_Amounts_At_Date ( rest_amount_,
+                                                             rest_dom_amount_,
+                                                             company_,
+                                                             the_record_.identity,
+                                                             party_to_use_,
+                                                             the_record_.ledger_item_series_id,
+                                                             the_record_.ledger_item_id,
+                                                             the_record_.ledger_item_version,
+                                                             to_date_,
+                                                             known_fully_paid_voucher_date_ => the_record_.fully_paid_voucher_date,
+                                                             fetch_fully_paid_voucher_date_ => FALSE,
+                                                             known_full_curr_amount_        => the_record_.inst_full_curr_amt,
+                                                             fetch_full_curr_amount_        => FALSE,
+                                                             known_full_dom_amount_         => the_record_.inst_full_dom_amt,
+                                                             fetch_full_dom_amount_         => FALSE,
+                                                             known_ledger_item_type_        => the_record_.rowtype,
+                                                             fetch_ledger_item_type_        => FALSE,
+                                                             known_exist_at_voucher_date_   => NULL,
+                                                             fetch_exist_at_voucher_date_   => TRUE,
+                                                             installment_id_                => NVL(the_record_.installment_id,''));
+               ELSE
+                  Ledger_Item_API.Get_Rest_Amounts_At_Date ( rest_amount_,
+                                                             rest_dom_amount_,
+                                                             company_,
+                                                             the_record_.identity,
+                                                             party_to_use_,
+                                                             the_record_.ledger_item_series_id,
+                                                             the_record_.ledger_item_id,
+                                                             the_record_.ledger_item_version,
+                                                             to_date_,
+                                                             known_fully_paid_voucher_date_ => the_record_.fully_paid_voucher_date,
+                                                             fetch_fully_paid_voucher_date_ => FALSE,
+                                                             known_full_curr_amount_        => the_record_.full_curr_amount,
+                                                             fetch_full_curr_amount_        => FALSE,
+                                                             known_full_dom_amount_         => the_record_.full_dom_amount,
+                                                             fetch_full_dom_amount_         => FALSE,
+                                                             known_ledger_item_type_        => the_record_.rowtype,
+                                                             fetch_ledger_item_type_        => FALSE,
+                                                             known_exist_at_voucher_date_   => NULL,
+                                                             fetch_exist_at_voucher_date_   => TRUE,
+                                                             installment_id_                => NVL(the_record_.installment_id,''));
+               END IF;
+               -- Bug 46008, End.
+
+               temp_rest_dom_amount_ := temp_rest_dom_amount_ +  rest_dom_amount_;
+
+               IF (rest_amount_ != 0 AND rest_amount_ IS NOT NULL) THEN 
+                  -- Bug 46420, start commented code below
+               -- if invoice ledger item - fetch info about payment plan and authorizer ...
+                /*  IF (the_record_.rowtype != 'OnAccountLedgerItem') OR (the_record_.rowtype != 'BillOfExchange') THEN 
+                     Invoice_Ledger_Item_API.Get_Auth_And_Plan_Info (
+                                          authorizer_,
+                                          authorized_,
+                                          paym_plan_,
+                                          pl_pay_date_,
+                                          company_,
+                                          the_record_.identity,
+                                          cl_party_type_,
+                                          the_record_.ledger_item_series_id,
+                                          the_record_.ledger_item_id,
+                                          the_record_.ledger_item_version);
+
+                  ELSE
+                     authorizer_  := NULL;
+                     authorized_  := NULL;
+                     paym_plan_   := NULL;
+                     pl_pay_date_ := NULL;
+                  END IF;    */
+                  -- Bug 46420, end
+
+                  codestring_ := Ledger_Item_API.Get_Account_String (
+                                              company_,
+                                              the_record_.identity,
+                                              cl_party_type_,
+                                              the_record_.ledger_item_series_id,
+                                              the_record_.ledger_item_id,
+                                              the_record_.ledger_item_version);
+
+                  --
+                  -- If the accounting currency and the invoice currency are the same only
+                  -- the accounting currency(domestic) values are shown on the report.
+                  --
+
+                  IF acc_curr_ = row_currency_ THEN
+                     curr_        := NULL;
+                     invoicedamt_ := NULL;
+                     opendamt_    := rest_amount_;
+                  ELSE
+                     curr_        := acc_curr_;
+                     invoicedamt_ := the_record_.full_dom_amount;
+                     opendamt_    := rest_amount_;
+                     rest_amount_ := rest_dom_amount_;
+                  END IF;
+                  -- Bug 46420, start removed comented code below
+                  -- If payment plan is returned True Print X on the Report
+                  -- Otherwise print Blank.             
+
+                  -- paym_plan_  := Decode_Boolean___(paym_plan_,  TRUE);
+                  -- authorized_ := Decode_Boolean___(authorized_, TRUE);
+                  -- Bug 46420, end
+
+                  IF (prev_identity_ != the_record_.identity OR prev_identity_ IS NULL) THEN
+                     party_name_  := substrb(Payment_Library_API.Get_Identity_Name( company_, the_record_.identity,Party_Type_API.Decode(the_record_.party_type_db)),1,100);
+                     supplier_no_ := the_record_.identity;
+                     --
+                     -- If we want NULL for parked payments
+                     --
+                     IF (party_to_use_ = cl_company_) THEN
+                        supplier_no_ := NULL;
+                     END IF;
+                     --OPEN  Get_Amount_Due_And_Balance (the_record_.company, 
+                     --                      the_record_.party_type_db, 
+                     --                      the_record_.identity);
+                     --FETCH Get_Amount_Due_And_Balance INTO temp_dom_due_amount, temp_dom_balance_;
+                     --CLOSE Get_Amount_Due_And_Balance;
+
+                     prev_identity_      := the_record_.identity;
+                  --ELSE
+                     --temp_dom_balance_     := 0;
+                     --temp_dom_due_amount   := 0;
+                  END IF;
+
+                   IF ((the_record_.payment_id IS NOT NULL) AND (the_record_.trans_id IS NOT NULL)) THEN
+                      OPEN  Get_Payment_Type_Code_Db (the_record_.company, 
+                                                      the_record_.party_type_db, 
+                                                      the_record_.identity,
+                                                      the_record_.payment_id,
+                                                      the_record_.trans_id);
+                     FETCH Get_Payment_Type_Code_Db INTO payment_type_code_db_;
+                     CLOSE Get_Payment_Type_Code_Db;
+                   ELSE
+                     payment_type_code_db_ := NULL;
+                   END IF;   
+                   IF TRUNC(due_date_) > TRUNC(to_date_) THEN 
+                        row_due_amount_ := 0;  
+                   ELSE
+                      -- Bug 37342, begin, For checks and BOEs Due amounts should be shown
+                      IF (((the_record_.rowtype = 'OnAccountLedgerItem') AND (payment_type_code_db_ = 'CHKPAY'))  OR
+                         ((the_record_.rowtype = 'OnAccountLedgerItem') AND (payment_type_code_db_ = 'SUPPBOE')))  THEN
+                         row_due_amount_ := 0;
+                      ELSE
+                         row_due_amount_ := rest_dom_amount_;
+                      END IF;
+                      -- Bug 37342, end
+                   END IF;          
+                   IF ( voucher_date_ IS NULL ) THEN
+                        IF ( the_record_.rowtype = 'CheckLedgerItem' ) THEN
+                           voucher_date_ := CHECK_LEDGER_ITEM_API.Get_Voucher_Date( the_record_.company,
+                                                                                    the_record_.identity,
+                                                                                    tmp_party_type_,
+                                                                                    the_record_.ledger_item_series_id,
+                                                                                    the_record_.ledger_item_id,
+                                                                                    the_record_.ledger_item_version );
+                        ELSIF ( the_record_.rowtype = 'BillOfExchange' ) THEN
+                           voucher_date_ := BILL_OF_EXCHANGE_API.Get_Voucher_Date( the_record_.company,
+                                                                                   the_record_.identity,
+                                                                                   tmp_party_type_,
+                                                                                   the_record_.ledger_item_series_id,
+                                                                                   the_record_.ledger_item_id,
+                                                                                   the_record_.ledger_item_version );
+                        END IF;                                                                             
+                   END IF;                                                      
+                   
+                   IF ( TRUNC(voucher_date_) <= TRUNC(SYSDATE) ) THEN
+                      temp_dom_balance_ := nvl(rest_dom_amount_,0);
+                   ELSE
+                      temp_dom_balance_ := 0;                  
+                   END IF;
+                  
+                   IF ( TRUNC(due_date_) <= TRUNC(SYSDATE) ) THEN
+                      temp_dom_due_amount := nvl(row_due_amount_,0);
+                   ELSE
+                      temp_dom_due_amount := 0;                  
+                   END IF;
+                   codeparts_ok_ := Codeparts_Ok___( codestring_,
+                                                 code_a_,
+                                                 code_b_,
+                                                 code_c_,
+                                                 code_d_,
+                                                 code_e_,
+                                                 code_f_,
+                                                 code_g_,
+                                                 code_h_,
+                                                 code_i_,
+                                                 code_j_,
+                                                 project_activity_id_ );
+                                                                                                               
+                   IF (codeparts_ok_) THEN 
+                      --OPEN get_supp_payment_plan(the_record_.ledger_item_id );
+                      --FETCH get_supp_payment_plan INTO amount_due_, current_due_date_;
+                      --CLOSE get_supp_payment_plan;
+                     installment_id_       := the_record_.installment_id;
+                      IF  installment_id_ IS NULL THEN 
+                        show_value_       := 1;
+                        keep_value_       := 0;
+                     ELSE
+                        show_value_       := 0;
+                        keep_value_       := 1;
+                     END IF;
+
+                      IF curr_ IS NULL THEN
+                        show_dom_currency_ :=0;
+                      ELSE
+                        show_dom_currency_ :=1;
+                      END IF;
+
+                      -- Bug 46420, fetched  authorized_, authorized_ too if payment plan exist
+                      IF installment_id_ IS NOT NULL THEN
+                         OPEN get_payment_plan(the_record_.company, 
+                                               the_record_.party_type_db, 
+                                               the_record_.identity,
+                                               the_record_.invoice_id,
+                                               the_record_.installment_id);
+                         FETCH get_payment_plan INTO due_date_,current_due_date_, authorized_, authorizer_;
+                         CLOSE get_payment_plan;
+                      ELSE
+                         authorizer_  := NULL;
+                         authorized_  := NULL;
+                      END IF;
+                      -- If authorized_ is returned True Print X on the Report
+                      -- Otherwise print Blank.             
+
+                      authorized_ := Decode_Boolean___(authorized_, TRUE);
+                      -- Bug 46420, end
+
+                      INSERT INTO &TABLE (
+                        result_key,
+                        row_no,                    
+                        party_name,
+                        supplier_no,
+                        supplier_name,
+                        ledger_item_series_id,
+                        ledger_item_version,
+                        installment_id,
+                        balance_until_date,
+                        balance_dom_until_date,
+                        invoice_or_pp_date,
+                        due_date,
+                        paym_plan,
+                        pl_pay_date,
+                        authorizer,
+                        authorized,
+                        pay_term_base_date,
+                        ledger_status,
+                        full_amount,
+                        rest_amount,
+                        dom_currency,
+                        currency_rowtype,
+                        full_dom_amount,
+                        rest_dom_amount,
+                        due_dom_amount,
+                        company_id,
+                        balance_date,
+                        sup_inv_total,
+                        sup_open_total,
+                        codestring,                      
+                        accounting_currency,
+                        company_name,
+                        print_details,
+                        current_due_date,
+                        amount_due,
+                        show_dom_currency,
+                        show_value,
+                        keep_value )
+                     VALUES
+                        (result_key_,
+                        row_no_,
+                        party_name_,
+                        supplier_no_,
+                        party_name_,
+                        the_record_.ledger_item_series_id || ' ' ||the_record_.ledger_item_id,
+                        the_record_.ledger_item_version,
+                        the_record_.installment_id,
+                        temp_dom_balance_, 
+                        temp_dom_due_amount,  
+                        invoice_or_pp_date_,
+                        due_date_,
+                        paym_plan_,
+                        pl_pay_date_,
+                        authorizer_,
+                        authorized_,
+                        pay_term_base_date_,
+                        the_record_.ledger_status,
+                        the_record_.full_curr_amount,
+                        rest_amount_,
+                        curr_,
+                        row_currency_,
+                        invoicedamt_,
+                        opendamt_,
+                        row_due_amount_,
+                        company_,
+                        to_date_,
+                        the_record_.full_dom_amount,
+                        temp_rest_dom_amount_,
+                        codestring_,             
+                        acc_curr_,
+                        company_name_,
+                        flag_print_details_,
+                        current_due_date_,
+                        the_record_.amount_due,
+                        show_dom_currency_,
+                        show_value_,
+                        keep_value_ );
+
+                     row_no_ := row_no_ + 1;
+                    temp_rest_dom_amount_ := 0;
+                  END IF;
+               END IF;
+            END IF;
+         END IF;  
+         --Bug 45759, end
+      END IF; 
+   END LOOP;
+
+   logotype_ := Company_API.Get_Logotype(company_);
+   company_name_ := Company_API.Get_Name(company_);
+
+   IF (logotype_ IS NOT NULL ) THEN
+      Archive_Variable_API.Set_Object(result_key_, 
+                                      'rhSysLogo', 
+                                      logotype_);
+      Archive_Variable_API.Set_Variable(result_key_, 
+                                      'companyName', 
+                                      company_name_);
+   END IF; 
+
+END &METHOD;
+
+
+PROCEDURE &METHOD2 (
+   date_    OUT VARCHAR2 )
+IS
+   company_    VARCHAR2(20);
+   from_date_  DATE;
+   to_date_    DATE;
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', '&METHOD2');
+   User_Finance_API.Get_Default_Company(company_);
+   Accounting_Period_Api.Get_Period_Date(from_date_, to_date_, company_,
+         Accounting_Period_Api.Get_Accounting_Year(company_, SYSDATE),
+         Accounting_Period_Api.Get_Accounting_Period(company_, SYSDATE));
+   date_ := to_char(to_date_, Report_SYS.date_format_);
+END &METHOD2;
+
+PROCEDURE &METHOD3 (
+   year_    OUT VARCHAR2 )
+IS
+   company_    VARCHAR2(20);
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', '&METHOD3');
+   User_Finance_API.Get_Default_Company(company_);
+   year_ := to_char(Accounting_Period_Api.Get_Accounting_Year(company_, SYSDATE));
+END &METHOD3;
+
+PROCEDURE &METHOD4 (
+   period_    OUT VARCHAR2 )
+IS
+   company_    VARCHAR2(20);
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', '&METHOD4');
+   User_Finance_API.Get_Default_Company(company_);
+   period_ := to_char(Accounting_Period_Api.Get_Accounting_Period(company_, SYSDATE));
+END &METHOD4;
+
+PROCEDURE Get_Defaults_For_Report(
+   def_company_     IN OUT VARCHAR2,
+   def_date_        IN OUT DATE,
+   def_year_        IN OUT VARCHAR2,
+   def_period_      IN OUT VARCHAR2,
+   cust_party_type_ IN OUT VARCHAR2,
+   show_det_yes_    IN OUT VARCHAR2,
+   show_det_no_     IN OUT VARCHAR2 )
+IS
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', 'Get_Defaults_For_Report');
+ -- #26240  User_Finance_API.Get_Default_Company(def_company_);
+   def_date_        := trunc( sysdate );
+   def_year_        := to_char(Accounting_Period_Api.Get_Accounting_Year(def_company_, def_date_));
+   def_period_      := to_char(Accounting_Period_Api.Get_Accounting_Period(def_company_, def_date_));
+   cust_party_type_ := Party_Type_API.Decode( 'SUPPLIER' );
+   show_det_yes_    := Show_Details_API.Decode( 'TRUE' );
+   show_det_no_     := Show_Details_API.Decode( 'FALSE' );
+END Get_Defaults_For_Report;
+
+PROCEDURE Get_Blocked_Codeparts (
+   code_a_          OUT VARCHAR2,
+   code_b_          OUT VARCHAR2,
+   code_c_          OUT VARCHAR2,
+   code_d_          OUT VARCHAR2,
+   code_e_          OUT VARCHAR2,
+   code_f_          OUT VARCHAR2,
+   code_g_          OUT VARCHAR2,
+   code_h_          OUT VARCHAR2,
+   code_i_          OUT VARCHAR2,
+   code_j_          OUT VARCHAR2,
+   company_         IN  VARCHAR2 )
+IS
+BEGIN
+   code_a_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'A' );
+   code_b_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'B' );
+   code_c_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'C' );
+   code_d_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'D' );
+   code_e_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'E' );
+   code_f_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'F' );
+   code_g_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'G' );
+   code_h_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'H' );
+   code_i_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'I' );
+   code_j_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'J' );
+END Get_Blocked_Codeparts;
+
+PROCEDURE Get_Company_Specific (
+   code_a_used_           OUT VARCHAR2,
+   code_b_used_           OUT VARCHAR2,
+   code_c_used_           OUT VARCHAR2,
+   code_d_used_           OUT VARCHAR2,
+   code_e_used_           OUT VARCHAR2,
+   code_f_used_           OUT VARCHAR2,
+   code_g_used_           OUT VARCHAR2,
+   code_h_used_           OUT VARCHAR2,
+   code_i_used_           OUT VARCHAR2,
+   code_j_used_           OUT VARCHAR2,
+   code_a_name_           OUT VARCHAR2,
+   code_b_name_           OUT VARCHAR2,
+   code_c_name_           OUT VARCHAR2,
+   code_d_name_           OUT VARCHAR2,
+   code_e_name_           OUT VARCHAR2,
+   code_f_name_           OUT VARCHAR2,
+   code_g_name_           OUT VARCHAR2,
+   code_h_name_           OUT VARCHAR2,
+   code_i_name_           OUT VARCHAR2,
+   code_j_name_           OUT VARCHAR2,
+   company_               IN  VARCHAR2 )
+IS
+BEGIN
+   code_a_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'A' );
+   code_b_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'B' );
+   code_c_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'C' );
+   code_d_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'D' );
+   code_e_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'E' );
+   code_f_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'F' );
+   code_g_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'G' );
+   code_h_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'H' );
+   code_i_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'I' );
+   code_j_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'J' );
+   code_a_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'A' );
+   code_b_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'B' );
+   code_c_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'C' );
+   code_d_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'D' );
+   code_e_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'E' );
+   code_f_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'F' );
+   code_g_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'G' );
+   code_h_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'H' );
+   code_i_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'I' );
+   code_j_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'J' );
+END Get_Company_Specific;
+
+PROCEDURE Enumerate_Yes_Or_No ( yes_or_no OUT VARCHAR2 ) IS
+BEGIN
+   yes_or_no := Show_Details_API.Decode( 'TRUE' ) || Client_SYS.Field_Separator_ || Show_Details_API.Decode( 'FALSE' );
+END Enumerate_Yes_Or_No;
+
+PROCEDURE Get_Default_Yes_Choice (
+   yes_ OUT VARCHAR2 )
+IS
+BEGIN
+   yes_ := Show_Details_API.Decode( 'TRUE' );
+END Get_Default_Yes_Choice;
+
+PROCEDURE Get_Default_No_Choice (
+   no_ OUT VARCHAR2 )
+IS
+BEGIN
+   no_ := Show_Details_API.Decode( 'FALSE' );
+END Get_Default_No_Choice;
+
+PROCEDURE Store_Codepart_Names (
+   result_key_            IN NUMBER,
+   company_               IN VARCHAR2)
+IS
+   name_a_  VARCHAR2(10);
+   name_b_  VARCHAR2(10);
+   name_c_  VARCHAR2(10);
+   name_d_  VARCHAR2(10);
+   name_e_  VARCHAR2(10);
+   name_f_  VARCHAR2(10);
+   name_g_  VARCHAR2(10);
+   name_h_  VARCHAR2(10);
+   name_i_  VARCHAR2(10);
+   name_j_  VARCHAR2(10);
+
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', 'Store_Codepart_Names');
+   ---for adopting to oracle9
+   name_a_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'A' ),1,10);
+   name_b_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'B' ),1,10);
+   name_c_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'C' ),1,10);
+   name_d_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'D' ),1,10);
+   name_e_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'E' ),1,10);
+   name_f_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'F' ),1,10);
+   name_g_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'G' ),1,10);
+   name_h_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'H' ),1,10);
+   name_i_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'I' ),1,10);
+   name_j_ := substr(Accounting_Code_Parts_API.Get_Name(company_, 'J' ),1,10);
+
+            INSERT INTO &TABLE2 (
+               result_key,
+               code_a_name,
+               code_b_name,
+               code_c_name,
+               code_d_name,
+               code_e_name,
+               code_f_name,
+               code_g_name,
+               code_h_name,
+               code_i_name,
+               code_j_name )
+            VALUES (
+               result_key_,
+               name_a_,
+               name_b_,
+               name_c_,
+               name_d_,
+               name_e_,
+               name_f_,
+               name_g_,
+               name_h_,
+               name_i_,
+               name_j_);
+END Store_Codepart_Names;
+
+-- Bug 39993, begin
+PROCEDURE Get_Titlepage_Codeparts(
+   show_codestring_       IN OUT VARCHAR2,
+   company_               IN VARCHAR2 )
+IS 
+   code_a_used_           VARCHAR2(5);
+   code_b_used_           VARCHAR2(5);
+   code_c_used_           VARCHAR2(5);
+   code_d_used_           VARCHAR2(5);
+   code_e_used_           VARCHAR2(5);
+   code_f_used_           VARCHAR2(5);
+   code_g_used_           VARCHAR2(5);
+   code_h_used_           VARCHAR2(5);
+   code_i_used_           VARCHAR2(5);
+   code_j_used_           VARCHAR2(5); 
+
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', 'Get_Titlepage_Codeparts');
+
+   Get_Blocked_Codeparts(code_a_used_, code_b_used_, code_c_used_, code_d_used_,
+                         code_e_used_, code_f_used_, code_g_used_, code_h_used_,
+                         code_i_used_, code_j_used_, company_);
+
+   show_codestring_ := code_a_used_ || ',' || code_b_used_ || ',' || code_c_used_ || ',' || 
+                       code_d_used_ || ',' || code_e_used_ || ',' || code_f_used_ || ',' || 
+                       code_g_used_ || ',' || code_h_used_ || ',' || code_i_used_ || ',' || 
+                       code_j_used_;
+
+END Get_Titlepage_Codeparts;
+-- Bug 39993, end 
+
+FUNCTION Get_Code_Name (
+   result_key_    IN VARCHAR2,
+   code_          IN VARCHAR2 ) RETURN VARCHAR2
+IS
+   CURSOR code_names IS
+      SELECT *
+      FROM   &TABLE2
+      WHERE  result_key = result_key_;
+   row_    code_names%ROWTYPE;
+BEGIN
+   OPEN  code_names;
+   FETCH code_names INTO row_;
+   IF (code_names%NOTFOUND) THEN
+      CLOSE code_names;
+      RETURN NULL;
+   END IF;
+   CLOSE code_names;
+
+   IF (code_ = 'A') THEN
+      RETURN row_.code_a_name;
+   ELSIF (code_ = 'B') THEN
+      RETURN row_.code_b_name;
+   ELSIF (code_ = 'C') THEN
+      RETURN row_.code_c_name;
+   ELSIF (code_ = 'D') THEN
+      RETURN row_.code_d_name;
+   ELSIF (code_ = 'E') THEN
+      RETURN row_.code_e_name;
+   ELSIF (code_ = 'F') THEN
+      RETURN row_.code_f_name;
+   ELSIF (code_ = 'G') THEN
+      RETURN row_.code_g_name;
+   ELSIF (code_ = 'H') THEN
+      RETURN row_.code_h_name;
+   ELSIF (code_ = 'I') THEN
+      RETURN row_.code_i_name;
+   ELSIF (code_ = 'J') THEN
+      RETURN row_.code_j_name;
+   END IF;
+   RETURN NULL;
+END Get_Code_Name;
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+PROCEDURE Init
+IS
+BEGIN
+   NULL;
+END Init;
+ 
+
+END &PKG;
+/
+SHOW ERROR
+
+----------------------------------------------------------
+-- <UNDEFINE_SECTION>
+----------------------------------------------------------
+-- This section is reserved for undefine statements
+-- nothing should be manually written below because
+-- that would be overwritten everytime the IFS / Undefine
+-- tool is run.  
+-- Also do NOT make any changes to the above tag because
+-- this will result in duplicated code
+----------------------------------------------------------
+UNDEFINE TABLE2
+UNDEFINE METHOD2
+UNDEFINE METHOD3
+UNDEFINE METHOD4

@@ -1,0 +1,19 @@
+--***** Check Items
+select t.*,
+       substr(t.ledger_item_id, 0, instr(t.ledger_item_id, '#') - 1) "Check No"
+  from ifsapp.CHECK_LEDGER_ITEM t
+ where t.identity like '&CustomerID'
+   and t.state != 'Cancelled'
+ order by t.voucher_date, t.voucher_type, t.voucher_no;
+
+--***** Cash Items
+select m.*,
+       p.voucher_type_ref,
+       p.voucher_no_ref,
+       p.voucher_date_ref,
+       p.rowstate
+  from ifsapp.mixed_payment_lump_sum_tab m
+ inner join ifsapp.MIXED_PAYMENT_TAB p
+    on m.mixed_payment_id = p.mixed_payment_id
+ where m.payer_identity like '&CustomerID'
+ order by 2, 3;

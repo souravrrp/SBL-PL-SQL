@@ -1,0 +1,215 @@
+--***** Report Summary
+select x.year,
+       x.period,
+       x.year||'-'||x.period "YEAR-PERIOD",
+       x.part_no,
+       x.qtn,
+       y.service_month,
+       y.no_of_failures
+  from (select j.year, j.period, j.part_no, nvl(l.qtn, 0) qtn
+          from (select extract(year from add_months(start_date, level - 1)) "YEAR",
+                       extract(month from add_months(start_date, level - 1)) period,
+                       $P{PRODUCT} part_no
+                  from (select $P{FROM_DATE} start_date,
+                               $P{TO_DATE} end_date
+                          from dual)
+                connect by level <=
+                           months_between(trunc(end_date, 'MM'),
+                                          trunc(start_date, 'MM')) + 1) j
+          left join ( --***** Receive Summary
+                    select extract(year from r.receipt_date) "YEAR",
+                            extract(month from r.receipt_date) period,
+                            r.part_no,
+                            count(r.serial_no) qtn
+                      from (select i.part_no,
+                                    (SELECT P.PRODUCT_FAMILY
+                                FROM IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+                               WHERE P.PRODUCT_CODE = i.part_no) PRODUCT_FAMILY,
+                             (SELECT P.BRAND
+                                FROM IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+                               WHERE P.PRODUCT_CODE = i.part_no) BRAND,
+                             i.serial_no,
+                                    IFSAPP.SERIAL_OEM_CONN_API.Get_Oem_No(i.part_no,
+                                                                          i.serial_no) oem_no,
+                                    i.part_no || '-' || i.serial_no mch_code,
+                                    i.vendor_no,
+                                    IFSAPP.SUPPLIER_INFO_API.Get_Name(i.vendor_no) vendor_name,
+                                    i.receipt_date
+                               from IFSAPP.INVENTORY_PART_IN_STOCK_TAB i
+                              where i.part_no = $P{PRODUCT}
+                                and (SELECT P.PRODUCT_FAMILY
+                                FROM IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+                               WHERE P.PRODUCT_CODE = i.part_no) = $P{PRODUCT_FAMILY_SGL}
+                         and (SELECT P.BRAND
+                                FROM IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+                               WHERE P.PRODUCT_CODE = i.part_no) = $P{BRAND}
+                         and i.vendor_no = $P{SUPPLIER}
+                         and IFSAPP.PART_CATALOG_API.Get_Serial_Tracking_Code_Db(i.part_no) =
+                                    'SERIAL TRACKING'
+                                and IFSAPP.IDENTITY_INVOICE_INFO_API.Get_Group_Id('SBL',
+                                                                                  i.vendor_no,
+                                                                                  'Supplier') = '0'
+                                and trunc(i.receipt_date) between
+                                    $P{FROM_DATE} and
+                                    $P{TO_DATE}) r
+                     group by extract(year from r.receipt_date),
+                               extract(month from r.receipt_date),
+                               r.part_no,
+                               r.vendor_no) l
+            on j.year = l.year
+           and j.period = l.period
+           and j.part_no = l.part_no) x
+
+ inner join
+
+ (select g.year,
+         g.period,
+         g.part_no,
+         g.service_month,
+         nvl(m.no_of_failures, 0) no_of_failures
+    from (select j.*, k.*, $P{PRODUCT} part_no
+            from (select extract(year from add_months(start_date, level - 1)) "YEAR",
+                         extract(month from add_months(start_date, level - 1)) period
+                    from (select $P{FROM_DATE} start_date,
+                                 $P{TO_DATE} end_date
+                            from dual)
+                  connect by level <=
+                             months_between(trunc(end_date, 'MM'),
+                                            trunc(start_date, 'MM')) + 1) j
+           cross join (select rownum - 1 service_month
+                        from dual d
+                      connect by rownum <= 17) k) g
+    left join ( --***** Service Summary
+              select extract(year from f.receipt_date) "YEAR",
+                      extract(month from f.receipt_date) period,
+                      f.part_no,
+                      f.service_month,
+                      count(f.wo_no) no_of_failures
+                from (select s.*,
+                              substr(s.mch_code,
+                                     1,
+                                     instr(s.mch_code, '-', -3, 1) - 1) part_no,
+                              (SELECT P.PRODUCT_FAMILY
+                                FROM IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+                               WHERE P.PRODUCT_CODE =
+                                     substr(s.mch_code,
+                                            1,
+                                            instr(s.mch_code, '-', -3, 1) - 1)) PRODUCT_FAMILY,
+                             (SELECT P.BRAND
+                                FROM IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+                               WHERE P.PRODUCT_CODE =
+                                     substr(s.mch_code,
+                                            1,
+                                            instr(s.mch_code, '-', -3, 1) - 1)) BRAND,
+                             substr(s.mch_code,
+                                     instr(s.mch_code, '-', -3, 1) + 1) serial_no,
+                              (select i.receipt_date
+                                 from IFSAPP.INVENTORY_PART_IN_STOCK_TAB i
+                                where IFSAPP.IDENTITY_INVOICE_INFO_API.Get_Group_Id('SBL',
+                                                                                    i.vendor_no,
+                                                                                    'Supplier') = '0'
+                                  and i.part_no =
+                                      substr(s.mch_code,
+                                             1,
+                                             instr(s.mch_code, '-', -3, 1) - 1)
+                                  and i.serial_no =
+                                      substr(s.mch_code,
+                                             instr(s.mch_code, '-', -3, 1) + 1)) receipt_date,
+                              round(decode((select i.receipt_date
+                                             from IFSAPP.INVENTORY_PART_IN_STOCK_TAB i
+                                            where IFSAPP.IDENTITY_INVOICE_INFO_API.Get_Group_Id('SBL',
+                                                                                                i.vendor_no,
+                                                                                                'Supplier') = '0'
+                                              and i.part_no =
+                                                  substr(s.mch_code,
+                                                         1,
+                                                         instr(s.mch_code,
+                                                               '-',
+                                                               -3,
+                                                               1) - 1)
+                                              and i.serial_no =
+                                                  substr(s.mch_code,
+                                                         instr(s.mch_code,
+                                                               '-',
+                                                               -3,
+                                                               1) + 1)),
+                                           null,
+                                           0,
+                                           months_between(s.reg_date,
+                                                          (select i.receipt_date
+                                                             from IFSAPP.INVENTORY_PART_IN_STOCK_TAB i
+                                                            where IFSAPP.IDENTITY_INVOICE_INFO_API.Get_Group_Id('SBL',
+                                                                                                                i.vendor_no,
+                                                                                                                'Supplier') = '0'
+                                                              and i.part_no =
+                                                                  substr(s.mch_code,
+                                                                         1,
+                                                                         instr(s.mch_code,
+                                                                               '-',
+                                                                               -3,
+                                                                               1) - 1)
+                                                              and i.serial_no =
+                                                                  substr(s.mch_code,
+                                                                         instr(s.mch_code,
+                                                                               '-',
+                                                                               -3,
+                                                                               1) + 1))))) service_month
+                         from (select a.wo_no,
+                                      a.mch_code,
+                                      a.mch_code_description,
+                                      a.reg_date
+                                 from IFSAPP.ACTIVE_SEPARATE a
+                               union all
+                               select h.wo_no,
+                                      h.mch_code,
+                                      h.mch_code_description,
+                                      h.reg_date
+                                 from IFSAPP.HISTORICAL_SEPARATE h) s
+                        where substr(s.mch_code,
+                                     1,
+                                     instr(s.mch_code, '-', -3, 1) - 1) =
+                              $P{PRODUCT}
+                          and (SELECT P.PRODUCT_FAMILY
+                                FROM IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+                               WHERE P.PRODUCT_CODE =
+                                     substr(s.mch_code,
+                                            1,
+                                            instr(s.mch_code, '-', -3, 1) - 1)) =
+                             $P{PRODUCT_FAMILY_SGL}
+                         and (SELECT P.BRAND
+                                FROM IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+                               WHERE P.PRODUCT_CODE =
+                                     substr(s.mch_code,
+                                            1,
+                                            instr(s.mch_code, '-', -3, 1) - 1)) =
+                             $P{BRAND}
+                         and trunc((select i.receipt_date
+                                      from IFSAPP.INVENTORY_PART_IN_STOCK_TAB i
+                                     where IFSAPP.IDENTITY_INVOICE_INFO_API.Get_Group_Id('SBL',
+                                                                                         i.vendor_no,
+                                                                                         'Supplier') = '0'
+                                      and i.vendor_no = $P{SUPPLIER}
+                                      and i.part_no =
+                                           substr(s.mch_code,
+                                                  1,
+                                                  instr(s.mch_code, '-', -3, 1) - 1)
+                                       and i.serial_no =
+                                           substr(s.mch_code,
+                                                  instr(s.mch_code, '-', -3, 1) + 1))) between
+                              $P{FROM_DATE} and
+                              $P{TO_DATE}) f
+               where f.service_month <= 16
+               group by extract(year from f.receipt_date),
+                         extract(month from f.receipt_date),
+                         f.part_no,
+                         f.service_month
+              ) m
+      on g.year = m.year
+     and g.period = m.period
+     and g.part_no = m.part_no
+     and g.service_month = m.service_month
+  ) y
+    on x.year = y.year
+   and x.period = y.period
+   and x.part_no = y.part_no
+ order by 1, 2, 6

@@ -1,0 +1,41 @@
+CREATE OR REPLACE VIEW SBL_DEL_AMT_OF_HP_ACC AS
+SELECT H.YEAR,
+       H.PERIOD,
+       H.SHOP_CODE,
+       H.ORIGINAL_ACCT_NO,
+       H.ACCT_NO,
+       H.ACTUAL_SALES_DATE,
+       H.SALES_DATE,
+       H.CASH_CONVERSION_ON_DATE,
+       H.BB_NO,
+       H.HIRE_PRICE,
+       H.LOC,
+       H.FIRST_PAY,
+       H.AMOUNT_FINANCED,
+       H.MONTHLY_PAY,
+       H.COLLECTION,
+       H.ARR_MON,
+       H.DEL_MON,
+       H.ARR_AMT,
+       H.ACT_OUT_BAL,
+       H.ADV_AMT,
+       CASE
+         WHEN (H.ARR_AMT > 0) AND
+              ((H.ACT_OUT_BAL - H.ARR_AMT) > H.MONTHLY_PAY) THEN
+          H.MONTHLY_PAY
+         WHEN (H.ARR_AMT > 0) AND
+              ((H.ACT_OUT_BAL - H.ARR_AMT) <= H.MONTHLY_PAY) THEN
+          (H.ACT_OUT_BAL - H.ARR_AMT)
+         WHEN (H.ARR_AMT <= 0) AND (H.ADV_AMT >= 0) AND
+              (H.ADV_AMT < H.MONTHLY_PAY) AND (H.ACT_OUT_BAL > (H.MONTHLY_PAY - H.ADV_AMT)) THEN
+          (H.MONTHLY_PAY - H.ADV_AMT)
+         WHEN (H.ARR_AMT <= 0) AND (H.ADV_AMT >= 0) AND
+              (H.ADV_AMT < H.MONTHLY_PAY) AND (H.ACT_OUT_BAL <= (H.MONTHLY_PAY - H.ADV_AMT)) THEN
+          H.ACT_OUT_BAL
+         WHEN (H.ARR_AMT <= 0) AND (H.ADV_AMT > 0) AND
+              (H.ADV_AMT >= H.MONTHLY_PAY) THEN
+          0
+       END DEL_AMT
+  FROM IFSAPP.SBL_ADV_AMT_OF_HP_ACC H
+ WHERE H.ACT_OUT_BAL > 0
+ ORDER BY H.YEAR, H.PERIOD, H.SHOP_CODE, H.ORIGINAL_ACCT_NO;

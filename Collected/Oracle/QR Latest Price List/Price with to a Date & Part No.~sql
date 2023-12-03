@@ -1,0 +1,9 @@
+--Price with to a Date & Part No
+select lp.price_list_no, --Find the difference between cutoff date and last price date
+       lp.catalog_no,
+       min(abs(lp.valid_from_date - to_date('&cutoff_date', 'YYYY/MM/DD')/*trunc(sysdate)*/)) diff
+  from IFSAPP.SALES_PRICE_LIST_PART lp
+ where lp.valid_from_date <= to_date('&cutoff_date', 'YYYY/MM/DD')
+   and lp.catalog_no = '&part_no'
+ group by lp.price_list_no, lp.catalog_no
+ order by lp.catalog_no

@@ -1,0 +1,82 @@
+--Collections based on Cash Conversion on Date (Previous Collections)
+--Positive Collections
+select c.contract,
+       c.account_no,
+       c.original_acc_no,
+       c.receipt_no,
+       c.amount amount,
+       ((c.amount * 5) / 100) comm_calc_amount,
+       c.payment_date,
+       --F.SALES_DATE,
+       F.CASH_CONVERSION_ON_DATE,
+       c.pay_method,
+       c.rowstate
+  from ifsapp.SBL_COLLECTION_INFO c
+ INNER JOIN (SELECT H.YEAR,
+                    H.PERIOD,
+                    H.SHOP_CODE,
+                    H.ACCT_NO,
+                    H.ORIGINAL_ACCT_NO,
+                    H.PRODUCT_CODE,
+                    H.ACTUAL_SALES_DATE,
+                    H.SALES_DATE,
+                    H.CLOSED_DATE,
+                    H.STATE,
+                    H.COLLECTION,
+                    H.CASH_CONVERSION_ON_DATE
+               FROM HPNRET_FORM249_ARREARS_TAB H
+              WHERE H.YEAR = '&YEAR_I'
+                AND H.PERIOD = '&PERIOD'
+                   --AND H.ACT_OUT_BAL > 0
+                AND TRUNC(H.CASH_CONVERSION_ON_DATE) /*>*/
+                    BETWEEN TO_DATE('&CC_S_DATE', 'YYYY/MM/DD') AND
+                    TO_DATE('&CC_E_DATE', 'YYYY/MM/DD')) F
+    ON C.contract = F.SHOP_CODE
+   AND C.account_no = F.ACCT_NO
+   AND C.original_acc_no = F.ORIGINAL_ACCT_NO
+ WHERE C.payment_date < TO_DATE('&CC_S_DATE', 'YYYY/MM/DD')
+   AND F.SHOP_CODE LIKE '&SHOP_CODE'
+
+union all
+
+--Negative Cllections
+SELECT r.contract,
+       r.order_no account_no,
+       c.original_acc_no,
+       c.receipt_no,
+       ((-1) * c.amount) amount,
+       ((c.amount * (-5)) / 100) comm_calc_amount,
+       r.date_returned,
+       --F.SALES_DATE,
+       F.CASH_CONVERSION_ON_DATE,
+       c.pay_method,
+       c.rowstate
+  FROM ifsapp.SBL_RETURN_INFO r
+  left join ifsapp.SBL_COLLECTION_INFO c
+    on r.order_no = c.account_no
+   and r.contract = c.contract
+ INNER join (SELECT H.YEAR,
+                    H.PERIOD,
+                    H.SHOP_CODE,
+                    H.ACCT_NO,
+                    H.ORIGINAL_ACCT_NO,
+                    H.PRODUCT_CODE,
+                    H.ACTUAL_SALES_DATE,
+                    H.SALES_DATE,
+                    H.CLOSED_DATE,
+                    H.STATE,
+                    H.COLLECTION,
+                    H.CASH_CONVERSION_ON_DATE
+               FROM HPNRET_FORM249_ARREARS_TAB H
+              WHERE H.YEAR = '&YEAR_I'
+                AND H.PERIOD = '&PERIOD'
+                   --AND H.ACT_OUT_BAL > 0
+                AND TRUNC(H.CASH_CONVERSION_ON_DATE) /*>*/
+                    BETWEEN TO_DATE('&CC_S_DATE', 'YYYY/MM/DD') AND
+                    TO_DATE('&CC_E_DATE', 'YYYY/MM/DD')) F
+    ON r.contract = F.SHOP_CODE
+   AND r.order_no = F.ACCT_NO
+   AND C.original_acc_no = F.ORIGINAL_ACCT_NO
+ WHERE R.date_returned < TO_DATE('&CC_S_DATE', 'YYYY/MM/DD')
+   AND F.SHOP_CODE LIKE '&SHOP_CODE'
+--ORDER BY 8

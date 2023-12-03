@@ -1,0 +1,16 @@
+SELECT 
+  --*
+  DISTINCT A.ROWSTATE
+FROM ifsapp.hpnret_hp_dtl_tab a
+
+--No. of New  Active Accounts
+select 
+    --*
+    count(*) 
+from hpnret_form249_arrears_tab f
+where 
+  f.year = '&year_i' and
+  f.period = '&period' and
+  --f.act_out_bal > 0 and
+  --f.sales_date >= to_date('2014/4/1', 'YYYY/MM/DD')
+  f.sales_date between to_date('&from_date', 'YYYY/MM/DD') and to_date('&to_date', 'YYYY/MM/DD')

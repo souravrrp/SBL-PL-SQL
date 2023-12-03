@@ -1,0 +1,31 @@
+--Positive Collection
+select 
+    * 
+from SBL_COLLECTION_INFO c
+where 
+  c.payment_date between to_date('&from_date', 'YYYY/MM/DD') and to_date('&to_date', 'YYYY/MM/DD') and
+  c.contract like '&site'
+  
+
+union
+
+
+--Negative Collection
+SELECT
+    r.contract,
+    r.order_no account_no,
+    c.original_acc_no,
+    c.receipt_no,
+    (-1) * c.amount amount,
+    --c.payment_date,
+    r.date_returned,
+    c.pay_method,
+    c.rowstate        
+FROM 
+  SBL_RETURN_INFO r,
+  SBL_COLLECTION_INFO c
+WHERE
+  r.order_no = c.account_no and
+  r.contract = c.contract and
+  r.date_returned between to_date('&from_date', 'YYYY/MM/DD') and to_date('&to_date', 'YYYY/MM/DD') and
+  c.contract like '&site'

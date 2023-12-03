@@ -1,0 +1,320 @@
+-----------------------------------------------------------------------------
+--
+--  Logical unit: <<< Enter your logical unit description here >>>
+--
+--  File:         grnbasedaging.RDF
+--  Version:      Foundation1 2.2
+--
+--  Date    Sign  History
+--  ------  ----  -----------------------------------------------------------
+-- 
+-----------------------------------------------------------------------------
+
+define MODULE             = HPNRET
+define LU                 = HpnretCustomerOrder
+define PKG                = SIN_AGING_INV_RPI
+
+define TABLE              = INFO_SERVICES_RPT
+define VIEW               = SIN_AGING_INV_REP
+define METHOD             = Report_Overview
+
+-----------------------------------------------------------------------------
+-- PACKAGE SPECIFICATION:
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG specification
+
+CREATE OR REPLACE PACKAGE &PKG AS
+
+module_ CONSTANT VARCHAR2(6) := '&MODULE';
+lu_name_ CONSTANT VARCHAR2(25) := '&LU';
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 );
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- REPORTS
+
+-----------------------------------------------------------------------------
+
+PROMPT Creating report view &VIEW
+
+CREATE OR REPLACE VIEW &VIEW AS
+SELECT RESULT_KEY                              RESULT_KEY,
+       ROW_NO                                  ROW_NO,
+       s1                                      PART_MAIN,
+       s2                                      PROD_FAMILY,
+       s3                                      PF_DES,
+       s4                                      PART,
+       n1                                      COST,       
+       n2                                      MTHLESS3,
+       n3                                      MTHBET46,
+       n4                                      MTHBET72,
+       n5                                      MTHOVR12,
+       n6                                      UNTLESS3,
+       n7                                      UNTBET46,
+       n8                                      UNTBET72,
+       n9                                      UNTOVR12,
+       s5                                      AS_AT_DATE,
+       n10                                     UNTTOT,
+       n11                                     COSTTOT,
+       s6                                      COMMODITY,
+       s7                                      COMMODITY_DES
+FROM  &TABLE
+WITH  read only;
+
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=&LU^
+   ^METHOD=&PKG..&METHOD^MODE=PLSQL1.2^TABLE=&TABLE^TITLE=Report Title^';
+COMMENT ON COLUMN &VIEW..result_key IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..row_no IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..part_main IS
+   'FLAGS=A----^TITLE=Part Main^ITEM_NAME=iPartMain^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..prod_family IS
+   'FLAGS=A----^TITLE=Prod Family^ITEM_NAME=iProdFamily^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..pf_des IS
+   'FLAGS=A----^TITLE=pf des^ITEM_NAME=iPfDes^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..part IS
+   'FLAGS=A----^TITLE=Part^ITEM_NAME=iPart^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..COST IS
+   'FLAGS=A----^TITLE=Cost^ITEM_NAME=iCost^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..mthless3 IS
+   'FLAGS=A----^TITLE=Mthless3^ITEM_NAME=iMthless3^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..mthbet46 IS
+   'FLAGS=A----^TITLE=mthbet46^ITEM_NAME=iMthbet46^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..mthbet72 IS
+   'FLAGS=A----^TITLE=mthbet72^ITEM_NAME=iMthbet72^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..mthovr12 IS
+   'FLAGS=A----^TITLE=mthovr12^ITEM_NAME=iMthovr12^DATATYPE=NUMBER^';   
+COMMENT ON COLUMN &VIEW..untless3 IS
+   'FLAGS=A----^TITLE=untless3^ITEM_NAME=iUntless3^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..untbet46 IS
+   'FLAGS=A----^TITLE=untbet46^ITEM_NAME=iUntbet46^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..untbet72 IS
+   'FLAGS=A----^TITLE=untbet72^ITEM_NAME=iUntbet72^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..Untovr12 IS
+   'FLAGS=A----^TITLE=untovr12^ITEM_NAME=iUntovr12^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..as_at_date IS
+   'FLAGS=A----^TITLE=As At Date^ITEM_NAME=iAsAtDate^DATATYPE=STRING^QUERY=As At Date:^QVALUE=YYYY/MM/DD^';
+COMMENT ON COLUMN &VIEW..Unttot IS
+   'FLAGS=A----^TITLE=unttot^ITEM_NAME=iUnttot^DATATYPE=NUMBER^';    
+COMMENT ON COLUMN &VIEW..Costtot IS
+   'FLAGS=A----^TITLE=costtot^ITEM_NAME=iCosttot^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..commodity IS
+   'FLAGS=A----^TITLE=commodity^ITEM_NAME=icommodity^DATATYPE=STRING^'; 
+COMMENT ON COLUMN &VIEW..commodity_des IS
+   'FLAGS=A----^TITLE=commodity des^ITEM_NAME=iCommodityDes^DATATYPE=STRING^'; 
+
+BEGIN
+   Report_Sys.Define_Report_('&VIEW', '&MODULE', '&LU', 'List of Aging Inventory Analysis', '&TABLE', '&PKG..&METHOD', 0);
+   Report_SYS.Define_Report_Layout_('&VIEW', 'SinAgingInventory.qrp','List of Aging Inventory Analysis','LETTER','PART_MAIN');
+ --  Report_SYS.Define_Report_Layout_('&VIEW', 'SinAreaArrearsVarience.qrp','SinAreaArrearsVarience','LETTER', 'ORD_TYPE');
+   Report_SYS.Refresh_('&VIEW');
+END;
+/
+
+-----------------------------------------------------------------------------
+-- PACKAGE IMPLEMENTATION
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG implementation
+
+CREATE OR REPLACE PACKAGE BODY &PKG AS
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 )
+IS
+   result_key_  NUMBER;
+   row_no_      NUMBER := 1;
+   as_at_       VARCHAR2(10);
+   as_at_date_  DATE;
+   les3_date_   DATE;
+   from46_date_ DATE;
+   to46_date_   DATE;
+   from72_date_ DATE;
+   to72_date_   DATE;
+   less3_qty_   NUMBER;
+   bet46_qty_   NUMBER;
+   bet72_qty_   NUMBER;
+   over12_qty_  NUMBER;
+   run_qty_     NUMBER;
+   
+--------------------------------------------------------------------------------------------
+
+CURSOR get_CostClBal(as_at_date_ IN DATE) IS
+
+  SELECT i.part_no,
+         ifsapp.inventory_part_api.Get_Second_Commodity(i.site,i.part_no) commodity,
+         ifsapp.inventory_part_api.get_part_product_family(i.site,i.part_no) pf,
+         ifsapp.eng_part_main_group_api.Get_Description(ifsapp.part_catalog_api.Get_Part_Main_Group(i.part_no)) main_des,
+         sum(i.closing_bal+i.in_transit) Qty,
+         sum(i.cost *(i.closing_bal+i.in_transit))/sum(i.closing_bal+i.in_transit) COST
+  FROM  ifsapp.inventory_balance i
+  WHERE i.year = to_char(as_at_date_,'YYYY')
+  AND   i.period = to_char(as_at_date_,'MM')  
+  GROUP BY ifsapp.inventory_part_api.get_part_product_family(i.site,i.part_no), ifsapp.eng_part_main_group_api.Get_Description(ifsapp.part_catalog_api.Get_Part_Main_Group(i.part_no)),i.part_no
+  HAVING sum(i.closing_bal+i.in_transit) > 0;
+
+
+CURSOR get_arrival_les3(les3_date_ IN DATE ,as_at_date_ IN DATE, part_no_ IN VARCHAR2) IS 
+  SELECT sum(bb.quantity)
+  FROM ifsapp.inventory_transaction_hist2 bb
+  WHERE bb.date_applied BETWEEN les3_date_ AND as_at_date_
+  AND bb.transaction = 'ARRIVAL'  
+  AND bb.part_no = Part_No_;
+
+
+CURSOR get_arrival_bet46(from46_date_ IN DATE ,to46_date_ IN DATE, part_no_ IN VARCHAR2) IS 
+  SELECT sum(bb.quantity) 
+  FROM ifsapp.inventory_transaction_hist2 bb
+  WHERE bb.date_applied BETWEEN from46_date_ AND to46_date_
+  AND bb.transaction = 'ARRIVAL'  
+  AND bb.part_no = Part_No_;
+
+  
+CURSOR get_arrival_bet72(from72_date_ IN DATE ,to72_date_ IN DATE, part_no_ IN VARCHAR2) IS 
+  SELECT sum(bb.quantity) 
+  FROM ifsapp.inventory_transaction_hist2 bb
+  WHERE bb.date_applied BETWEEN from72_date_ AND to72_date_
+  AND bb.transaction = 'ARRIVAL'  
+  AND bb.part_no = Part_No_;
+
+  
+  
+--------------------------------------------------------------------------------------------
+
+
+ 
+   
+BEGIN
+    result_key_ := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY', report_attr_));
+    as_at_ :=  Client_SYS.Get_Item_Value('AS_AT_DATE',parameter_attr_);
+ 
+   as_at_date_   := to_date(as_at_ ,'YYYY/MM/DD');
+   les3_date_    := trunc(add_months(as_at_date_,-2),'MONTH');
+   to46_date_    := add_months(as_at_date_,-3);
+   from46_date_  := trunc(add_months(as_at_date_,-5),'MONTH');
+   to72_date_    := add_months(as_at_date_,-6);
+   from72_date_  := trunc(add_months(as_at_date_,-11),'MONTH');
+    
+FOR rec_ IN get_CostClBal(as_at_date_) LOOP
+       
+      run_qty_ := rec_.qty;
+      less3_qty_   := 0;
+      bet46_qty_   := 0;
+      bet72_qty_   := 0;
+      over12_qty_  := 0;
+       
+      WHILE run_qty_ > 0 LOOP
+                    
+         OPEN   get_arrival_les3(les3_date_ ,as_at_date_, rec_.part_no);
+         FETCH  get_arrival_les3 INTO less3_qty_;
+         CLOSE  get_arrival_les3; 
+         less3_qty_ := nvl(less3_qty_,0);
+         
+         IF less3_qty_ >= run_qty_ THEN
+           less3_qty_ := run_qty_;
+           run_qty_ := 0;
+         ELSE 
+           run_qty_ := run_qty_ - less3_qty_;
+         END IF;
+         
+         OPEN   get_arrival_bet46(from46_date_ ,to46_date_, rec_.part_no);
+         FETCH  get_arrival_bet46 INTO bet46_qty_;
+         CLOSE  get_arrival_bet46; 
+         bet46_qty_ := nvl(bet46_qty_,0);
+         
+         IF bet46_qty_ >= run_qty_ THEN
+           bet46_qty_ := run_qty_;
+           run_qty_ := 0;
+         ELSE 
+           run_qty_ := run_qty_ - bet46_qty_;
+         END IF;
+
+         OPEN   get_arrival_bet72(from72_date_ ,to72_date_, rec_.part_no);
+         FETCH  get_arrival_bet72 INTO bet72_qty_;
+         CLOSE  get_arrival_bet72; 
+         bet72_qty_ := nvl(bet72_qty_,0);
+         
+         IF bet72_qty_ >= run_qty_ THEN
+           bet72_qty_ := run_qty_;
+           run_qty_ := 0;
+         ELSE 
+           over12_qty_ := run_qty_ - bet72_qty_ ;
+           run_qty_ := 0;
+         END IF;
+         
+                      
+      END LOOP;
+      
+      IF over12_qty_ < 0 THEN
+         over12_qty_ := 0;
+      END IF;
+      
+       
+ Insert Into INFO_SERVICES_RPT
+                 (result_key,
+                  row_no,
+                  parent_row_no,
+                  s1,                                      --PART_MAIN,
+                  s2,                                      --PROD_FAMILY,
+                  s3,                                      --PF_DES,
+                  s4,                                      --PART,
+                  n1,                                      --COST,       
+                  n2,                                      --MTHLESS3,
+                  n3,                                      --MTHBET46,
+                  n4,                                      --MTHBET72,
+                  n5,                                      --MTHOVR12,
+                  n6,                                      --UNTLESS3,
+                  n7,                                      --UNTBET46,
+                  n8,                                      --UNTBET72,
+                  n9,                                      --UNTOVR12
+                  s5,                                      --AS_AT_DATE,
+                  n10,                                     --UNTTOT,
+                  n11,                                     --COSTTOT 
+                  s6,                                      --COMMODITY,
+                  s7)                                      --COMMODITY_DES
+                VALUES
+                  (result_key_,
+                  row_no_,
+                  0,
+                  nvl(rec_.main_des,'BLANK'),
+                  rec_.pf,
+                  ifsapp.inventory_product_family_api.Get_Description(rec_.pf),
+                  rec_.part_no,
+                  rec_.COST,
+                  rec_.COST * less3_qty_,
+                  rec_.COST * bet46_qty_,
+                  rec_.COST * bet72_qty_,
+                  rec_.COST * over12_qty_,
+                  less3_qty_,
+                  bet46_qty_,
+                  bet72_qty_,
+                  over12_qty_,
+                  as_at_, 
+                  rec_.qty,
+                  rec_.qty * rec_.COST,
+                  rec_.commodity,
+                  ifsapp.commodity_group_api.Get_Description(rec_.commodity)
+                  );
+            row_no_:=row_no_+1;
+         
+    END LOOP;
+ 
+END &METHOD;
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- END
+-----------------------------------------------------------------------------

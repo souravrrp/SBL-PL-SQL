@@ -1,0 +1,3 @@
+select * from SBL_ECC_FORWARD_AGING t
+where t.year = '&year'
+and t.period = '&period'

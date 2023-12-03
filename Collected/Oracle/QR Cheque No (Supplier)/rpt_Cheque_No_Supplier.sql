@@ -1,0 +1,45 @@
+select g.company,
+       g.voucher_type,
+       g.voucher_no,
+       g.accounting_year,
+       g.accounting_period,
+       g.voucher_date,
+       g.account,
+       g.account_desc,
+       g.code_b,
+       g.code_b_desc,
+       g.trans_code,
+       (select g2.text
+          from GL_AND_HOLD_VOU_ROW_QRY g2
+         where g2.account = '10020910'
+           and g2.voucher_type = g.voucher_type
+           and g2.voucher_no = g.voucher_no) text,
+       g.amount,
+       g.currency_code,
+       g.correction,
+       (select g2.party_type_id
+          from GL_AND_HOLD_VOU_ROW_QRY g2
+         where g2.account = '10020910'
+           and g2.voucher_type = g.voucher_type
+           and g2.voucher_no = g.voucher_no) supplier_id,
+       IFSAPP.SUPPLIER_INFO_API.Get_Name((select g2.party_type_id
+                                           from GL_AND_HOLD_VOU_ROW_QRY g2
+                                          where g2.account = '10020910'
+                                            and g2.voucher_type = g.voucher_type
+                                            and g2.voucher_no = g.voucher_no)) supplier_name,
+       (select g2.reference_serie
+          from GL_AND_HOLD_VOU_ROW_QRY g2
+         where g2.account = '10020910'
+           and g2.voucher_type = g.voucher_type
+           and g2.voucher_no = g.voucher_no) bank_id,
+       (select g2.reference_number
+          from GL_AND_HOLD_VOU_ROW_QRY g2
+         where g2.account = '10020910'
+           and g2.voucher_type = g.voucher_type
+           and g2.voucher_no = g.voucher_no) cheque_no
+from   GL_AND_HOLD_VOU_ROW_QRY g
+where  g.accounting_year = '&year_g'
+and    g.accounting_period = '&period'
+and    g.account = '10020610'
+--and    g.voucher_type = 'U'
+--and    g.voucher_no = '1500003422'

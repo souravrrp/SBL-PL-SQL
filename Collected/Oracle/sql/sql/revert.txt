@@ -1,0 +1,22 @@
+select
+c.Account_No,
+c.CONTRACT,
+to_char(c.sales_DATE,'dd/mm/yyyy') SALE_DATE,
+to_char(c.reverted_date,'dd/mm/yyyy') R_DATE,
+t.ID,
+ifsapp.customer_info_api.Get_Name(t.ID) NAME,
+CUSTOMER_INFO_COMM_METHOD_API.Get_Any_Phone_No(t.ID) PHONE_NO,
+
+c.CATALOG_NO,
+c.QUANTITY,
+customer_order_line_api.Get_Sale_Price_Total(c.Account_No, c.REF_LINE_NO, c.REF_REL_NO ,c.REF_LINE_ITEM_NO) SALE_PRICE,
+t.REMARKS,
+c.rowstate
+
+from
+IFSAPP.hpnret_hp_dtl_tab  c,
+IFSAPP.HPNRET_HP_HEAD_TAB t
+where
+t.Account_No= c.Account_No
+and  c.reverted_date   between to_date('&DATE_FROM','dd/mm/yyyy') and to_date('&DATE_TO','dd/mm/yyyy')
+and c.ROWSTATE   in   ('Reverted')

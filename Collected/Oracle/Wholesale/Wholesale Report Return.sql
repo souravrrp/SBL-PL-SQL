@@ -1,0 +1,49 @@
+SELECT W.RMA_NO,
+       W.SITE,
+       W.ORDER_NO,
+       W.LINE_NO,
+       W.REL_NO,
+       /*(select p.order_no
+          from ifsapp.purchase_order_line_tab p
+         where p.demand_order_no = W.ORDER_NO
+           and p.demand_release = W.LINE_NO
+           and p.demand_sequence_no = W.REL_NO) CUSTOMER_PO_NO,
+       (select c.date_entered
+          from Customer_Order_Tab c
+         where c.customer_po_no =
+               (select p.order_no
+                  from ifsapp.purchase_order_line_tab p
+                 where p.demand_order_no = W.ORDER_NO
+                   and p.demand_release = W.LINE_NO
+                   and p.demand_sequence_no = W.REL_NO)) SALES_DATE,*/
+       to_char((select c.real_ship_date
+                 from Customer_Order_Line_Tab c
+                inner join ifsapp.purchase_order_line_tab p
+                   on c.demand_order_ref1 = p.order_no
+                  and c.demand_order_ref2 = p.line_no
+                  and c.demand_order_ref3 = p.release_no
+                where p.demand_order_no = W.ORDER_NO
+                  and p.demand_release = W.LINE_NO
+                  and p.demand_sequence_no = W.REL_NO),
+               'YYYY/MM/DD') DELIVERY_DATE,
+       TO_CHAR(W.SALES_DATE, 'YYYY/MM/DD') RETURN_DATE,
+       W.CUSTOMER_NO CUSTOMER_ID,
+       W.CUSTOMER_NAME,
+       W.DELIVERY_SITE,
+       W.PRODUCT_CODE,
+       W.PRODUCT_DESC,
+       W.CATALOG_TYPE,
+       W.SALES_QUANTITY,
+       W.SALES_PRICE,
+       W.DISCOUNT "DISCOUNT(%)",
+       W.VAT,
+       W.unit_nsp,
+       W.RSP "SALES_RETURN_AMOUNT"
+  FROM ifsapp.sbl_vw_wholesale_sales W
+ WHERE W.SALES_DATE between to_date('&from_date', 'yyyy/mm/dd') and
+       to_date('&to_date', 'yyyy/mm/dd')
+   and W.SITE in ('JWSS', 'SAOS', 'SCSM', 'SWSS', 'WSMO') --'SHOM',
+      --AND W.CUSTOMER_NO LIKE '&CUSTOMER_ID'
+   and W.SALES_PRICE < 0
+      --and w.ORDER_NO LIKE 'WSM-R10558'
+ order by W.ORDER_NO

@@ -1,0 +1,6 @@
+select 
+  h.*,
+  (select max(trunc(t.date_entered)) from customer_order_tab t where t.customer_no = h.customer_no) sale_date
+from IFSAPP.HISTORICAL_SEPARATE h
+where trunc(h.reg_date) between to_date('2014/1/1', 'YYYY/MM/DD') AND to_date('2014/8/26', 'YYYY/MM/DD') AND
+h.mch_code like '%AC-%'

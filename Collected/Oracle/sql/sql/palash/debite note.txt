@@ -1,0 +1,50 @@
+SELECT distinct
+t1.ORDER_NO,
+o.DEMAND_ORDER_NO,
+t2.INTERNAL_PO_NO,
+t1.REAL_SHIP_DATE,
+t1.CATALOG_NO,
+t1.QTY_SHIPPED,
+t3.DEBIT_NOTE_NO,
+t3.VAT_RECEIPT_NO,
+customer_info_api.get_name(customer_order_api.Get_Customer_No(o.DEMAND_ORDER_NO)) "Customer Name"
+FROM customer_order_line_tab t1,
+external_customer_order_tab t2,
+trn_trip_plan_co_line_tab t3,
+purchase_order_line_tab o 
+WHERE t1.order_no = t2.order_no
+AND t1.order_no = t3.order_no
+and t2.INTERNAL_PO_NO=o.ORDER_NO
+AND t1.contract = 'SWHW'
+AND t1.rowstate IN ('Invoiced','Delivered','PartiallyDelivered')
+And t1.real_ship_date between to_date('01/02/2013','dd/mm/yyyy') and to_date('05/02/2013','dd/mm/yyyy')
+AND cust_ord_customer_api.get_cust_grp(Customer_Order_API.Get_Customer_No(o.DEMAND_ORDER_NO)) = '003'
+
+
+/***
+SELECT distinct
+t1.ORDER_NO,
+t1.CONTRACT TR_PLACE,
+o.DEMAND_ORDER_NO,
+t2.INTERNAL_PO_NO DOC_REF1,
+t1.REAL_SHIP_DATE TR_DATE,
+t1.CATALOG_NO PART_CODE,
+t1.QTY_SHIPPED QTY_OUT,
+t3.DEBIT_NOTE_NO,
+t3.VAT_RECEIPT_NO DOC_REF2,
+customer_info_api.get_name(customer_order_api.Get_Customer_No(o.DEMAND_ORDER_NO)) DEST_SOURCE
+FROM customer_order_line_tab t1,
+external_customer_order_tab t2,
+trn_trip_plan_co_line_tab t3,
+purchase_order_line_tab o 
+WHERE t1.order_no = t2.order_no
+AND t1.order_no = t3.order_no
+and t2.INTERNAL_PO_NO=o.ORDER_NO
+AND t1.contract = 'SWHW'
+AND t1.rowstate IN ('Invoiced','Delivered','PartiallyDelivered')
+--And t1.real_ship_date between to_date('01/02/2013','dd/mm/yyyy') and to_date('05/02/2013','dd/mm/yyyy')
+and to_date(to_char( t1.real_ship_date,'dd-MON-yy')) between '01-JAN-2013' and '31-JAN-2013'
+AND cust_ord_customer_api.get_cust_grp(Customer_Order_API.Get_Customer_No(o.DEMAND_ORDER_NO)) = '003'
+and vat_receipt_no is not null
+
+****/

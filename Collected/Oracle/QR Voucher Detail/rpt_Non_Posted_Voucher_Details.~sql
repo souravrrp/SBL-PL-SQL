@@ -1,0 +1,25 @@
+select vr.voucher_type
+    ,vr.voucher_no
+    ,vr.voucher_date
+    ,v.voucher_text
+    ,v.userid
+    ,v.approved_by_userid
+    ,vr.account
+    ,decode(vr.account, null, null, 
+      substr(text_field_translation_api.Get_Text(vr.company, 'CODEA', vr.account), 1, 100)) account_Desc
+    ,vr.code_b
+    ,nvl(vr.currency_credit_amount, 0) credit_amount
+    ,nvl(vr.currency_debet_amount, 0) debit_amount
+    ,vr.text
+  from voucher_row_tab vr
+      ,voucher_tab v
+  where vr.voucher_type = v.voucher_type
+      and vr.voucher_no = v.voucher_no
+      and vr.voucher_date = v.voucher_date
+      and vr.voucher_type like decode('&Voucher_Type', '', '%', '&Voucher_Type')
+      and vr.voucher_no like decode('&Voucher_No', '', '%', '&Voucher_No')
+      and vr.voucher_date between to_date('&FromDate','YYYY/MM/DD') and to_date('&ToDate','YYYY/MM/DD')
+      
+      /*(vr.voucher_date between to_date(decode('&From_Date', '', '2013/1/1','&From_Date'),'YYYY/MM/DD')
+          and to_date(decode('&To_Date', '', '', '&To_Date'),'MM/DD/YYYY'))*/
+  order by vr.voucher_date,vr.voucher_type,vr.voucher_no;

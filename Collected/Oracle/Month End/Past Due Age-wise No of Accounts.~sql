@@ -1,0 +1,56 @@
+--***** Past Due Age-wise No of Accounts
+select v1.band, count(v1.acct_no) no_of_accts
+  from (select h.shop_code,
+               h.acct_no,
+               h.sales_date,
+               h.loc,
+               h.outstanding_months,
+               h.total_ucc,
+               h.amount_financed,
+               h.act_out_bal,
+               h.monthly_pay,
+               --h.actual_sales_date,
+               --(last_day(to_date('&year_i'||'/'||'&period'||'/1', 'YYYY/MM/DD')) - h.sales_date) date_difference,
+               --round(((h.total_ucc + h.amount_financed - h.act_out_bal) / h.monthly_pay)) installment_paid_month,
+               --((last_day(to_date('&year_i'||'/'||'&period'||'/1', 'YYYY/MM/DD')) - h.sales_date) - (((h.total_ucc + h.amount_financed - h.act_out_bal) / h.monthly_pay) * 30)) - 30 as age,
+               ((last_day(to_date('&year_i' || '/' || '&period' || '/1',
+                                  'YYYY/MM/DD')) - h.sales_date) -
+               (round((h.total_ucc + h.amount_financed - h.act_out_bal) /
+                       h.monthly_pay) * 30)) - 30 as aging,
+               case
+                 when (((last_day(to_date('&year_i' || '/' || '&period' || '/1',
+                                          'YYYY/MM/DD')) - h.sales_date) -
+                      ((h.total_ucc + h.amount_financed - h.act_out_bal) /
+                      h.monthly_pay) * 30) - 30) <= 60 then
+                  '000-060'
+                 when (((last_day(to_date('&year_i' || '/' || '&period' || '/1',
+                                          'YYYY/MM/DD')) - h.sales_date) -
+                      ((h.total_ucc + h.amount_financed - h.act_out_bal) /
+                      h.monthly_pay) * 30) - 30) > 60 and
+                      (((last_day(to_date('&year_i' || '/' || '&period' || '/1',
+                                          'YYYY/MM/DD')) - h.sales_date) -
+                      ((h.total_ucc + h.amount_financed - h.act_out_bal) /
+                      h.monthly_pay) * 30) - 30) <= 120 then
+                  '061-120'
+                 else
+                  '120 +'
+               end band,
+               H.ACT_OUT_BAL,
+               H.ACTUAL_UCC,
+               H.PRESENT_VALUE
+          from hpnret_form249_arrears_tab h
+         where h.year = '&year_i'
+           and h.period = '&period'
+           and h.act_out_bal > 0
+           and h.acct_no != 'DBL-H2291' --'FLP-H2816' --'SES-H320'
+           and h.shop_code not in ('JWSS', 'SAOS', 'SWSS', 'WSMO', 'SITM') --Wholesale Sites
+           and h.shop_code not in ('SAPM',
+                                   'SCOM',
+                                   'SCSM',
+                                   'SESM',
+                                   'SHOM',
+                                   'SISM',
+                                   'SFSM',
+                                   'SOSM')) v1
+ group by v1.band
+ ORDER BY BAND

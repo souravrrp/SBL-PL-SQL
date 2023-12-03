@@ -1,0 +1,6 @@
+select * from report_sys_tab t
+where 
+t.report_title like '%Collection%'
+
+
+desc HP_COLLECTION_COMMISSION_RPI.Report_Overview

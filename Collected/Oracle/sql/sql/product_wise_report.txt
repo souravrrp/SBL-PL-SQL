@@ -1,0 +1,68 @@
+select 
+t.ORDER_NO,
+t.WANTED_DELIVERY_DATE "SALE DATE",
+c.CATALOG_NO,
+c.buy_qty_due,
+customer_order_line_api.Get_Sale_Price_Total(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "SALE PRICE",
+(SELECT SUM(t.discount_amount)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = c.order_no
+ AND t.line_no = c.LINE_NO
+ AND t.rel_no =  c.REL_No
+ AND t.line_item_no = c.LINE_ITEM_NO ) "DISCOUNT",
+customer_order_line_api.Get_Total_Tax_Amount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "TAX PRICE"
+from
+customer_order_tab t,
+customer_order_line_tab c
+where
+c.ORDER_NO = t.ORDER_NO
+and t.WANTED_DELIVERY_DATE between to_date('01/11/2012','dd/mm/yyyy') and to_date('21/03/2013','dd/mm/yyyy')
+and cust_ord_customer_api.get_cust_grp(t.CUSTOMER_NO) <> '003'
+and t.ROWSTATE in ('Invoiced')
+and t.internal_po_no is null
+and c.CATALOG_NO in ('GJREF-GFE-25-SMTE-B','GJREF-GFE-25-SVTE-B','GJREF-GFE-30-CMTE-B','GJREF-GFE-30-CVTE-B','GJREF-GFE-35-LMTE-B','GJREF-GFE-35-LVTE-B')
+
+union all
+
+select
+c.Account_No,
+c.VARIATED_DATE,
+c.CATALOG_NO,
+(-1)*c.QUANTITY,
+(-1)*customer_order_line_api.Get_Sale_Price_Total(c.Account_No, c.REF_LINE_NO, c.REF_REL_NO ,c.REF_LINE_ITEM_NO) "SALE PRICE",
+(SELECT SUM(t.discount_amount)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = c.Account_No
+ AND t.line_no = c.REF_LINE_NO
+ AND t.rel_no =  c.REF_REL_No
+ AND t.line_item_no = c.REF_LINE_ITEM_NO ) "DISCOUNT",
+(-1)*customer_order_line_api.Get_Total_Tax_Amount(c.Account_No, c.REF_LINE_NO, c.REF_REL_NO ,c.REF_LINE_ITEM_NO) "TAX PRICE"
+from
+hpnret_hp_dtl_tab c
+where
+c.VARIATED_DATE between to_date('01/11/2012','dd/mm/yyyy') and to_date('21/03/2013','dd/mm/yyyy')
+
+and c.ROWSTATE in ('CashConverted','Returned')
+and c.CATALOG_NO in ('GJREF-GFE-25-SMTE-B','GJREF-GFE-25-SVTE-B','GJREF-GFE-30-CMTE-B','GJREF-GFE-30-CVTE-B','GJREF-GFE-35-LMTE-B','GJREF-GFE-35-LVTE-B')
+
+union all
+
+
+select 
+c.ORDER_NO,
+c.DATE_RETURNED,
+c.CATALOG_NO,
+(-1)*c.qty_returned_inv,
+(-1)*customer_order_line_api.Get_Sale_Price_Total(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "SALE PRICE",
+(SELECT SUM(t.discount_amount)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = c.order_no
+ AND t.line_no = c.LINE_NO
+ AND t.rel_no =  c.REL_No
+ AND t.line_item_no = c.LINE_ITEM_NO ) "DISCOUNT",
+(-1)*customer_order_line_api.Get_Total_Tax_Amount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "TAX PRICE"
+from
+hpnret_sales_ret_line_tab c
+where
+c.DATE_RETURNED between to_date('01/11/2012','dd/mm/yyyy') and to_date('21/03/2013','dd/mm/yyyy')
+and c.CATALOG_NO in ('GJREF-GFE-25-SMTE-B','GJREF-GFE-25-SVTE-B','GJREF-GFE-30-CMTE-B','GJREF-GFE-30-CVTE-B','GJREF-GFE-35-LMTE-B','GJREF-GFE-35-LVTE-B')

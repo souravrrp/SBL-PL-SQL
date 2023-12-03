@@ -1,0 +1,32 @@
+select 
+    --*
+    D.budget_book_id,
+    D.budget_line_no,
+    D.cash_price,
+    D.amount_financed,
+    D.gross_hire_value1,
+    D.gross_hire_value2,
+    D.gross_hire_value3,
+    D.gross_hire_value4,
+    D.gross_hire_value5,
+    D.gross_hire_value6,
+    D.gross_hire_value7,
+    D.gross_hire_value8,
+    D.gross_hire_value9,
+    D.gross_hire_value10,
+    D.gross_hire_value11,
+    D.gross_hire_value12,
+    D.gross_hire_value13,
+    D.gross_hire_value14,
+    D.gross_hire_value15,
+    D.gross_hire_value16,
+    D.gross_hire_value17,
+    D.gross_hire_value18,
+    D.gross_hire_value19,
+    D.gross_hire_value20,
+    D.gross_hire_value21,
+    D.gross_hire_value22,
+    D.gross_hire_value23,
+    D.gross_hire_value24
+from HPNRET_BB_MAIN_DETAIL D
+WHERE D.budget_book_id = 'NM-6'

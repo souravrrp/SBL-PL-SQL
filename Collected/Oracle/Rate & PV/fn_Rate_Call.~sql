@@ -1,0 +1,18 @@
+declare
+  
+  pv number(16,6);
+  nper integer;
+  pmt number(16,6);  
+  --fv number;
+  rate number(16,6);
+
+begin
+  pv := 12000.0;
+  nper := 48;
+  pmt := 900.0;
+  --fv := 11561.68;
+  rate := fn_Rate(nper, pmt, pv);
+  pv := fn_PV(pmt, rate, nper);
+  dbms_output.put_line('Rate is '||rate);
+  dbms_output.put_line('Present Value is '||pv);  
+end;

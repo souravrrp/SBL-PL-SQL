@@ -1,0 +1,13 @@
+--***** Received Products in a duration
+select t.*,
+       IFSAPP.SERIAL_OEM_CONN_API.Get_Oem_No(t.part_no, t.serial_no) oem_no,
+       t.part_no || '-' || t.serial_no mch_code
+  from IFSAPP.INVENTORY_PART_IN_STOCK_TAB t
+ where t.part_no = /*'SRTV-SLE23D1200TC'*/ /*'SRTV-SLE32D1200TC'*/ /*'SRREF-SINGER-BCD-198R-RG'*/
+       'SGTV-UA43N5300ARSER'
+      /*and t.contract = 'SAVF'*/
+   and IFSAPP.IDENTITY_INVOICE_INFO_API.Get_Group_Id('SBL',
+                                                     t.vendor_no,
+                                                     'Supplier') = '0'
+   and trunc(t.receipt_date) >= to_date('2019/1/1', 'YYYY/MM/DD')
+/*and t.serial_no = '56148'*/

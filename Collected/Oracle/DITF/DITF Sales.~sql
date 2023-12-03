@@ -1,0 +1,6 @@
+select * 
+from hpnret_customer_order_tab h
+where 
+  h.contract = 'DITF' and
+  h.salesman_code = 'DITF1495' --and
+  --h.order_no = 'DIT-R23'

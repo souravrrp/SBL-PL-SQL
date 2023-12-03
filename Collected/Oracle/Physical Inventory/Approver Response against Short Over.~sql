@@ -1,0 +1,20 @@
+--***** Approver Response against Short Over
+SELECT a.user_id,
+       IFSAPP.CUSTOMER_INFO_API.Get_Name(A.USER_ID) USER_NAME,
+       v.site,
+       count(v.qty_short_over) short_over,
+       sum((case
+             when v.settlement_deadline is not null then
+              1
+             else
+              0
+           end)) approver_response
+  FROM IFSAPP.SBL_PHYSICAL_INVENTORY_STATUS v
+ INNER JOIN IFSAPP.SBL_PI_SO_APPROVER a
+    ON v.site = a.site
+ WHERE v.qty_short_over != 0
+   and a.user_id != 'E10206'
+   and v.site LIKE '&Shop_Code'
+   /*and a.count_year = '&count_year'*/
+ group by a.user_id, v.site
+ order by a.user_id, v.site

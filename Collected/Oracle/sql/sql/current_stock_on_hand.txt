@@ -1,0 +1,10 @@
+select 
+t.PART_NO,
+t.QTY_ONHAND,
+serial_oem_conn_api.Get_Oem_No(t.PART_NO, t.SERIAL_NO) OEM_NO
+from 
+inventory_part_in_stock t
+where t.QTY_ONHAND>=1
+and t.SERIAL_NO <> '*'
+and t.part_no not in ('RCPT-BOOK','MUSHAK-11(KA)')
+and t.CONTRACT='DGNB'

@@ -1,0 +1,44 @@
+select 
+  c.commission_receiver,
+  c.site,
+  c.commission_sales_type,
+  c.collection_type,
+  c.agreement_id,
+  c.catalog_no,
+  c.quantity,
+  c.order_price,
+  c.invoice_amount,
+  c.installment_amount,
+  c.comm_calc_amount,
+  c.calculated_date,
+  c.order_no,
+  c.invoice_id,
+  c.inv_item_id,
+  c.approved_date,
+  c.approved_amount,
+  c.not_approved_amount,
+  c.deduction_type,
+  c.deduction_reason,
+  c.deduction_amount,
+  c.claim_id,
+  c.entitlement_type,
+  c.receipt_no,
+  c.note,
+  c.reverse_reason,
+  c.objversion,
+  c.objstate,
+  c.state
+from 
+  IFSAPP.COMMISSION_VALUE_DETAIL c
+where 
+  c.calculated_date between to_date('&from_date', 'YYYY/MM/DD') and to_date('&to_date', 'YYYY/MM/DD') and
+  c.site like '&shop_code' and
+  c.state like '&state'
+
+
+--
+select distinct c.collection_type from IFSAPP.COMMISSION_VALUE_DETAIL c
+select distinct c.condition_code from IFSAPP.COMMISSION_VALUE_DETAIL c
+select distinct c.installment_amount from IFSAPP.COMMISSION_VALUE_DETAIL c
+select distinct c.entitlement_type from IFSAPP.COMMISSION_VALUE_DETAIL c
+select distinct c.deduction_reason from IFSAPP.COMMISSION_VALUE_DETAIL c

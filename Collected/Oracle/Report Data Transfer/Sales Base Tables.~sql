@@ -1,0 +1,7 @@
+select * from SBL_JR_SALES_DTL_PKG t
+WHERE T.ORDER_NO = 'TGN-R3765' /*'BGN-H2274'*/;
+T.DISCOUNT != 0.00;
+
+select * from SBL_JR_SALES_DTL_PKG_COMP t2;
+
+select * from SBL_JR_SALES_DTL_INV t3;

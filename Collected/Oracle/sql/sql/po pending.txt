@@ -1,0 +1,23 @@
+SELECT 
+Customer_Order_Line_API.Get_Purchase_Order_No(l.order_no,l.line_no,l.rel_no,l.line_item_no) PO_NO,
+l.PART_NO,
+l.BUY_QTY_DUE
+FROM 
+   IFSAPP.CUSTOMER_ORDER_LINE L,
+    IFSAPP.PURCHASE_ORDER_LINE_NEW N
+       WHERE 
+	   
+	   L.PART_NO=n.PART_NO
+	   and Customer_Order_Line_API.Get_Purchase_Order_No(l.order_no,l.line_no,l.rel_no,l.line_item_no)=n.ORDER_NO
+	   and  l.PART_NO not in
+	   ( select
+	   Customer_Order_Line_API.Get_Part_No(t.order_no,t.line_no,t.rel_no,t.line_item_no)
+	   from 
+	    Trn_Trip_Plan_Co_Line_Tab t
+	   where t.trip_no = 56341
+	     and t.ORDER_NO=l.ORDER_NO	
+	   and t.LINE_NO=l.LINE_NO
+	   and t.REL_NO=l.REL_NO
+	   and t.LINE_ITEM_NO=l.LINE_ITEM_NO
+	   )
+	 and L.ORDER_NO='CTG-R9186'

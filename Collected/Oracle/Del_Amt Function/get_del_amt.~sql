@@ -1,0 +1,96 @@
+create or replace function GET_DEL_AMT(
+       year_      in number,
+       period_    in number,
+       acct_no_   in varchar2) return number
+
+is
+
+    cursor get_actual_sales_date(year_ in number, period_ in number, acct_no_ in varchar2) is
+      select h.actual_sales_date
+      from   HPNRET_FORM249_ARREARS_TAB h
+      where  h.year = year_
+      and    h.period = period_
+      and    h.acct_no = acct_no_;
+    
+    cursor get_loc(year_ in number, period_ in number, acct_no_ in varchar2) is
+      select h.loc
+      from   HPNRET_FORM249_ARREARS_TAB h
+      where  h.year = year_
+      and    h.period = period_
+      and    h.acct_no = acct_no_;
+    
+    cursor get_hire_price(year_ in number, period_ in number, acct_no_ in varchar2) is
+      select h.hire_price
+      from   HPNRET_FORM249_ARREARS_TAB h
+      where  h.year = year_
+      and    h.period = period_
+      and    h.acct_no = acct_no_;
+    
+    cursor get_first_pay(year_ in number, period_ in number, acct_no_ in varchar2) is
+      select h.first_pay
+      from   HPNRET_FORM249_ARREARS_TAB h
+      where  h.year = year_
+      and    h.period = period_
+      and    h.acct_no = acct_no_;
+    
+    cursor get_monthly_pay(year_ in number, period_ in number, acct_no_ in varchar2) is
+      select h.monthly_pay
+      from   HPNRET_FORM249_ARREARS_TAB h
+      where  h.year = year_
+      and    h.period = period_
+      and    h.acct_no = acct_no_;
+    
+    cursor get_act_out_bal(year_ in number, period_ in number, acct_no_ in varchar2) is
+      select h.act_out_bal
+      from   HPNRET_FORM249_ARREARS_TAB h
+      where  h.year = year_
+      and    h.period = period_
+      and    h.acct_no = acct_no_;
+    
+    actual_sales_date    date;
+    loc                  number;
+    hire_price           number;
+    first_pay            number;
+    monthly_pay          number;
+    act_out_bal          number;
+    mature_date          date;
+    cutoff_date          date;
+    no_of_mons_paid      date;
+    amount_collected     number;
+    amount_to_be_paid    number;
+    del_amt              number;
+
+
+begin
+  
+    open get_actual_sales_date(year_, period_, acct_no_);
+    fetch get_actual_sales_date into actual_sales_date;
+    close get_actual_sales_date;
+    
+    open get_loc(year_, period_, acct_no_);
+    fetch get_loc into loc;
+    close get_loc;
+    
+    open get_hire_price(year_, period_, acct_no_);
+    fetch get_hire_price into hire_price;
+    close get_hire_price;
+    
+    open get_first_pay(year_, period_, acct_no_);
+    fetch get_first_pay into first_pay;
+    close get_first_pay;
+    
+    open get_monthly_pay(year_, period_, acct_no_);
+    fetch get_monthly_pay into monthly_pay;
+    close get_monthly_pay;
+    
+    open get_act_out_bal(year_, period_, acct_no_);
+    fetch get_act_out_bal into act_out_bal;
+    close get_act_out_bal;
+    
+    mature_date := ADD_MONTHS((actual_sales_date + 30), loc);
+    cutoff_date := last_day(to_date(year_||'/'||(period_ + 1)||'/1', 'YYYY/MM/DD'));
+    
+    if mature_date < cutoff_date then
+      no_of_mons_paid := floor(months_between(mature_date, actual_sales_date)) - 1;
+    else
+      no_of_mons_paid := floor(months_between(cutoff_date, actual_sales_date)) - 1;

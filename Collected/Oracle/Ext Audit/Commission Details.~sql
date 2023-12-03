@@ -1,0 +1,110 @@
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'DBBB'
+   and t.entitlement_type = 'SCS'
+   and t.approved_date = to_date('2017/3/5', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'BOGB'
+   and t.entitlement_type = 'SCS'
+   and t.approved_date = to_date('2017/6/11', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'GKBB'
+   and t.entitlement_type = 'SCS'
+   and t.approved_date = to_date('2017/9/17', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'CHMB'
+   and t.entitlement_type = 'SCS'
+   and t.approved_date = to_date('2017/9/30', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'CCTB'
+   and t.entitlement_type = 'SCS'
+   and t.approved_date = to_date('2017/11/19', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'STPB'
+   and t.entitlement_type = 'SCS'
+   and t.approved_date = to_date('2017/11/30', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'CCBB'
+   and t.entitlement_type = 'SCS'
+   and t.approved_date = to_date('2017/11/30', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'CPZD'
+   and t.entitlement_type = 'ACS'
+   and t.approved_date = to_date('2017/1/22', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'KPGD'
+   and t.entitlement_type = 'ACS'
+   and t.approved_date = to_date('2017/4/30', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'KAZD'
+   and t.entitlement_type = 'ACS'
+   and t.approved_date = to_date('2017/6/11', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'MAND'
+   and t.entitlement_type = 'ACS'
+   and t.approved_date = to_date('2017/12/24', 'YYYY/MM/DD')
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'PRPB'
+   and t.entitlement_type = 'SHPS'
+   and t.claim_id = 267933
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'SPLB'
+   and t.entitlement_type = 'SHPS'
+   and t.claim_id = 277714
+
+union all
+
+select *
+  from COMMISSION_VALUE_DETAIL t
+ where t.site = 'JENB'
+   and t.entitlement_type = 'SHPS'
+   and t.claim_id = 280124
+ order by 5

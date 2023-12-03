@@ -1,0 +1,18 @@
+select 
+c.ORDER_NO,
+c.CATALOG_NO,
+c.qty_returned_inv,
+customer_order_line_api.Get_Sale_Price_Total(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "SALE PRICE",
+(SELECT SUM(t.discount_amount)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = c.order_no
+ AND t.line_no = c.LINE_NO
+ AND t.rel_no =  c.REL_No
+ AND t.line_item_no = c.LINE_ITEM_NO ) "DISCOUNT",
+customer_order_line_api.Get_Total_Tax_Amount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "TAX PRICE",
+c.ROWSTATE
+from
+hpnret_sales_ret_line_tab c
+where
+c.DATE_RETURNED between to_date('01/01/2013','dd/mm/yyyy') and to_date('28/02/2013','dd/mm/yyyy')
+and c.CONTRACT='DGNB'

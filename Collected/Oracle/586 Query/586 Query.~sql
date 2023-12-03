@@ -1,0 +1,18 @@
+SELECT v.area, v.district, a.site, ifsapp.Site_Api.Get_Description(a.site)site_description, a.book_no,  a.sheet_serial_no, a.price,  a.customer_id, IFSAPP.Customer_Info_Api.Get_Name(a.customer_id) Cust_Name, a.hpnret_other_pay_type,  a.state, 
+--(to_char(months_between(to_date(SYSDATE, 'YYYY/MM/DD'), --(to_date(a.date_created,'YYYY/MM/DD'))), '999')) "No of Months",
+a.date_created, a.expiry_date
+FROM
+  ifsapp.hpnret_com_register a,
+  ifsapp.hpnret_levels_overview v 
+WHERE
+a.site = '&Site'
+AND
+a.State = 'Created' 
+AND
+a.hpnret_other_pay_type = '586'
+AND
+a.redeem = 'TRUE'
+AND 
+v.site_id = a.site
+AND
+a.expiry_date >= SYSDATE

@@ -1,0 +1,24 @@
+select t.receipt_no,
+    t.company,
+    to_char(t.receipt_date, 'YYYY/MM/DD') receipt_date,
+    t.remarks,
+    t.print_flag,
+    t.account_no,
+    t.account_rev,
+    t.currency_code,
+    t.contract,
+    t.identity,
+    t.sheet_serial_no,
+    t.book_types,
+    t.group_sale_no,
+    to_char(t.rowversion, 'YYYY/MM/DD') rowversion,
+    t.rowstate,
+    to_char(t.cancel_date, 'YYYY/MM/DD') cancel_date,
+    t.backdated_on,
+    t.ew_receipt,
+    t.lp_receipt,
+    t.vat_receipt,
+    t.lpr_printed
+from HPNRET_PAY_RECEIPT_HEAD_TAB t
+where t.receipt_date BETWEEN TO_DATE('2014/1/1', 'YYYY/MM/DD') AND TO_DATE('2014/1/31', 'YYYY/MM/DD') and
+  t.receipt_no like '%-HF%'

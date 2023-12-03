@@ -1,0 +1,10 @@
+--Cash Conversion Period of a Product for a specific sales_date
+select *
+  from (select *
+          from HPNRET_CASH_CON_DTL_TAB t
+         where to_date('&sales_date', 'yyyy/mm/dd') between t.eff_from and
+               t.eff_to
+           and t.product_code like '&product_code' --'SRREF-G-BCD-192'
+           and t.rowstate = 'Actived'
+         order by t.rowversion desc)
+ where rownum <= 1

@@ -1,0 +1,25 @@
+CREATE OR REPLACE FORCE VIEW IFSAPP.SALE_DTS_VIEW
+(ACCOUNT_NO, SHOP_CODE, PRODUCT_CODE, PRODUCT_NAME, SALE_DATE, 
+ QUANTITY, TOTAL_SALES, SALES_TYPE, TAX_AMOUNT, NSP, 
+ VAT)
+AS 
+select
+distinct
+ account_no,
+ SHOP_CODE,
+ PRODUCT_CODE,
+ PRODUCT_NAME,
+ SALE_DATE,
+ QUANTITY,
+ TOTAL_SALES,
+ SALES_TYPE,
+Customer_Order_Line_API.Get_Total_Tax_Amount(c.order_no,c.line_no,c.rel_no,c.line_item_no) tax_amount,
+customer_order_line_api.Get_Sale_Price_Total(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) NSP,
+customer_order_line_api.Get_Discount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) VAT
+
+ from
+SBL_SALES_TMP t,
+ customer_order_line c
+  where
+ account_no= c.ORDER_NO(+)
+and PRODUCT_CODE=c.CATALOG_NO(+);

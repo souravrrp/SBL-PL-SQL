@@ -1,0 +1,5 @@
+select *
+  from ifsapp.SBL_VW_MULTI_BRAND_SALES m
+ where m.SALES_DATE between
+       to_date('&YEAR_I' || '/' || '&PERIOD' || '/1', 'yyyy/mm/dd') and
+       LAST_DAY(to_date('&YEAR_I' || '/' || '&PERIOD' || '/1', 'yyyy/mm/dd'))

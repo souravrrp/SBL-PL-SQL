@@ -1,0 +1,19 @@
+--
+select * from IFSAPP.PURCHASE_ORDER_TAB p
+where p.order_no = 'A-29950882';
+
+--
+select * from IFSAPP.purchase_order_line_tab l
+where l.order_no = 'A-29950882';
+
+--
+select * from IFSAPP.purchase_order_line_tab l
+where l.purchase_modified = 'Internal'
+and substr(l.order_no,1,2) != 'A-';
+
+--
+select substr(p.order_no, 1, 2)
+  from IFSAPP.PURCHASE_ORDER_TAB p
+ where substr(p.order_no, 2, 1) = '-'
+ group by substr(p.order_no, 1, 2)
+ order by substr(p.order_no, 1, 2);

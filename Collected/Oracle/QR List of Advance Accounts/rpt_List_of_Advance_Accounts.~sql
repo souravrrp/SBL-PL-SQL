@@ -1,0 +1,65 @@
+--List of Advance Accounts
+SELECT H.YEAR,
+       H.PERIOD,
+       H.SHOP_CODE,
+       H.ORIGINAL_ACCT_NO,
+       H.ACCT_NO,
+       H.PRODUCT_CODE,
+       H.SALESMAN,
+       TO_CHAR(H.ACTUAL_SALES_DATE, 'YYYY/MM/DD') ACTUAL_SALES_DATE,
+       TO_CHAR(H.SALES_DATE, 'YYYY/MM/DD') SALES_DATE,
+       H.CUSTOMER,
+       H.NORMAL_CASH_PRICE CASH_PRICE,
+       H.HIRE_CASH_PRICE,
+       H.HIRE_PRICE,
+       H.AMOUNT_FINANCED,
+       H.MONTHLY_PAY,
+       H.FIRST_PAY,
+       H.DOWN_PAYMENT,
+       H.LOC,
+       H.ARR_MON,
+       H.ARR_AMT,
+       H.DEL_MON,
+       H.ACT_OUT_BAL,
+       (H.HIRE_PRICE - H.FIRST_PAY - H.ACT_OUT_BAL -
+       ((trunc(MONTHS_BETWEEN(last_day(to_date('&year_i' || '/' ||
+                                               '&month_i' || '/1',
+                                               'YYYY/MM/DD')),
+                              H.ACTUAL_SALES_DATE)) - 1) * H.MONTHLY_PAY)) ADVANCE_AMOUNT
+       /*COUNT(*)*/
+  FROM IFSAPP.HPNRET_FORM249_ARREARS_TAB H
+ WHERE /*H.ACT_OUT_BAL > 0
+   AND*/ H.YEAR = '&year_i'
+   AND H.PERIOD = '&month_i'
+   AND H.SHOP_CODE LIKE '&shop_code'
+   AND H.ARR_MON = 0
+   AND H.ARR_AMT = 0
+   /*and h.acct_no = 'KHL-H6317'*/
+   /*AND (H.HIRE_PRICE - H.FIRST_PAY - H.ACT_OUT_BAL -
+       ((trunc(MONTHS_BETWEEN(last_day(to_date('&year_i' || '/' ||
+                                                '&month_i' || '/1',
+                                                'YYYY/MM/DD')),
+                               H.ACTUAL_SALES_DATE)) - 1) * H.MONTHLY_PAY)) > 0*/ --Advance amount check
+   /*AND H.MONTHLY_PAY <=
+       (H.HIRE_PRICE - H.FIRST_PAY - H.ACT_OUT_BAL -
+       ((trunc(MONTHS_BETWEEN(last_day(to_date('&year_i' || '/' ||
+                                                '&month_i' || '/1',
+                                                'YYYY/MM/DD')),
+                               H.ACTUAL_SALES_DATE)) - 1) * H.MONTHLY_PAY))*/  --Checking monthly_pay les than advance_amount
+ ORDER BY H.SHOP_CODE, H.ACCT_NO, H.PRODUCT_CODE
+
+
+--Month Calculation check
+select h.actual_sales_date,
+       trunc(MONTHS_BETWEEN(to_date('&year_i' || '/' || '&month_i' || '/1' /*||extract(day  from H.ACTUAL_SALES_DATE)*/,
+                                    'YYYY/MM/DD'),
+                            H.ACTUAL_SALES_DATE)),
+       trunc(MONTHS_BETWEEN(last_day(to_date('&year_i' || '/' || '&month_i' || '/1',
+                                             'YYYY/MM/DD')),
+                            H.ACTUAL_SALES_DATE))
+/*trunc(MONTHS_BETWEEN(to_date('&year_i'||'/'||'&month_i'||'/'||extract(day  from H.ACTUAL_SALES_DATE), 'YYYY/MM/DD'),
+H.ACTUAL_SALES_DATE))*/
+  FROM HPNRET_FORM249_ARREARS_TAB H
+ WHERE H.ACT_OUT_BAL > 0
+   AND H.YEAR = '&year_i'
+   AND H.PERIOD = '&month_i'

@@ -1,0 +1,62 @@
+create or replace function GET_SBL_M2_ECC_F_AGING(
+       year_      in number,
+       period_    in number,
+       acct_no_   in varchar2) return number
+
+is
+
+    cursor get_pv(year_ in number, period_ in number, acct_no_ in varchar2) is
+      select h.present_value
+      from   HPNRET_FORM249_ARREARS_TAB h
+      where  h.year = year_
+      and    h.period = period_
+      and    h.acct_no = acct_no_;
+
+    cursor get_effective_rate(year_ in number, period_ in number, acct_no_ in varchar2) is
+      select h.effective_rate
+      from   HPNRET_FORM249_ARREARS_TAB h
+      where  h.year = year_
+      and    h.period = period_
+      and    h.acct_no = acct_no_;
+
+    cursor get_monthly_pay(year_ in number, period_ in number, acct_no_ in varchar2) is
+      select h.monthly_pay
+      from   HPNRET_FORM249_ARREARS_TAB h
+      where  h.year = year_
+      and    h.period = period_
+      and    h.acct_no = acct_no_;
+    
+    pv                   number;
+    effective_rate       number;
+    monthly_pay          number;
+    m1                   number;
+    m2                   number;
+    
+
+begin
+  
+    open get_pv(year_, period_, acct_no_);
+    fetch get_pv into pv;
+    close get_pv;
+    
+    open get_effective_rate(year_, period_, acct_no_);
+    fetch get_effective_rate into effective_rate;
+    close get_effective_rate;
+    
+    open get_monthly_pay(year_, period_, acct_no_);
+    fetch get_monthly_pay into monthly_pay;
+    close get_monthly_pay;
+    
+    m1 := GET_SBL_M1_ECC_F_AGING(year_, period_, acct_no_);
+    
+    if m1 > 0 and (pv - (monthly_pay - m1)) > 0 then
+      m2 := round((pv - (monthly_pay - m1)) * effective_rate, 6);
+    else
+      m2 := 0;
+    end if;
+    
+    /*dbms_output.put_line('m1 = '||m1);*/
+    
+    return m2;
+    
+end GET_SBL_M2_ECC_F_AGING;

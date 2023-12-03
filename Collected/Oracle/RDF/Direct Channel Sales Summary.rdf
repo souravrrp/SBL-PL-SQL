@@ -1,0 +1,1459 @@
+-----------------------------------------------------------------------------
+--
+--  Logical unit: <<< Enter your logical unit description here >>>
+--
+--  File:         TEMPLATE.RDF
+--  Version:      Foundation1 2.2
+--
+--  Date    Sign     History
+--  ------  ----     -----------------------------------------------------------
+--  081206  nowilk   Created--
+--  080319  Erwilk   Bug Fix - MIS 2008/03/19 Changed Pkg part functionality
+--  080504  ralilk   Replace the body with SalesMISReport
+--  080904  RaLiLK   Bug Fix - MIS Reports 2008/09/04
+-----------------------------------------------------------------------------
+
+define MODULE             = HPNRET
+define LU                 = HpnretHpHead
+define PKG                = SIN_CHANNEL_SALES_SUMMARY_RPI
+
+define TABLE              = INFO_SERVICES_RPT
+define VIEW               = SIN_CHANNEL_SALES_SUMMARY_REP
+define VIEW2                             = HPNRET_LEVEL_SITE_LOV
+
+define METHOD             = Report_Overview
+
+-----------------------------------------------------------------------------
+-- PACKAGE SPECIFICATION:
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG specification
+
+CREATE OR REPLACE PACKAGE &PKG AS
+
+  MODULE_  CONSTANT VARCHAR2(6) := '&MODULE';
+  LU_NAME_ CONSTANT VARCHAR2(25) := '&LU';
+
+  PROCEDURE Enumerate_Yes_Or_No(Yes_Or_No OUT VARCHAR2);
+
+  PROCEDURE &METHOD(Report_Attr_ IN VARCHAR2, Parameter_Attr_ IN VARCHAR2);
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- REPORTS
+-----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW &VIEW2 AS
+SELECT  higher_level district,
+site_id      site,
+Site_API.Get_Description(site_id) Description
+FROM   Hpnret_Level_Hierarchy_TAB
+WHERE  Site_Id IS NOT  NULL
+AND    User_Allowed_Site_API.Is_Authorized(site_id) = 1;
+
+COMMENT ON TABLE &VIEW
+IS 'LU=&LU^PROMPT=Site^MODULE=&MODULE^';
+
+COMMENT ON COLUMN &VIEW2..district
+IS 'FLAGS=PMIU-^DATATYPE=NUMBER^PROMPT=District^REF=HpnretLevel^';
+COMMENT ON COLUMN &VIEW2..site
+IS 'FLAGS=K-IUL^DATATYPE=STRING(5)^PROMPT=Site Id^';
+COMMENT ON COLUMN &VIEW2..Description
+IS 'FLAGS=A-IUL^DATATYPE=STRING(50)^PROMPT=Description^';
+
+PROMPT Creating report view &VIEW
+
+CREATE OR REPLACE VIEW &VIEW AS
+SELECT RESULT_KEY                              RESULT_KEY,
+       ROW_NO                                  ROW_NO,
+       s1                                      FROM_DATE,
+       s2                                      TO_DATE,
+       s15                                     CHANNEL,
+       s11                                     AREA,
+       s16                                     DISTRICT,
+       s4                                      SITE,
+       s9                                      SECOND_COMMODITY,
+       s12                                     PRODUCT,
+       s3                                      USR,
+       s5                                      SITE_DESC,
+       s6                                      SALES_MAN,
+       s7                                      SALES_MAN_DESC,
+       s8                                      COMMODITY_GROUP,
+       n1                                      CASH_VALUE,
+       n2                                      SALES_UNITS,
+       n3                                      HIRE_VALUE,
+       n4                                      HIRE_SALES_UNITS,
+       n5                                      REVERT_VAL,
+       n6                                      REVERT_UNITS,
+       n7                                      REVERT_REV_VAL,
+       n8                                      REVERT_REV_UNIT,
+       s14                                     PRODUCT_DESC,
+       n9                                      LIST_VALUE,
+       n10                                     HIRE_VALUE_HP,
+       n11                                     FIRST_PAYMENT,
+       s17                                     AD
+FROM  &TABLE
+WITH  read only;
+
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=&LU^METHOD=&PKG..&METHOD^MODE=PLSQL1.2^TABLE=&TABLE^
+   ^TITLE=Direct Channel Sales Summary^
+   ^LAYOUTS=DirectChannelSalesSummary.QRP=Direct Channel Sales Summary^';
+
+COMMENT ON COLUMN &VIEW..result_key IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..row_no IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..from_date IS
+   'FLAGS=A----^TITLE=From Date^ITEM_NAME=iFromDate^DATATYPE=STRING^QVALUE=YYYY/MM/DD^QFLAGS=MC---^QUERY=From Date:^';
+COMMENT ON COLUMN &VIEW..to_date IS
+   'FLAGS=A----^TITLE=To Date^ITEM_NAME=iToDate^DATATYPE=STRING^QFLAGS=MC---^QVALUE=YYYY/MM/DD^QUERY=To Date:^';
+COMMENT ON COLUMN &VIEW..channel IS
+   'FLAGS=A----^TITLE=Channel^ITEM_NAME=iChannel^DATATYPE=STRING^'; 
+   --REF=hpnret_channels^
+  -- ^QUERY=Channel:^';
+COMMENT ON COLUMN &VIEW..area IS
+   'FLAGS=A----^TITLE=Area^ITEM_NAME=iArea^DATATYPE=STRING^';
+ --  ^REF=hpnret_areas_by_channel(channel)^QUERY=Area:^QFLAGS=MC--L^QVALUE=%^';
+COMMENT ON COLUMN &VIEW..district IS
+   'FLAGS=A----^TITLE=District^ITEM_NAME=iDistrict^DATATYPE=STRING^';
+  -- ^REF=HPNRET_SINGER_DISTRICT_BY_AREA(area)^QUERY=District:^QVALUE=%^';
+COMMENT ON COLUMN &VIEW..site IS
+   'FLAGS=A----^TITLE=Site^ITEM_NAME=iSite^DATATYPE=STRING^'; 
+   --REF=HPNRET_LEVEL_SITE_LOV(district)^QUERY=Branch:^';
+COMMENT ON COLUMN &VIEW..second_commodity IS
+   'FLAGS=A----^TITLE=Second Commodity^ITEM_NAME=iSecondCommodity^DATATYPE=STRING^';
+  -- ^REF=INVENTORY_PRODUCT_FAMILY^QUERY=Product Family:^';
+COMMENT ON COLUMN &VIEW..product IS
+   'FLAGS=A----^TITLE=Product^ITEM_NAME=iProduct^DATATYPE=STRING^'; 
+   --REF=Inventory_Part^
+  -- ^QUERY=Product:^';
+COMMENT ON COLUMN &VIEW..usr IS
+   'FLAGS=A----^TITLE=Usr^ITEM_NAME=iUsr^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..site_desc IS
+   'FLAGS=A----^TITLE=Site Desc^ITEM_NAME=iSiteDesc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..sales_man IS
+   'FLAGS=A----^TITLE=Salesman Code^ITEM_NAME=iSalesMan^DATATYPE=STRING(20)/UPPERCASE^REF=SalesPartSalesman^QFLAGS=MC--L^';
+COMMENT ON COLUMN &VIEW..sales_man_desc IS
+   'FLAGS=A----^TITLE=Sales Man Desc^ITEM_NAME=iSalesManDesc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..commodity_group IS
+   'FLAGS=A----^TITLE=Commodity Group^ITEM_NAME=iCommodityGroup^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..cash_value IS
+   'FLAGS=A----^TITLE=Cash Value^ITEM_NAME=iCashValue^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..sales_units IS
+   'FLAGS=A----^TITLE=Sales Units^ITEM_NAME=iSalesUnits^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..hire_value IS
+   'FLAGS=A----^TITLE=Hire Value^ITEM_NAME=iHireValue^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..hire_sales_units IS
+   'FLAGS=A----^TITLE=Hire Sales Units^ITEM_NAME=iHireSalesUnits^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..revert_val IS
+   'FLAGS=A----^TITLE=Revert Val^ITEM_NAME=iRevertVal^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..revert_units IS
+   'FLAGS=A----^TITLE=Revert Units^ITEM_NAME=iRevertUnits^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..revert_rev_val IS
+   'FLAGS=A----^TITLE=Revert Rev Val^ITEM_NAME=iRevertRevVal^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..revert_rev_unit IS
+   'FLAGS=A----^TITLE=Revert Rev Unit^ITEM_NAME=iRevertRevUnit^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..product_desc IS
+   'FLAGS=A----^TITLE=Product Desc^ITEM_NAME=iProductDesc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..list_value IS
+   'FLAGS=A----^TITLE=List Value^ITEM_NAME=iListValue^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..hire_value_hp IS
+   'FLAGS=A----^TITLE=Hire Value^ITEM_NAME=iHireValueHP^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..first_payment IS
+   'FLAGS=A----^TITLE=First Payment^ITEM_NAME=iFirstPayment^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..ad IS
+   'FLAGS=A----^DATATYPE=STRING(1)/UPPERCASE^'; 
+   --PROMPT=Ad^TITLE=Ad^ITEM_NAME=iAd^ENUMERATE=HPNRET_BRANCHWISE_AREA_RPI.Enumerate_Yes_Or_No^QUERY=Include Approved Dealer:^QFLAGS=MCS--^QVALUE=:CUST_OPEN_ITEM_RPI.Get_Default_No_Choice';
+
+
+BEGIN
+Report_SYS.Refresh_('&VIEW');
+END;
+/
+
+-----------------------------------------------------------------------------
+-- PACKAGE IMPLEMENTATION
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG implementation
+
+CREATE OR REPLACE PACKAGE BODY &PKG AS
+
+  PROCEDURE Enumerate_Yes_Or_No(yes_or_no OUT VARCHAR2) IS
+  
+  BEGIN
+    yes_or_no := Gen_Yes_No_API.Decode('Y') || Client_SYS.Field_Separator_ ||
+                 Gen_Yes_No_API.Decode('N');
+  END Enumerate_Yes_Or_No;
+
+  PROCEDURE &METHOD(report_attr_ IN VARCHAR2, parameter_attr_ IN VARCHAR2) IS
+             result_key_ NUMBER;
+    row_no_     NUMBER := 1;
+    site_code_  VARCHAR2(5);
+
+    usr_              VARCHAR2(30);
+    site_desc_        VARCHAR2(20);
+    second_commodity_ VARCHAR2(5);
+
+    product_family_ VARCHAR2(200);
+
+    product_      VARCHAR2(200);
+    product_desc_ VARCHAR2(200);
+    part_no_      VARCHAR2(200);
+    part_desc_    VARCHAR2(200);
+    ad_           VARCHAR2(5);
+
+    l_non_disc_cach_p_   NUMBER := 0;
+    pkg_line_            VARCHAR2(8);
+    pkg_part_cashprice_  NUMBER := 0;
+    currency_code_       VARCHAR2(3);
+    l_disc_percentage_   NUMBER := 0;
+    l_cash_price_        NUMBER := 0;
+    sum_komp_cach_price_ NUMBER := 0;
+    
+    --(+) ralilk - 2008/04/02
+    sum_komp_qty_        NUMBER := 0;
+   -- komp_hire_val_       NUMBER := 0;
+  --  komp_line_count_     NUMBER;
+    --  suraksha_price_ NUMBER := 0;
+    --  sanasuma_value_ NUMBER := 0;
+
+    prev_prod_cat VARCHAR2(5);
+    reset         BOOLEAN := TRUE;
+
+    account_no_  VARCHAR2(50);
+    account_rev_ NUMBER := 1;
+
+    dock_code__ VARCHAR2(35);
+    hp_line_no_ VARCHAR2(8);
+    hp_rev_no_  NUMBER;
+
+    CURSOR get_branches(district_code_ IN NUMBER) IS
+      SELECT site_id, level_id
+        FROM HPNRET_LEVEL_HIERARCHY
+       WHERE site_id is not NULL
+       START with level_id LIKE district_code_
+      CONNECT BY PRIOR level_id = higher_level;
+    --ORDER BY site_id;
+
+    --ralilk new def
+    agency_           NUMBER;
+    channel_          NUMBER;
+    area_             NUMBER;
+    zone_             NUMBER;
+    singer_district_  NUMBER;
+    franchise_dealer_ NUMBER;
+    branch_           NUMBER;
+    approve_dealer_   NUMBER;
+    sales_agent_      NUMBER;
+
+    strsinger_district_ VARCHAR2(12);
+    strarea_            VARCHAR2(12);
+    strchannel_         VARCHAR2(12);
+
+    strfdate_ VARCHAR2(30);
+    strtdate_ VARCHAR2(30);
+    --end new
+
+    area_desc_     VARCHAR2(100);
+    channel_desc_  VARCHAR2(100);
+    district_desc_ VARCHAR2(100);
+
+    get_all_product_family_ number := 0;
+
+    procedure insert_rec__(product_cat__   IN VARCHAR2,
+                           cat_desc__      IN VARCHAR2,
+                           cash_value_co_  IN NUMBER,
+                           sales_units_co_ IN NUMBER,
+                           cash_value_hp_  IN NUMBER,
+                           sales_units_hp_ IN NUMBER,
+                           cash_value_rt_  IN NUMBER,
+                           sales_units_rt_ IN NUMBER,
+                           cash_value_rr_  IN NUMBER,
+                           sales_units_rr_ IN NUMBER,
+                           part_no_        IN VARCHAR2,
+                           part_desc__     IN VARCHAR2,
+                           list_value_     IN NUMBER,
+                           hire_value_     IN NUMBER,
+                           first_payment_  IN NUMBER,
+                           channel_desc__  IN VARCHAR2,
+                           area_desc__     IN VARCHAR2,
+                           district_desc__ IN VARCHAR2,
+                           site_code__     IN VARCHAR2,
+                           site_desc__     IN VARCHAR2) IS
+
+      temp_upper_site_id_ VARCHAR2(5);
+      temp_level_id_      NUMBER;
+      CURSOR get_level_site(level_id_ NUMBER) IS
+        SELECT site_id
+          FROM Hpnret_Level_Hierarchy_TAB
+         WHERE level_id = level_id_
+           AND site_id IS NOT NULL;
+    BEGIN
+      --insert into ralilk_test values(Gen_Yes_No_API.Encode(ad_),site_code__,'1');
+      IF (Gen_Yes_No_Api.Encode(AD_) = 'Y') THEN
+
+        temp_level_id_ := Hpnret_Level_H_Util_API.Get_Level_By_Site(site_code__);
+
+        IF (Hpnret_Level_API.Get_Level_Type_Num(temp_level_id_) = 8) THEN
+          --AD
+          OPEN Get_Level_Site(Hpnret_Level_H_Util_API.Get_Percent_Higher_Level(Temp_Level_Id_));
+          FETCH get_level_site
+            INTO temp_upper_site_id_;
+          IF get_level_site%FOUND THEN
+            -- insert into ralilk_test values(temp_upper_site_id_,site_code__,'2');
+            INSERT INTO INFO_SERVICES_RPT
+              (result_key,
+               row_no,
+               parent_row_no,
+               s1,
+               s2,
+               s3,
+               s4,
+               s5,
+               s6,
+               s7,
+               s8,
+               n1,
+               n2,
+               n3,
+               n4,
+               n5,
+               n6,
+               s9,
+               n7,
+               n8,
+               s11,
+               s12,
+               s14,
+               s15,
+               s16,
+               n9,
+               n10,
+               n11)
+            VALUES
+              (result_key_,
+               row_no_,
+               0,
+               strfdate_, --s1
+               strtdate_, --s2
+               usr_, --s3
+               temp_upper_site_id_, --s4
+               site_API.get_description(temp_upper_site_id_), --s5
+               site_code__, --sales_man_, --s6
+               site_desc__, --sales_man_name_, --s7
+               cat_desc__, --s8
+               cash_value_co_, --n1
+               sales_units_co_, --n2
+               cash_value_hp_, --n3
+               sales_units_hp_, --n4
+               cash_value_rt_, --total_disc_chash_price_,
+               sales_units_rt_, --total_ord_qty_,
+               product_cat__,
+               cash_value_rr_, --rec2_.total_hpret_price,
+               sales_units_rr_, --rec2_.tot_hpret_qty);
+               area_desc__,
+               part_no_,
+               part_desc__,
+               channel_desc__,
+               district_desc__,
+               list_value_,
+               hire_value_,
+               first_payment_);
+          END IF;
+          CLOSE get_level_site;
+        ELSE
+          INSERT INTO INFO_SERVICES_RPT
+            (result_key,
+             row_no,
+             parent_row_no,
+             s1,
+             s2,
+             s3,
+             s4,
+             s5,
+             s6,
+             s7,
+             s8,
+             n1,
+             n2,
+             n3,
+             n4,
+             n5,
+             n6,
+             s9,
+             n7,
+             n8,
+             s11,
+             s12,
+             s14,
+             s15,
+             s16,
+             n9,
+             n10,
+             n11)
+          VALUES
+            (result_key_,
+             row_no_,
+             0,
+             strfdate_, --s1
+             strtdate_, --s2
+             usr_, --s3
+             site_code__, --s4
+             site_desc__, --s5
+             site_code__, --sales_man_, --s6
+             site_desc__, --sales_man_name_, --s7
+             cat_desc__, --s8
+             cash_value_co_, --n1
+             sales_units_co_, --n2
+             cash_value_hp_, --n3
+             sales_units_hp_, --n4
+             cash_value_rt_, --total_disc_chash_price_,
+             sales_units_rt_, --total_ord_qty_,
+             product_cat__,
+             cash_value_rr_, --rec2_.total_hpret_price,
+             sales_units_rr_, --rec2_.tot_hpret_qty);
+             area_desc__,
+             part_no_,
+             part_desc__,
+             channel_desc__,
+             district_desc__,
+             list_value_,
+             hire_value_,
+             first_payment_);
+
+        END IF;
+
+      ELSE
+        INSERT INTO INFO_SERVICES_RPT
+          (result_key,
+           row_no,
+           parent_row_no,
+           s1,
+           s2,
+           s3,
+           s4,
+           s5,
+           s6,
+           s7,
+           s8,
+           n1,
+           n2,
+           n3,
+           n4,
+           n5,
+           n6,
+           s9,
+           n7,
+           n8,
+           s11,
+           s12,
+           s14,
+           s15,
+           s16,
+           n9,
+           n10,
+           n11)
+        VALUES
+          (result_key_,
+           row_no_,
+           0,
+           strfdate_, --s1
+           strtdate_, --s2
+           usr_, --s3
+           site_code__, --s4
+           site_desc__, --s5
+           site_code__, --sales_man_, --s6
+           site_desc__, --sales_man_name_, --s7
+           cat_desc__, --s8
+           cash_value_co_, --n1
+           sales_units_co_, --n2
+           cash_value_hp_, --n3
+           sales_units_hp_, --n4
+           cash_value_rt_, --total_disc_chash_price_,
+           sales_units_rt_, --total_ord_qty_,
+           product_cat__,
+           cash_value_rr_, --rec2_.total_hpret_price,
+           sales_units_rr_, --rec2_.tot_hpret_qty);
+           area_desc__,
+           part_no_,
+           part_desc__,
+           channel_desc__,
+           district_desc__,
+           list_value_,
+           hire_value_,
+           first_payment_);
+
+      END IF;
+      ROW_NO_ := ROW_NO_ + 1;
+    END INSERT_REC__;
+
+    procedure insert_recs(all_product_familly_ IN NUMBER, --all product family
+                          product_family_      IN VARCHAR2,
+                          all_products_        IN VARCHAR2,
+                          cat_no_              IN VARCHAR2,
+                          site_                IN VARCHAR2,
+                          fdate_               IN DATE,
+                          tdate_               IN DATE,
+                          channel_desc_        IN VARCHAR2,
+                          area_desc_           IN VARCHAR2,
+                          district_desc_       IN VARCHAR2,
+                          site_desc_           IN VARCHAR2) IS
+
+      co_val_sum NUMBER := 0;
+      co_qty_sum NUMBER := 0;
+      hp_val_sum NUMBER := 0;
+      hp_qty_sum NUMBER := 0;
+
+      rt_val_sum NUMBER := 0;
+      rt_qty_sum NUMBER := 0;
+      rr_val_sum NUMBER := 0;
+      rr_qty_sum NUMBER := 0;
+      list_value NUMBER := 0;
+      hire_value NUMBER := 0;
+      first_pay  NUMBER := 0;
+      komp_hire_val_ NUMBER := 0;
+
+      CURSOR org_sales(from_date_ in date, to_date_ in date, site_ in varchar2, product_family_ in varchar2, cat_no_ in varchar2) is
+        SELECT order_no,
+               line_no,
+               line_item_no,
+               rel_no,
+               real_ship_date,
+               qty_invoiced,
+               base_sale_unit_price,
+               dock_code,
+               sale_cat,
+               part_no,
+               product_family,
+               contract
+          FROM (SELECT c.order_no order_no,
+                        c.line_no line_no,
+                        c.line_item_no line_item_no,
+                        c.rel_no rel_no,
+                        c.real_ship_date real_ship_date,
+                        c.qty_invoiced qty_invoiced,
+                        c.base_sale_unit_price base_sale_unit_price,
+                        c.dock_code dock_code,
+                        1 sale_cat,
+                        c.part_no part_no,
+                        Inventory_Part_API.Get_Part_Product_Family(c.contract,
+                                                                   c.part_no) product_family,
+                        c.contract contract
+                   FROM customer_order_line c
+                  WHERE c.contract = site_ --'bab01'
+                    AND trunc(c.real_ship_date) between from_date_ and
+                        to_date_
+                    AND c.part_no is not null
+                       --to exclude multi site transactions
+                    AND (c.demand_code_db is null or
+                        c.demand_code_db in ('PO', 'WO'))
+                    AND ((all_products_ = 1) OR (c.part_no = cat_no_))
+                    AND ((all_product_familly_ = 1) OR (inventory_part_API.get_part_product_family(c.contract,
+                                                                                                   c.part_no) =
+                        product_family_))
+                 UNION
+                 --  CURSOR var_sales is
+                 SELECT h.account_no order_no,
+                        h.line_no line_no,
+                        h.account_rev line_item_no,
+                        null rel_no,
+                        h.variated_date real_ship_date,
+                        h.quantity qty_invoiced,
+                        null base_sale_unit_price,
+                        h.rowstate dock_code,
+                        2 sale_cat,
+                        h.part_no part_no,
+                        Inventory_Part_API.Get_Part_Product_Family(h.contract,
+                                                                   h.part_no) product_family,
+                        h.contract contract
+                   FROM Hpnret_Hp_Dtl_TAB H
+                  WHERE h.rowstate IN
+                        ('CashConverted', 'ExchangedIn', 'Returned')
+                    AND h.part_no IS NOT NULL
+                    AND catalog_type <> 'PKG'
+                    AND ((all_products_ = 1) OR (h.part_no = cat_no_))
+                    AND TRUNC(h.variated_date) BETWEEN from_date_ AND
+                        to_date_
+                    AND h.contract = site_
+                    AND ((all_product_familly_ = 1) OR (inventory_part_API.get_part_product_family(h.contract,
+                                                                                                   h.part_no) =
+                        product_family_))
+                 UNION
+                 -- RevertReversed ,Start
+                 SELECT h.account_no order_no,
+                        h.line_no line_no,
+                        h.account_rev line_item_no,
+                        null rel_no,
+                        h.variated_date real_ship_date,
+                        h.quantity qty_invoiced,
+                        null base_sale_unit_price,
+                        'RevertReversed' dock_code,
+                        2 sale_cat,
+                        h.part_no part_no,
+                        Inventory_Part_API.Get_Part_Product_Family(h.contract,
+                                                                   h.part_no) product_family,
+                        h.contract contract
+                   FROM hpnret_hp_dtl_TAB h
+                  WHERE h.part_no IS NOT NULL
+                    AND catalog_type <> 'PKG'
+                    AND ((all_products_ = 1) OR (h.part_no = cat_no_))
+                    AND trunc(h.variated_date) BETWEEN from_date_ AND
+                        to_date_
+                    AND trunc(h.reverted_date) IS NOT NULL
+                    AND TRUNC(h.variated_date) >= TRUNC(h.reverted_date)
+                    AND h.contract = site_
+                    AND ((all_product_familly_ = 1) OR (inventory_part_API.get_part_product_family(h.contract,
+                                                                                                   h.part_no) =
+                        product_family_))
+                 -- revertreversed ,end
+                 UNION
+                 --  CURSOR var_sales is
+                 SELECT h.account_no order_no,
+                        h.line_no line_no,
+                        h.account_rev line_item_no,
+                        null rel_no,
+                        h.variated_date real_ship_date,
+                        h.quantity qty_invoiced,
+                        null base_sale_unit_price,
+                        'Reverted' dock_code,
+                        2 sale_cat,
+                        h.part_no part_no,
+                        Inventory_Part_API.Get_Part_Product_Family(h.contract,
+                                                                   h.part_no) product_family,
+                        h.contract contract
+                   FROM hpnret_hp_dtl_TAB H
+                  WHERE --h.Rowstate IN ('Reverted','RevertReversed')
+                 --     AND H.part_no = cat_no_
+                 --  AND H.part_no IS NOT NULL
+                 -- AND
+                  catalog_type <> 'PKG'
+               AND ((all_products_ = 1) OR (h.part_no = cat_no_))
+               and h.reverted_date IS NOT NULL
+               AND TRUNC(h.reverted_date) BETWEEN from_date_ AND to_date_
+               AND h.contract = site_
+               AND ((all_product_familly_ = 1) OR (Inventory_Part_API.Get_Part_Product_Family(h.contract,
+                                                                                             h.part_no) =
+                  product_family_))
+
+                 UNION
+                 -- CURSOR get_returns IS
+                 SELECT rml.order_no order_no,
+                        null line_no,
+                        null line_item_no,
+                        null rel_no,
+                        rml.date_returned real_ship_date,
+                        rml.qty_to_return qty_invoiced,
+                        rml.sale_unit_price base_sale_unit_price,
+                        null dock_code,
+                        3 sale_cat,
+                        rml.catalog_no part_no,
+                        Inventory_Part_API.Get_Part_Product_Family(rml.contract,
+                                                                   rml.catalog_no) product_family,
+                        rml.contract contract
+                   FROM Return_Material_Line_TAB rml
+                  WHERE rml.rowstate = 'ReturnCompleted'
+                    AND rml.catalog_no IS NOT NULL
+                    AND ((all_products_ = 1) OR (rml.catalog_no = cat_no_))
+                    AND TRUNC(rml.date_returned) BETWEEN from_date_ AND
+                        to_date_
+                    AND rml.contract = site_
+                    --080904, RaLiLK, Start
+                    AND rml.purchase_order_no IS NULL
+                    --080904, RaLiLK, End
+                    AND SUBSTR(rml.order_no, 5, 1) = 'R'
+                    AND ((all_product_familly_ = 1) OR (inventory_part_API.get_part_product_family(rml.contract,
+                                                                                                   rml.catalog_no) =
+                        product_family_)))
+
+         ORDER BY product_family, part_no;
+
+      CURSOR get_pkg_komp_sum_cash_pr(acc_no_ IN VARCHAR2, pkg_line_ IN VARCHAR2) IS
+        SELECT SUM(NVL(T.cash_price*t.quantity, 0)), SUM(t.quantity)
+          FROM Hpnret_Hp_Dtl_TAB T
+         WHERE t.account_no = acc_no_
+           AND t.account_rev = 1
+           AND t.pkg_line_no = pkg_line_;
+
+      curr_part_no_        VARCHAR2(50) := NULL;
+      curr_product_family_ VARCHAR2(50);
+      loop_                NUMBER := 0;
+
+    BEGIN
+
+      FOR REC_ IN org_sales(fdate_, tdate_, site_, product_family_, cat_no_) LOOP
+        part_no_ := rec_.part_no;
+        --part_desc_ := Inventory_Part_API.Get_Description(rec_.contract,rec_.part_no);
+        account_no_  := rec_.order_no;
+        account_rev_ := 1;
+        if curr_part_no_ IS NULL THEN
+          curr_part_no_        := part_no_;
+          curr_product_family_ := rec_.product_family;
+        ELSIF curr_part_no_ <> part_no_ THEN
+          insert_rec__(curr_product_family_, --product_cat   IN       VARCHAR2(5),
+                       Inventory_Product_Family_API.Get_Description(Curr_Product_Family_), --Cat_Desc        IN     VARCHAR2(200),
+                       co_val_sum, --cash_value_co   in     number,
+                       co_qty_sum, --sales_units_co  in     number,
+                       hp_val_sum, --cash_value_hp   in     number,
+                       hp_qty_sum, --sales_units_hp  in     number,
+                       rt_val_sum, --cash_value_rt   in     number,
+                       rt_qty_sum, --sales_units_rt  in     number,
+                       rr_val_sum,
+                       rr_qty_sum, --cash_value_rr   in     number,
+                       curr_part_no_,
+                       inventory_part_API.get_description(rec_.contract,
+                                                          curr_part_no_),
+                       list_value,
+                       hire_value,
+                       first_pay,
+                       channel_desc_,
+                       area_desc_,
+                       district_desc_,
+                       site_,
+                       site_desc_);
+          curr_part_no_        := part_no_;
+          curr_product_family_ := rec_.product_family;
+
+          co_val_sum := 0;
+          co_qty_sum := 0;
+          hp_val_sum := 0;
+          hp_qty_sum := 0;
+          rt_val_sum := 0;
+          rt_qty_sum := 0;
+          rr_val_sum := 0;
+          rr_qty_sum := 0;
+          list_value := 0;
+          hire_value := 0;
+          first_pay  := 0;
+          komp_hire_val_ := 0;
+
+        END IF;
+        IF rec_.sale_cat = 1 THEN
+
+          IF SUBSTR(rec_.order_no, 5, 1) = 'H' THEN
+            dock_code__ := NVL(rec_.dock_code, 'TEST');
+            IF dock_code__ <> 'NS' THEN
+              hpnret_hp_dtl_API.get_order_line(hp_rev_no_,
+                                               hp_line_no_,
+                                               rec_.order_no,
+                                               rec_.line_no,
+                                               rec_.line_item_no,
+                                               rec_.rel_no);
+              l_non_disc_cach_p_ := nvl(hpnret_hp_dtl_API.get_cash_price(rec_.order_no,
+                                                                         hp_rev_no_,
+                                                                         hp_line_no_),
+                                        0)*rec_.qty_invoiced;  --2008/04/03
+
+              IF (sales_part_type_API.encode(hpnret_hp_dtl_API.get_catalog_type(rec_.order_no,
+                                                                                hp_rev_no_,
+                                                                                hp_line_no_)) =
+                 'KOMP') THEN
+                --- line no of the pkg part
+                pkg_line_ := hpnret_hp_dtl_API.get_pkg_line_no(rec_.order_no,
+                                                               hp_rev_no_,
+                                                               hp_line_no_);
+                --- pkg cash price
+                pkg_part_cashprice_ := nvl(hpnret_hp_dtl_API.get_cash_price(rec_.order_no,
+                                                                            hp_rev_no_,
+                                                                            pkg_line_),
+                                           0) - nvl(((Hpnret_Hp_Dtl_API.Get_Discount(rec_.order_no,
+                                                                                     hp_rev_no_,
+                                                                                     pkg_line_) / 100) *
+                                                    Hpnret_Hp_Dtl_API.Get_Cash_Price(rec_.order_no,
+                                                                                      hp_rev_no_,
+                                                                                      pkg_line_)),
+                                                    0);
+                
+                OPEN get_pkg_komp_sum_cash_pr(rec_.order_no, pkg_line_);
+                FETCH get_pkg_komp_sum_cash_pr
+                  INTO sum_komp_cach_price_,sum_komp_qty_;
+                CLOSE get_pkg_komp_sum_cash_pr;
+                               
+                
+                /*(-) RALILK 2008/04/02
+                IF ((NVL(sum_komp_cach_price_, 0)) <> 0) THEN
+                   IF NVL(komp_line_count_,0)!=0 THEN
+                      l_non_disc_cach_p_ := (1 * pkg_part_cashprice_) /
+                                        komp_line_count_;
+                   ELSE
+                     l_non_disc_cach_p_ := 0;
+                   END IF;
+                ELSE
+                  IF(NVL(sum_komp_cach_price_*sum_komp_qty_,0)<>0) THEN
+                     l_non_disc_cach_p_ := (l_non_disc_cach_p_ *
+                                        pkg_part_cashprice_*rec_.qty_invoiced) /
+                                        (sum_komp_cach_price_*sum_komp_qty_);
+                  ELSE
+                     l_non_disc_cach_p_ :=0;
+                  END IF;
+                END IF;
+                 */
+                currency_code_     := Customer_Order_API.Get_Currency_Code(rec_.order_no);
+               /* (-) RALILK 2008/04/02
+               l_non_disc_cach_p_ := round(l_non_disc_cach_p_,
+                                            Currency_Code_API.Get_Currency_Rounding(site_API.get_company(site_),
+                                                                                    currency_code_));
+                 */                                                                   
+                --(+) RALILK 2008/04/02, START
+                l_non_disc_cach_p_ := HPNRET_HP_DTL_API.Get_Sale_Unit_Price(account_no_,
+                                                                        account_rev_,
+                                                                        hp_line_no_)*rec_.qty_invoiced;
+                --(+) RALILK 2008/04/02, END
+                -- 20070528(+)
+                IF(NVL(sum_komp_cach_price_,
+                                  Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                        account_rev_,
+                                                                        hp_line_no_)*sum_komp_qty_)<>0)THEN
+                list_value := nvl(list_value, 0) +
+                              ((NVL(Hpnret_Hp_Dtl_API.Get_Full_Service_Price(account_no_,
+                                                                            account_rev_,
+                                                                            pkg_line_),
+                                   0) + NVL(Hpnret_Hp_Dtl_API.Get_Service_Charge(account_no_,
+                                                                                 account_rev_,
+                                                                                 pkg_line_),
+                                            0)) *
+                              NVL(Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                        account_rev_,
+                                                                        hp_line_no_),
+                                  0)*rec_.qty_invoiced) /  ----ralilk 2008/04/02
+                              NVL(sum_komp_cach_price_,
+                                  Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                        account_rev_,
+                                                                        hp_line_no_)*sum_komp_qty_);
+
+
+                first_pay := nvl(first_pay, 0) +
+                             (NVL(Hpnret_Hp_Dtl_API.Get_First_Payment(account_no_,
+                                                                     account_rev_,
+                                                                     pkg_line_),
+                                 0) * NVL(Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                                account_rev_,
+                                                                                hp_line_no_),
+                                          0)*rec_.qty_invoiced) /  ----ralilk 2008/04/02
+                             nvl(sum_komp_cach_price_,
+                                 Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                       account_rev_,
+                                                                       hp_line_no_)*sum_komp_qty_);
+                                                                       
+                 komp_hire_val_ := nvl(komp_hire_val_,0)+NVL(hpnret_hp_dtl_API.get_gross_hire_value(account_no_,
+                                                                                    account_rev_,
+                                                                                    pkg_line_),
+                                             0)* NVL(Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                                account_rev_,
+                                                                                hp_line_no_),
+                                          0)*rec_.qty_invoiced /  ----ralilk 2008/04/02
+                             nvl(sum_komp_cach_price_,
+                                 Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                       account_rev_,
+                                                                       hp_line_no_)*sum_komp_qty_);
+                --    INSERT INTO ralilk_test VALUES('first pay',account_no_ ||'--'||to_char(hp_line_no_),to_char(Hpnret_Hp_Dtl_API.Get_First_Payment(account_no_,account_rev_, pkg_line_)));
+               ELSE
+                  list_value := 0;
+                  first_pay := 0;
+                  komp_hire_val_ := 0;
+               END IF;
+              ELSE -- komp
+                -- 20070528(+)
+                --list_value :=  nvl(list_value,0) + nvl(l_cash_price_,0)+nvl(suraksha_price_,0)+nvl(sanasuma_value_,0) +nvl(Hpnret_Hp_Dtl_API.Get_Service_Charge(account_no_,account_rev_,hp_line_no_),0);
+                list_value := nvl(list_value, 0) +
+                              NVL(Hpnret_Hp_Dtl_API.Get_Full_Service_Price(account_no_,
+                                                                           account_rev_,
+                                                                           hp_line_no_),
+                                  0) + NVL(Hpnret_Hp_Dtl_API.Get_Service_Charge(account_no_,
+                                                                                account_rev_,
+                                                                                hp_line_no_),
+                                           0);
+                first_pay  := nvl(first_pay, 0) +
+                              NVL(Hpnret_Hp_Dtl_API.Get_First_Payment(account_no_,
+                                                                      account_rev_,
+                                                                      hp_line_no_),
+                                  0);
+                                  
+                 komp_hire_val_ :=nvl(komp_hire_val_, 0) + NVL(hpnret_hp_dtl_API.get_gross_hire_value(account_no_,
+                                                                                    account_rev_,
+                                                                                    hp_line_no_),
+                                             0);
+              END IF;
+
+              l_disc_percentage_ := NVL(Hpnret_Hp_Dtl_API.Get_Discount(rec_.order_no,
+                                                                       hp_rev_no_,
+                                                                       hp_line_no_),
+                                        0);
+              
+              l_cash_price_      := nvl(l_non_disc_cach_p_, 0) -
+                                    nvl(((l_disc_percentage_ / 100) *
+                                        l_non_disc_cach_p_),
+                                        0);
+              ---
+              --INSERT INTO test_ralilk  VALUES(account_no_,to_char(hp_line_no_),to_char(l_non_disc_cach_p_)||'XXX'||to_char(l_cash_price_));
+
+              hp_val_sum := hp_val_sum + l_cash_price_;
+              hp_qty_sum := hp_qty_sum + rec_.qty_invoiced;
+              -- old list_value := list_value + Hpnret_Hp_Head_API.Get_Total_List_Price(account_no_,1);
+              --Hpnret_Hp_Dtl_API.Get_Insr_Ext_Warrfrom_Charges(suraksha_price_,sanasuma_value_,account_no_,account_rev_,hp_line_no_);
+
+              -- 20070528(-) -- list_value :=  nvl(list_value,0) + nvl(l_cash_price_,0)+nvl(suraksha_price_,0)+nvl(sanasuma_value_,0) +nvl(Hpnret_Hp_Dtl_API.Get_Service_Charge(account_no_,account_rev_,rec_.line_no),0);
+
+              -- hire_value := hire_value + NVL(Hpnret_Hp_Head_API.Get_Gross_Hire_Value(account_no_,1),0);
+              HIRE_VALUE :=  komp_hire_val_;
+             /* (-)RALILK 2008/04/02
+             HIRE_VALUE := HIRE_VALUE + NVL(hpnret_hp_dtl_API.get_gross_hire_value(account_no_,
+                                                                                    account_rev_,
+                                                                                    hp_line_no_),
+                                             0);*/
+
+              --  first_pay  := first_pay  + Hpnret_Hp_Head_API.Get_Total_First_Payment(account_no_,1);
+
+              -- first_pay  := first_pay  + NVL(Hpnret_Hp_Dtl_API.Get_Down_Payment(account_no_,account_rev_, hp_line_no_),0);
+
+            END IF; --NS
+          ELSE
+            ---cash sales
+            co_val_sum := co_val_sum + nvl(rec_.base_sale_unit_price, 0) *
+                          nvl(rec_.qty_invoiced, 0) +
+                          nvl(Customer_Order_Line_API.Get_Total_Tax_Amount(rec_.order_no,
+                                                                           rec_.line_no,
+                                                                           rec_.rel_no,
+                                                                           rec_.line_item_no),
+                              0) - nvl(Hpnret_Cust_Order_Line_API.Get_Tot_Discount_Base(rec_.order_no,
+                                                                                        rec_.line_no,
+                                                                                        rec_.rel_no,
+                                                                                        rec_.line_item_no),
+                                       0);
+
+            co_qty_sum := co_qty_sum + rec_.qty_invoiced;
+          END  IF ;
+        ELSIF rec_.sale_cat = 2 THEN
+
+          IF rec_.dock_code = 'Reverted' THEN
+
+            l_cash_price_ := nvl(Hpnret_Pay_Dtl_API.Get_Outstanding_Balance(site_API.get_company(rec_.contract),
+                                                                            rec_.order_no,
+                                                                            1,
+                                                                            rec_.line_no,
+                                                                            Hpnret_Hp_Dtl_API.Get_Ref_Pay_Rev(rec_.order_no,
+                                                                                                              1,
+                                                                                                              rec_.line_no)),
+                                 0);
+            rt_qty_sum    := rt_qty_sum + nvl(Hpnret_Hp_Dtl_API.Get_Quantity(rec_.order_no,
+                                                                             rec_.line_item_no,
+                                                                             rec_.line_no),
+                                              0);
+            rt_val_sum    := rt_val_sum + l_cash_price_;
+
+          ELSIF rec_.dock_code = 'RevertReversed' THEN
+
+            l_cash_price_ := NVL(Hpnret_Pay_Dtl_API.Get_Outstanding_Balance(site_API.get_company(rec_.contract),
+                                                                            rec_.order_no,
+                                                                            1,
+                                                                            rec_.line_no,
+                                                                            Hpnret_Hp_Dtl_API.Get_Ref_Pay_Rev(rec_.order_no,
+                                                                                                              1,
+                                                                                                              rec_.line_no)),
+                                 0);
+            rr_qty_sum    := rr_qty_sum + NVL(Hpnret_Hp_Dtl_API.Get_Quantity(rec_.order_no,
+                                                                             rec_.line_item_no,
+                                                                             rec_.line_no),
+                                              0);
+            rr_val_sum    := rr_val_sum + l_cash_price_;
+          ELSE
+            l_non_disc_cach_p_ := NVL(Hpnret_Hp_Dtl_API.Get_Cash_Price(rec_.order_no,
+                                                                       rec_.line_item_no,
+                                                                       rec_.line_no),
+                                      0)*rec_.qty_invoiced; --2008/04/02
+            IF (Sales_Part_Type_API.Encode(Hpnret_Hp_Dtl_API.Get_Catalog_Type(rec_.order_no,
+                                                                              rec_.line_item_no,
+                                                                              rec_.line_no)) =
+               'KOMP') THEN
+              pkg_line_           := Hpnret_Hp_Dtl_API.Get_Pkg_Line_No(rec_.order_no,
+                                                                       rec_.line_item_no,
+                                                                       rec_.line_no);
+              pkg_part_cashprice_ := NVL(Hpnret_Hp_Dtl_API.Get_Cash_Price(rec_.order_no,
+                                                                          rec_.line_item_no,
+                                                                          pkg_line_),
+                                         0) - NVL(((Hpnret_Hp_Dtl_API.Get_Discount(rec_.order_no,
+                                                                                   rec_.line_item_no,
+                                                                                   pkg_line_) / 100) *
+                                                  Hpnret_Hp_Dtl_API.Get_Cash_Price(rec_.order_no,
+                                                                                    rec_.line_item_no,
+                                                                                    pkg_line_)),
+                                                  0);
+              OPEN get_pkg_komp_sum_cash_pr(rec_.order_no, pkg_line_);
+              FETCH get_pkg_komp_sum_cash_pr
+                INTO sum_komp_cach_price_,sum_komp_qty_;
+              CLOSE get_pkg_komp_sum_cash_pr;
+              
+             -- sum_komp_cach_price_ := sum_komp_cach_price_*sum_komp_qty_;
+
+              /*(-) RALILK- 2008/04/02
+              IF ((NVL(sum_komp_cach_price_, 0)) <> 0) THEN
+                --BUG FIX ,RALILK (2008/2/14)
+                 IF NVL(komp_line_count_,0)=0  THEN
+                    l_non_disc_cach_p_ := (1 * pkg_part_cashprice_) /
+                                      komp_line_count_;
+                 ELSE
+                     l_non_disc_cach_p_ :=0;
+                 END IF;
+
+              ELSE
+               
+                 IF NVL(sum_komp_cach_price_*sum_komp_qty_,0)<>0  THEN
+                     l_non_disc_cach_p_ := (L_non_disc_cach_p_ *
+                                      pkg_part_cashprice_*rec_.qty_invoiced) /
+                                      (sum_komp_cach_price_*sum_komp_qty_);
+                 ELSE
+                    l_non_disc_cach_p_ := 0;
+                 END IF;
+             -- END IF;
+              */
+              currency_code_     := Customer_Order_API.Get_Currency_Code(rec_.order_no);
+              --(+) RALILK 2008/04/02, START
+               
+               sum_komp_cach_price_ := nvl(sum_komp_cach_price_,
+                                           Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                                 account_rev_,
+                                                                                 rec_.line_no)*sum_komp_qty_);
+                                                                                 
+               l_non_disc_cach_p_ := HPNRET_HP_DTL_API.Get_Sale_Unit_Price(account_no_,
+                                                                        account_rev_,
+                                                                        rec_.line_no)*rec_.qty_invoiced;
+              IF (sum_komp_cach_price_ <> 0) THEN
+                komp_hire_val_ := nvl(komp_hire_val_,0)-NVL(hpnret_hp_dtl_API.get_gross_hire_value(account_no_,
+                                                                                      account_rev_,
+                                                                                      pkg_line_),
+                                               0)* NVL(Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                                  account_rev_,
+                                                                                  rec_.line_no),
+                                            0)*rec_.qty_invoiced /  ----ralilk 2008/04/02
+                               nvl(sum_komp_cach_price_,
+                                   Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                         account_rev_,
+                                                                         rec_.line_no)*sum_komp_qty_);
+                 list_value := nvl(list_value, 0) -
+                              ((NVL(Hpnret_Hp_Dtl_API.Get_Full_Service_Price(account_no_,
+                                                                            account_rev_,
+                                                                            pkg_line_),
+                                   0) + NVL(Hpnret_Hp_Dtl_API.Get_Service_Charge(account_no_,
+                                                                                 account_rev_,
+                                                                                 pkg_line_),
+                                            0)) *
+                              NVL(Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                        account_rev_,
+                                                                        rec_.line_no),
+                                  0)*rec_.qty_invoiced) /  ----ralilk 2008/04/02
+                              NVL(sum_komp_cach_price_,
+                                  Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                        account_rev_,
+                                                                        rec_.line_no)*sum_komp_qty_);
+
+
+                first_pay := nvl(first_pay, 0) -
+                             (NVL(Hpnret_Hp_Dtl_API.Get_First_Payment(account_no_,
+                                                                     account_rev_,
+                                                                     pkg_line_),
+                                 0) * NVL(Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                                account_rev_,
+                                                                                rec_.line_no),
+                                          0)*rec_.qty_invoiced) /  ----ralilk 2008/04/02
+                             nvl(sum_komp_cach_price_,
+                                 Hpnret_Hp_Dtl_API.Get_Sale_Unit_Price(account_no_,
+                                                                       account_rev_,
+                                                                       rec_.line_no)*sum_komp_qty_);
+              END IF;
+               --(+) RALILK 2008/04/02, END
+                
+              /*
+              l_non_disc_cach_p_ := ROUND(l_non_disc_cach_p_,
+                                          Currency_Code_API.Get_Currency_Rounding(Site_API.Get_Company(site_),
+                                                                                  currency_code_));
+              */
+            ELSE--komp
+                 komp_hire_val_ :=nvl(komp_hire_val_, 0) - NVL(hpnret_hp_dtl_API.get_gross_hire_value(account_no_,
+                                                                                    account_rev_,
+                                                                                    rec_.line_no),
+                                             0);
+                  list_value := nvl(list_value, 0) -
+                              (NVL(Hpnret_Hp_Dtl_API.Get_Full_Service_Price(account_no_,
+                                                                           account_rev_,
+                                                                           rec_.line_no),
+                                  0) + NVL(Hpnret_Hp_Dtl_API.Get_Service_Charge(account_no_,
+                                                                                account_rev_,
+                                                                                rec_.line_no),
+                                           0));
+                first_pay  := nvl(first_pay, 0) -
+                              NVL(Hpnret_Hp_Dtl_API.Get_First_Payment(account_no_,
+                                                                      account_rev_,
+                                                                      rec_.line_no),0);
+            END IF;--komp
+            l_disc_percentage_ := NVL(Hpnret_Hp_Dtl_API.Get_Discount(rec_.order_no,
+                                                                     rec_.line_item_no,
+                                                                     rec_.line_no),
+                                      0);
+            l_cash_price_      := nvl(l_non_disc_cach_p_, 0) -
+                                  nvl(((l_disc_percentage_ / 100) *
+                                      l_non_disc_cach_p_),
+                                      0);
+
+            hp_qty_sum := hp_qty_sum - nvl(Hpnret_Hp_Dtl_API.Get_Quantity(rec_.order_no,
+                                                                          account_rev_,
+                                                                          rec_.line_no),
+                                           0);
+            hp_val_sum := hp_val_sum - l_cash_price_;
+            --list_value := list_value + Hpnret_Hp_Head_API.Get_Total_List_Price(account_no_,1);
+            -- hire_value := hire_value + NVL(Hpnret_Hp_Head_API.Get_Gross_Hire_Value(account_no_,1),0);
+            /*(-) Ralilk 2008/04/03
+            HIRE_VALUE := HIRE_VALUE - NVL(Hpnret_Hp_Dtl_API.Get_Gross_Hire_Value(account_no_,
+                                                                                  account_rev_,
+                                                                                  rec_.line_no),
+                                           0);
+                                           */
+            -- Hpnret_Hp_Dtl_API.Get_Insr_Ext_Warrfrom_Charges(suraksha_price_,sanasuma_value_,account_no_,account_rev_,rec_.line_no);
+            HIRE_VALUE := komp_hire_val_;
+            /*
+            list_value := nvl(list_value, 0) -
+                          (NVL(Hpnret_Hp_Dtl_API.Get_Full_Service_Price(account_no_,
+                                                                        account_rev_,
+                                                                        rec_.line_no),
+                               0) + NVL(Hpnret_Hp_Dtl_API.Get_Service_Charge(account_no_,
+                                                                             account_rev_,
+                                                                             rec_.line_no),
+                                        0));
+
+            -- first_pay  := first_pay  + Hpnret_Hp_Head_API.Get_Total_First_Payment(account_no_,1);
+            FIRST_PAY := FIRST_PAY - NVL(Hpnret_Hp_Dtl_API.Get_First_Payment(account_no_,
+                                                                             account_rev_,
+                                                                             rec_.line_no),
+                                         0);
+            */
+            
+          END IF;
+        ELSIF rec_.sale_cat = 3 THEN
+          co_val_sum := co_val_sum - nvl(rec_.base_sale_unit_price, 0) *
+                        rec_.qty_invoiced;
+          co_qty_sum := co_qty_sum - 1 * rec_.qty_invoiced;
+        END IF;
+        loop_ := 1;
+      END LOOP;
+      --insert last rec
+      IF loop_ = 1 THEN
+
+        insert_rec__(curr_product_family_, --Product_Cat   IN       VARCHAR2(5),
+                     Inventory_Product_Family_API.Get_Description(Curr_Product_Family_), --cat_desc        in     VARCHAR2(200),
+                     co_val_sum, --cash_value_co   in     number,
+                     co_qty_sum, --sales_units_co  in     number,
+                     hp_val_sum, --cash_value_hp   in     number,
+                     hp_qty_sum, --sales_units_hp  in     number,
+                     rt_val_sum, --cash_value_rt   in     number,
+                     rt_qty_sum, --sales_units_rt  in     number,
+                     rr_val_sum,
+
+                     rr_qty_sum, --CASH_VALUE_RR   IN     NUMBER,
+                     curr_part_no_,
+                     inventory_part_API.get_description(site_,
+                                                        curr_part_no_),
+                     list_value,
+                     hire_value,
+                     first_pay,
+                     channel_desc_,
+                     area_desc_,
+                     district_desc_,
+                     site_,
+                     site_desc_);
+      END IF;
+    END insert_recs;
+
+    PROCEDURE Insert_Site(product__        IN OUT VARCHAR2,
+                          product_family__ IN OUT VARCHAR2,
+                          site_code__      IN VARCHAR2,
+                          strfdate__       IN VARCHAR2,
+                          strtdate__       IN VARCHAR2,
+                          channel_desc__   IN VARCHAR2,
+                          area_desc__      IN VARCHAR2,
+                          district_desc__  IN VARCHAR2,
+                          site_desc__      IN VARCHAR2)
+
+     IS
+    BEGIN
+
+      IF ((product__ IS NOT NULL) AND (product__ != '%')) THEN
+        --product is given
+        product_family__ := Inventory_Part_API.Get_Part_Product_Family(site_code__,
+                                                                       product__);
+        insert_recs(0, --all product family
+                    Inventory_Part_API.Get_Part_Product_Family(site_code__,
+                                                               product__), --product family
+                    0,
+                    product__, --CAT NO
+                    site_code__,
+                    TO_DATE(strfdate__, 'YYYY/MM/DD'),
+                    TO_DATE(strtdate__, 'YYYY/MM/DD'),
+                    channel_desc__,
+                    area_desc__,
+                    district_desc__,
+                    site_desc__);
+
+      ELSIF (product_family__ IS NULL OR product_family__ = '%') THEN
+        --trace_SYS.Message('RRRRRRRRRRRRRR A product__ '||product__);
+        product_ := null;
+        Insert_Recs(1, --all product family
+                    null, --product family
+                    1,
+                    null, --cat no
+                    site_code__,
+                    to_date(strfdate__, 'YYYY/MM/DD'),
+                    to_date(strtdate__, 'YYYY/MM/DD'),
+                    channel_desc__,
+                    area_desc__,
+                    district_desc__,
+                    site_desc__);
+      ELSE
+        --trace_SYS.Message('RRRRRRRRRRRRRR B product__ '||product__);
+        product_ := NULL;
+        insert_recs(0, --all product family
+                    product_family__, --product family
+                    1,
+                    null, --cat no
+                    site_code__,
+                    TO_DATE(strfdate__, 'YYYY/MM/DD'),
+                    TO_DATE(strtdate__, 'YYYY/MM/DD'),
+                    channel_desc__,
+                    area_desc__,
+                    district_desc__,
+                    site_desc__);
+      END IF;
+
+    END INSERT_SITE;
+
+  BEGIN
+
+    RESULT_KEY_         := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY',
+                                                                                     report_attr_));
+    site_code_          := Client_SYS.Get_Item_Value('SITE',
+                                                     parameter_attr_);
+    product_            := Client_SYS.Get_Item_Value('PRODUCT',
+                                                     parameter_attr_);
+    strfdate_           := SUBSTR(Client_SYS.Get_Item_Value('FROM_DATE',
+                                                            parameter_attr_),
+                                  0,
+                                  10);
+    strtdate_           := SUBSTR(Client_SYS.Get_Item_Value('TO_DATE',
+                                                            parameter_attr_),
+                                  0,
+                                  10);
+    product_family_     := Client_SYS.Get_Item_Value('SECOND_COMMODITY',
+                                                     parameter_attr_);
+    strchannel_         := Client_SYS.Get_Item_Value('CHANNEL',
+                                                     parameter_attr_);
+    strarea_            := Client_SYS.Get_Item_Value('AREA',
+                                                     parameter_attr_);
+    strsinger_district_ := Client_SYS.Get_Item_Value('DISTRICT',
+                                                     parameter_attr_);
+    usr_                := Fnd_Session_API.Get_Fnd_User();
+    ad_                 := 'Yes'; --Client_SYS.Get_Item_Value('AD', parameter_attr_);
+
+    IF ((TO_DATE(strtdate_, 'YYYY/MM/DD') -
+       TO_DATE(strfdate_, 'YYYY/MM/DD')) > 31) THEN
+      Error_SYS.System_General('HPNYOUMAYNOTRUNFOR31DAYS: You may not run this report for more than 31 days.');
+    END IF;
+/*    IF (strchannel_ = '%') THEN
+      Error_SYS.System_General('HPNYOUMAYNOTUSEWILECH: You may not use wildcards(%) for Channel.');
+    END IF;*/
+    /*IF (site_code_ != '%' AND site_code_ IS NOT NULL) THEN
+      --if site is given
+      Hpnret_Level_H_Util_API.Get_Current_Upper_Levels(agency_,
+                                                       channel_,
+                                                       area_,
+                                                       zone_,
+                                                       singer_district_,
+                                                       franchise_dealer_,
+                                                       branch_,
+                                                       approve_dealer_,
+                                                       sales_agent_,
+                                                       Hpnret_Level_H_Util_API.Get_Level_By_Site(site_code_));
+
+      strchannel_         := TO_CHAR(channel_);
+      strarea_            := TO_CHAR(area_);
+      strsinger_district_ := TO_CHAR(singer_district_);
+
+      area_desc_     := Hpnret_Level_API.Get_Description(area_);
+      channel_desc_  := Hpnret_Level_API.Get_Description(channel_);
+      district_desc_ := Hpnret_Level_API.Get_Description(singer_district_);
+      site_desc_     := Site_API.Get_Description(site_code_);
+      FOR rec1_ IN Get_Branches(Hpnret_Level_H_Util_API.Get_Level_By_Site(site_code_)) LOOP
+        IF (Gen_Yes_No_API.Encode(ad_) = 'Y') THEN
+          insert_site(product_,
+                      product_family_,
+                      rec1_.site_id,
+                      strfdate_,
+                      strtdate_,
+                      channel_desc_,
+                      area_desc_,
+                      district_desc_,
+                      Site_API.Get_Description(rec1_.site_id));
+        ELSE
+          IF (Hpnret_Level_API.Get_Level_Type_Num(rec1_.level_id) <> 8) THEN
+
+            insert_site(product_,
+                        product_family_,
+                        rec1_.site_id,
+                        strfdate_,
+                        strtdate_,
+                        channel_desc_,
+                        area_desc_,
+                        district_desc_,
+                        Site_API.Get_Description(REC1_.SITE_ID));
+          END IF;
+        END IF;
+      END LOOP;
+      -- IF (Gen_Yes_No_API.Encode(ad_)='Y') THEN
+      --    NULL;
+      -- END IF;
+
+    ELSIF (strsinger_district_ != '%' AND strsinger_district_ IS NOT NULL) THEN
+      singer_district_ := TO_NUMBER(strsinger_district_);
+      Hpnret_Level_H_Util_API.Get_Current_Upper_Levels(agency_,
+                                                       channel_,
+                                                       area_,
+                                                       zone_,
+                                                       singer_district_,
+                                                       franchise_dealer_,
+                                                       branch_,
+                                                       approve_dealer_,
+                                                       sales_agent_,
+                                                       singer_district_);
+
+      strchannel_ := TO_CHAR(channel_);
+      strarea_    := TO_CHAR(area_);
+
+      area_desc_     := Hpnret_Level_API.Get_Description(area_);
+      channel_desc_  := Hpnret_Level_API.Get_Description(channel_);
+      district_desc_ := Hpnret_Level_API.Get_Description(singer_district_);
+      -- site_desc_       :=  site_API.Get_Description(site_code_);
+      FOR REC1_ IN get_branches(singer_district_) LOOP
+        --site_code_ := rec1_.site_id ;
+        insert_site(product_,
+                    product_family_,
+                    rec1_.site_id,
+                    strfdate_,
+                    strtdate_,
+                    channel_desc_,
+                    area_desc_,
+                    district_desc_,
+                    Site_API.Get_Description(rec1_.site_id));
+      END LOOP;
+
+    ELSIF (strarea_ != '%' AND strarea_ IS NOT NULL) THEN
+      AREA_ := TO_NUMBER(STRAREA_);
+      -- site_desc_       :=  site_API.Get_Description(site_code_);
+      FOR rec1_ IN get_branches(area_) LOOP
+
+        Hpnret_Level_H_Util_API.Get_Current_Upper_Levels(agency_,
+                                                         channel_,
+                                                         area_,
+                                                         zone_,
+                                                         singer_district_,
+                                                         franchise_dealer_,
+                                                         branch_,
+                                                         approve_dealer_,
+                                                         sales_agent_,
+                                                         rec1_.level_id);
+
+        strchannel_ := TO_CHAR(channel_);
+
+        area_desc_     := Hpnret_Level_API.Get_Description(area_);
+        channel_desc_  := Hpnret_Level_API.Get_Description(channel_);
+        district_desc_ := Hpnret_Level_API.Get_Description(singer_district_);
+
+        Insert_Site(product_,
+                    product_family_,
+                    rec1_.site_id,
+                    strfdate_,
+                    strtdate_,
+                    channel_desc_,
+                    area_desc_,
+                    district_desc_,
+                    Site_API.Get_Description(rec1_.site_id));
+      END LOOP;
+
+    ELSE
+      IF (STRCHANNEL_ != '%' AND STRCHANNEL_ IS NOT NULL) THEN
+      channel_ := TO_NUMBER(strchannel_);
+
+      channel_desc_ := Hpnret_Level_API.Get_Description(channel_);
+
+      FOR REC1_ IN GET_BRANCHES(CHANNEL_) LOOP
+        HPNRET_LEVEL_H_UTIL_API.GET_CURRENT_UPPER_LEVELS(AGENCY_,
+                                                         CHANNEL_,
+                                                         AREA_,
+                                                         ZONE_,
+                                                         SINGER_DISTRICT_,
+                                                         FRANCHISE_DEALER_,
+                                                         BRANCH_,
+                                                         APPROVE_DEALER_,
+                                                         SALES_AGENT_,
+                                                         REC1_.LEVEL_ID);
+
+        AREA_DESC_     := HPNRET_LEVEL_API.GET_DESCRIPTION(AREA_);
+        DISTRICT_DESC_ := HPNRET_LEVEL_API.GET_DESCRIPTION(SINGER_DISTRICT_);
+
+        INSERT_SITE(PRODUCT_,
+                    PRODUCT_FAMILY_,
+                    REC1_.SITE_ID,
+                    STRFDATE_,
+                    STRTDATE_,
+                    CHANNEL_DESC_,
+                    AREA_DESC_,
+                    DISTRICT_DESC_,
+                    SITE_API.GET_DESCRIPTION(REC1_.SITE_ID));
+      END LOOP;
+
+      --Error_SYS.System_General('HPNYOUMAYNOTUSEWILEAR: You may not use wildcards(%) for Area.');
+      ELSE
+          IF (STRCHANNEL_ = '%' ) THEN*/
+              AGENCY_ := 1;
+        
+        --      channel_desc_ := Hpnret_Level_API.Get_Description(channel_);
+        
+              FOR REC1_ IN GET_BRANCHES(AGENCY_) LOOP
+                HPNRET_LEVEL_H_UTIL_API.GET_CURRENT_UPPER_LEVELS(AGENCY_,
+                                                                 CHANNEL_,
+                                                                 AREA_,
+                                                                 ZONE_,
+                                                                 SINGER_DISTRICT_,
+                                                                 FRANCHISE_DEALER_,
+                                                                 BRANCH_,
+                                                                 APPROVE_DEALER_,
+                                                                 SALES_AGENT_,
+                                                                 REC1_.LEVEL_ID);
+                channel_desc_ := Hpnret_Level_API.Get_Description(channel_);
+                AREA_DESC_     := HPNRET_LEVEL_API.GET_DESCRIPTION(AREA_);
+                DISTRICT_DESC_ := HPNRET_LEVEL_API.GET_DESCRIPTION(SINGER_DISTRICT_);
+        
+                INSERT_SITE(PRODUCT_,
+                            PRODUCT_FAMILY_,
+                            REC1_.SITE_ID,
+                            STRFDATE_,
+                            STRTDATE_,
+                            CHANNEL_DESC_,
+                            AREA_DESC_,
+                            DISTRICT_DESC_,
+                            SITE_API.GET_DESCRIPTION(REC1_.SITE_ID));
+              END LOOP;
+        --  END IF;
+    --  END IF;
+   -- END IF;
+
+  END &METHOD;
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- END
+-----------------------------------------------------------------------------
+
+

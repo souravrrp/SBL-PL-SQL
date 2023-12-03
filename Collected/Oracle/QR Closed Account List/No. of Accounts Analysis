@@ -1,0 +1,28 @@
+SELECT 
+  --*
+  DISTINCT A.ROWSTATE
+FROM ifsapp.hpnret_hp_dtl_tab a
+
+--No. of New  Active Accounts
+select 
+    --*
+    count(*) 
+from hpnret_form249_arrears_tab f
+where 
+  f.year = '&year_i' and
+  f.period = '&period' and
+  --f.act_out_bal > 0 and
+  --f.sales_date >= to_date('2014/4/1', 'YYYY/MM/DD')
+  f.sales_date between to_date('&from_date', 'YYYY/MM/DD') and to_date('&to_date', 'YYYY/MM/DD')
+  
+--No. of Closed Accounts
+SELECT 
+  *
+  --count(distinct(a.account_no))
+FROM ifsapp.hpnret_hp_dtl_tab a
+where
+  a.ROWSTATE='Closed' and 
+  --a.LINE_NO=1 and 
+  a.ROWVERSION between to_date('&FromDate','YYYY/MM/DD') and to_date('&ToDate','YYYY/MM/DD') and 
+  a.CONTRACT like '&Site'
+group by a.account_no

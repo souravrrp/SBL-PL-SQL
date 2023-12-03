@@ -1,0 +1,52 @@
+-- Count Completion Status Details
+SELECT U.DATE_OF_COUNT,
+       CASE
+         WHEN U.SITE IN ('SACF', 'SAVF', 'SFRF') THEN
+          'Factory'
+         WHEN U.SITE IN ('BSCP',
+                         'BLSP',
+                         'CLSP',
+                         'CSCP',
+                         'CXSP',
+                         'DSCP',
+                         'FSCP', --New Service Center
+                         'JSCP',
+                         'KSCP',
+                         'MSCP',
+                         'NSCP',
+                         'RPSP',
+                         'RSCP',
+                         'SSCP',
+                         'MS1C',
+                         'MS2C',
+                         'BTSC') THEN
+          'Service Center'
+         WHEN U.SITE IN (SELECT W.WARE_HOUSE_NAME FROM WARE_HOUSE_INFO W) THEN
+          'Warehouse'
+         ELSE
+          (SELECT S.AREA_CODE
+             FROM IFSAPP.SHOP_DTS_INFO S
+            WHERE S.SHOP_CODE = U.SITE)
+       END AREA,
+       U.SITE,
+       U.USER_ID,
+       IFSAPP.Customer_Info_Api.Get_Name(U.USER_ID) USER_NAME,
+       CASE
+         WHEN (SELECT A.SHOP_CODE
+                 FROM IFSAPP.SBL_SHOP_ARRPOVE_TBL A
+                WHERE A.SHOP_CODE = U.SITE
+                  AND A.APPROVE_STATUS = 1
+                GROUP BY A.SHOP_CODE) IS NULL THEN
+          'NO'
+         ELSE
+          'YES'
+       END STATUS,
+       (SELECT MAX( /*TRUNC(*/ A.APPROVE_DATE /*)*/)
+          FROM IFSAPP.SBL_SHOP_ARRPOVE_TBL A
+         WHERE A.SHOP_CODE = U.SITE
+           AND A.APPROVE_STATUS = 1
+         GROUP BY A.SHOP_CODE) COMPLETION_TIME
+  FROM IFSAPP.SBL_USER_LIST U
+ WHERE U.DATE_OF_COUNT = TO_DATE('&COUNT_DATE', 'YYYY/MM/DD')
+   AND U.USER_ID != 'E10206'
+ ORDER BY 1, 2, 3

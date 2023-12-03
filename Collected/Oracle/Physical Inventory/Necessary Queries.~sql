@@ -1,0 +1,33 @@
+--List of Approved Shops
+select
+--* 
+ t.shop_code, count(t.shop_code) Approve
+  from SBL_SHOP_ARRPOVE_TBL t
+--where t.shop_code like 'MKKB'
+ group by t.shop_code;
+
+--User List as per Shop
+select COUNT(*)
+  from SBL_USER_LIST t
+ where t.date_of_count = to_date('&date_of_count', 'YYYY/MM/DD');
+order by 2;
+
+--Datewise List of Approvals
+SELECT DISTINCT (T.SHOP_CODE),
+                T.APPROVE_STATUS,
+                TRUNC(T.APPROVE_DATE) APPROVE_DATE,
+                T.AUDIT_USER_ID
+  FROM SBL_SHOP_ARRPOVE_TBL T
+ WHERE TRUNC(T.APPROVE_DATE) = TO_DATE('&APPROVED_DATE', 'YYYY/MM/DD');
+
+--List of Shops not Finiished Counting
+select T.SITE,
+       T.USER_ID,
+       IFSAPP.CUSTOMER_INFO_API.Get_Name(T.USER_ID) USER_NAME,
+       T.DATE_OF_COUNT
+  from SBL_USER_LIST t
+ where t.site NOT IN
+       (SELECT DISTINCT (A.SHOP_CODE) FROM SBL_SHOP_ARRPOVE_TBL A)
+   AND T.USER_ID <> 'E10206'
+   AND T.DATE_OF_COUNT <= TO_DATE('&DATE_OF_COUNT', 'YYYY/MM/DD')
+ ORDER BY T.SITE, T.DATE_OF_COUNT;

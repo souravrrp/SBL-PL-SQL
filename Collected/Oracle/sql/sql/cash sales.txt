@@ -1,0 +1,44 @@
+select 
+t.ORDER_NO,
+t.WANTED_DELIVERY_DATE "SALE DATE",
+c.CATALOG_NO,
+c.buy_qty_due,
+customer_info_api.get_name(c.CUSTOMER_NO),
+customer_order_line_api.Get_Sale_Price_Total(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "SALE PRICE",
+(SELECT SUM(t.discount_amount)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = c.order_no
+ AND t.line_no = c.LINE_NO
+ AND t.rel_no =  c.REL_No
+ AND t.line_item_no = c.LINE_ITEM_NO ) "DISCOUNT",
+customer_order_line_api.Get_Total_Tax_Amount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "TAX PRICE"
+from
+customer_order_tab t,
+customer_order_line_tab c
+where
+c.ORDER_NO = t.ORDER_NO
+and t.WANTED_DELIVERY_DATE between to_date('01/01/2013','dd/mm/yyyy') and to_date('31/01/2013','dd/mm/yyyy')
+and cust_ord_customer_api.get_cust_grp(t.CUSTOMER_NO) <> '003'
+and t.ROWSTATE in ('Invoiced')
+and t.internal_po_no is null
+and t.contract in
+(select  
+contract
+from
+IFSAPP.SITE
+where 
+SITE_TYPE='SP_SHOP'
+)
+
+
+/*****VAT RECEIPT ***/
+select
+t.RECEIPT_NO,
+t.VAT_RECEIPT,
+p.ORDER_NO
+from
+hpnret_co_pay_head_tab t,
+hpnret_co_pay_dtl p
+where
+p.PAY_NO=t.PAY_NO
+and p.ORDER_NO like 'JKR-R55%'

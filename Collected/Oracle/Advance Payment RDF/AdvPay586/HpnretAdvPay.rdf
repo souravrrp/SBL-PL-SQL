@@ -1,0 +1,544 @@
+-----------------------------------------------------------------------------
+--
+--  Logical unit: <<< Enter your logical unit description here >>>
+--
+--  File:         TEMPLATE.RDF
+--  Version:      Foundation1 2.2
+--
+--  Date    Sign     History
+--  ------  ----     -----------------------------------------------------------
+--  170505  AmPalk   Created.
+-----------------------------------------------------------------------------
+
+define MODULE             = HPNRET
+define LU                 = HpnretAdvPay
+define PKG                = HPNRET_ADV_PAY_RPI
+
+define TABLE              = INFO_SERVICES_RPT
+define VIEW               = HPNRET_ADV_PAY_REP
+define METHOD             = Report_Overview
+
+-----------------------------------------------------------------------------
+-- PACKAGE SPECIFICATION:
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG specification
+
+CREATE OR REPLACE PACKAGE &PKG AS
+
+module_ CONSTANT VARCHAR2(6) := '&MODULE';
+lu_name_ CONSTANT VARCHAR2(25) := '&LU';
+l_desc            VARCHAR2(320);
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 );
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- REPORTS
+-----------------------------------------------------------------------------
+
+PROMPT Creating report view &VIEW
+
+CREATE OR REPLACE VIEW &VIEW AS
+SELECT RESULT_KEY                              RESULT_KEY,
+       ROW_NO                                  ROW_NO,
+       s1                                      SERIES_NO,
+       d1                                      CREATE_DATE,
+       n1                                      AMOUNT,
+       n2                                      REFUND_AMOUNT,
+       s2                                      REFUND_RECEIPT_NO,
+       d2                                      REFUND_DATE,
+       d3                                      EXPIRY_DATE,
+       s3                                      EXPIRED,
+       s4                                      UPDATED,
+       s5                                      REMARKS,
+       s6                                      PURPOSE,
+       d4                                      REDEEM_DATE,
+       s7                                      CASH_BOOK,
+       s8                                      CURRENCY,
+       s9                                      STR1,
+       n3                                      DOM_AMOUNT,
+       s10                                     BOOK_NO,
+       s11                                     SHEET_SERIAL_NO,
+       s12                                     CONTRACT,
+       s13                                     CUSTOMER_ID,
+       s14                                     ORDER_NO,
+       s15                                     ADDRESS_ID,
+       s16                                     ACCOUNT_CODE,
+       s17                                     LINE_NO,
+       s18                                     REL_NO,
+       n4                                      LINE_ITEM_NO,
+       s19                                     BOOK_TYPES,
+       s20                                     SALESMAN_CODE,
+       d5                                      RUN_DATE,
+       s21                                     LOGIN_USER,
+       site_api.get_description(s12)           SHOP_NAME,
+       company_address_api.get_phone(site_api.get_company(s12),site_api.get_delivery_address(s12))   TELE_NO,
+       company_address_api.Get_Address1(site_api.get_company(s12),site_api.get_delivery_address(s12))  || ',   '||
+       company_address_api.Get_Address2(site_api.get_company(s12),site_api.get_delivery_address(s12))   SHOP_ADDR,
+       customer_info_api.get_name(s13)         RECEIVED_FROM,
+       hpnret_customer_guarantor_api.get_nic_no(s13)   NIC_NO,
+       s22                                     CUST_ADDRESS,
+       customer_info_address_api.get_full_address(s13,s22)   CUST_ADD_DESC,
+       n5                                      RUPEES,
+       person_info_api.get_name(s20)           SALESMAN_NAME,
+       substr(s5, 0,99)                        REMARKS_1,
+       substr(s5,100)                          REMARKS_2,
+       substr(s6, 0,90)                        PURPOSE_1,
+       substr(s6,91)                           PURPOSE_2,
+       s23                                     RS_IN_ENGLISH,
+       s24                                     VALID_FOR,
+       s25                                     ADVPAY_TYPE_DESC,
+       s26                                     S_RUN_DATE,
+       s27                                     S_CREATE_DATE
+FROM  &TABLE
+WITH  read only;
+
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=&LU^
+   ^METHOD=&PKG..&METHOD^MODE=PLSQL1.2^TABLE=&TABLE^TITLE=Advance Payment Receipt^LAYOUTS=HpnretAdvPay.qrp=Advance Payment Receipt^';
+
+COMMENT ON COLUMN &VIEW..result_key IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..row_no IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..series_no IS
+   'FLAGS=A----^DATATYPE=STRING(25)^PROMPT=Series No^TITLE=A No : ^ITEM_NAME=iSeriesNo^QUERY=Series No:^QFLAGS=OC---^';
+COMMENT ON COLUMN &VIEW..create_date IS
+   'FLAGS=A----^DATATYPE=DATE/DATE^PROMPT=Create Date^TITLE=Date : ^ITEM_NAME=iCreateDate^';
+COMMENT ON COLUMN &VIEW..amount IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Amount^TITLE=Rs : ^ITEM_NAME=iAmount^';
+COMMENT ON COLUMN &VIEW..refund_amount IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Refund Amount^TITLE=Refund Amount^ITEM_NAME=iRefundAmount^';
+COMMENT ON COLUMN &VIEW..refund_receipt_no IS
+   'FLAGS=A----^DATATYPE=STRING(15)^PROMPT=Refund Receipt No^TITLE=Refund Receipt No^ITEM_NAME=iRefundReceiptNo^';
+COMMENT ON COLUMN &VIEW..refund_date IS
+   'FLAGS=A----^DATATYPE=DATE/DATE^PROMPT=Refund Date^TITLE=Refund Date^ITEM_NAME=iRefundDate^';
+COMMENT ON COLUMN &VIEW..expiry_date IS
+   'FLAGS=A----^DATATYPE=DATE/DATE^PROMPT=Expiry Date^TITLE=Expiry Date^ITEM_NAME=iExpiryDate^';
+COMMENT ON COLUMN &VIEW..expired IS
+   'FLAGS=A----^DATATYPE=BOOLEAN^PROMPT=Expired^TITLE=Expired^ITEM_NAME=iExpired^';
+COMMENT ON COLUMN &VIEW..updated IS
+   'FLAGS=A----^DATATYPE=BOOLEAN^PROMPT=Updated^TITLE=Updated^ITEM_NAME=iUpdated^';
+COMMENT ON COLUMN &VIEW..remarks IS
+   'FLAGS=A----^DATATYPE=STRING(200)^PROMPT=Remarks^TITLE=Remarks^ITEM_NAME=iRemarks^';
+COMMENT ON COLUMN &VIEW..purpose IS
+   'FLAGS=A----^DATATYPE=STRING(100)^PROMPT=Purpose^TITLE=Purpose^ITEM_NAME=iPurpose^';
+COMMENT ON COLUMN &VIEW..redeem_date IS
+   'FLAGS=A----^DATATYPE=DATE/DATE^PROMPT=Redeem Date^TITLE=Redeem Date^ITEM_NAME=iRedeemDate^';
+COMMENT ON COLUMN &VIEW..cash_book IS
+   'FLAGS=A----^DATATYPE=STRING(20)/UPPERCASE^PROMPT=Cash Book^TITLE=Cash Book^ITEM_NAME=iCashBook^';
+COMMENT ON COLUMN &VIEW..currency IS
+   'FLAGS=A----^DATATYPE=STRING(4)/UPPERCASE^PROMPT=Currency^TITLE=Currency^ITEM_NAME=iCurrency^';
+COMMENT ON COLUMN &VIEW..str1 IS
+   'FLAGS=A----^DATATYPE=STRING(100)^PROMPT=Str1^TITLE=Str1^ITEM_NAME=iStr1^';
+COMMENT ON COLUMN &VIEW..dom_amount IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Dom Amount^TITLE=Dom Amount^ITEM_NAME=iDomAmount^';
+COMMENT ON COLUMN &VIEW..book_no IS
+   'FLAGS=A----^DATATYPE=STRING(50)^PROMPT=Book No^TITLE=Book No^ITEM_NAME=iBookNo^';
+COMMENT ON COLUMN &VIEW..sheet_serial_no IS
+   'FLAGS=A----^DATATYPE=STRING(50)^PROMPT=Sheet Serial No^TITLE=Sheet Serial No^ITEM_NAME=iSheetSerialNo^';
+COMMENT ON COLUMN &VIEW..contract IS
+   'FLAGS=A----^DATATYPE=STRING(5)/UPPERCASE^PROMPT=Site^REF=Site^TITLE=Site Code : ^ITEM_NAME=iContract^';
+COMMENT ON COLUMN &VIEW..customer_id IS
+   'FLAGS=A----^DATATYPE=STRING(20)/UPPERCASE^PROMPT=Customer Id^REF=CustomerInfo^TITLE=Customer Id^ITEM_NAME=iCustomerId^';
+COMMENT ON COLUMN &VIEW..order_no IS
+   'FLAGS=A----^DATATYPE=STRING(12)/UPPERCASE^PROMPT=Order No^REF=CustomerOrder^TITLE=Order No : ^ITEM_NAME=iOrderNo^';
+COMMENT ON COLUMN &VIEW..address_id IS
+   'FLAGS=A----^DATATYPE=STRING(50)/UPPERCASE^PROMPT=Address Id^REF=CustomerInfoAddress(customer_id)^TITLE=Address Id^ITEM_NAME=iAddressId^';
+COMMENT ON COLUMN &VIEW..account_code IS
+   'FLAGS=A----^DATATYPE=STRING(5)/UPPERCASE^PROMPT=Advance Type : ^REF=HpnretAdvBasic^TITLE=Account Code^ITEM_NAME=iAccountCode^';
+COMMENT ON COLUMN &VIEW..line_no IS
+   'FLAGS=A----^DATATYPE=STRING(4)^PROMPT=Line No^TITLE=Line No^ITEM_NAME=iLineNo^';
+COMMENT ON COLUMN &VIEW..rel_no IS
+   'FLAGS=A----^DATATYPE=STRING(4)^PROMPT=Rel No^TITLE=Rel No^ITEM_NAME=iRelNo^';
+COMMENT ON COLUMN &VIEW..line_item_no IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Line Item No^REF=CustomerOrderLine(order_no,line_no,rel_no)^TITLE=Line Item No^ITEM_NAME=iLineItemNo^';
+COMMENT ON COLUMN &VIEW..book_types IS
+   'FLAGS=A----^DATATYPE=STRING(200)^PROMPT=Book Types^REF=PurinvSheetRegister(sheet_serial_no)^TITLE=Book Types^ITEM_NAME=iBookTypes^';
+COMMENT ON COLUMN &VIEW..salesman_code IS
+   'FLAGS=A----^DATATYPE=STRING(20)/UPPERCASE^PROMPT=Salesman Code^REF=SalesPartSalesman^TITLE=Salesman : ^ITEM_NAME=iSalesmanCode^';
+COMMENT ON COLUMN &VIEW..run_date IS
+   'FLAGS=A----^TITLE=Run Date/Time : ^ITEM_NAME=iRunDate^DATATYPE=DATE/DATE^';
+COMMENT ON COLUMN &VIEW..login_user IS
+   'FLAGS=A----^TITLE=User : ^ITEM_NAME=iUser^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..shop_name IS
+   'FLAGS=A----^TITLE=Shop Name^ITEM_NAME=iShopName^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..tele_no IS
+   'FLAGS=A----^TITLE=Tele No^ITEM_NAME=iTeleNo^DATATYPE=STRING^';
+/*COMMENT ON COLUMN &VIEW..|| IS
+   '';*/
+COMMENT ON COLUMN &VIEW..shop_addr IS
+   'FLAGS=A----^TITLE=Shop Addr^ITEM_NAME=iShopAddr^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..received_from IS
+   'FLAGS=A----^TITLE=Received From : ^ITEM_NAME=iReceivedFrom^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..nic_no IS
+   'FLAGS=A----^TITLE=Nic No^ITEM_NAME=iNicNo^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..cust_address IS
+   'FLAGS=A----^TITLE=Address : ^ITEM_NAME=iCustAddress^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..cust_add_desc IS
+   'FLAGS=A----^TITLE=Address : ^ITEM_NAME=iCustAddDesc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..rupees IS
+   'FLAGS=A----^TITLE=Rupees : ^ITEM_NAME=iRupees^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..salesman_name IS
+   'FLAGS=A----^TITLE=Salesman Name^ITEM_NAME=iSalesmanName^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..remarks_1 IS
+   'FLAGS=A----^TITLE=Remarks 1^ITEM_NAME=iRemarks1^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..remarks_2 IS
+   'FLAGS=A----^TITLE=Remarks 2^ITEM_NAME=iRemarks2^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..purpose_1 IS
+   'FLAGS=A----^TITLE=Purpose 1^ITEM_NAME=iPurpose1^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..purpose_2 IS
+   'FLAGS=A----^TITLE=Purpose 2^ITEM_NAME=iPurpose2^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..rs_in_english IS
+   'FLAGS=A----^TITLE=Rs In English^ITEM_NAME=iRsInEnglish^DATATYPE=STRING/UPPERCASE^';
+COMMENT ON COLUMN &VIEW..valid_for IS
+   'FLAGS=A----^ITEM_NAME=iValidFor^DATATYPE=STRING^TITLE=temp^';
+COMMENT ON COLUMN &VIEW..advpay_type_desc IS
+   'FLAGS=A----^TITLE=Advpay Type Desc^ITEM_NAME=iAdvpayTypeDesc^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..s_run_date IS
+   'FLAGS=A----^TITLE=S Run Date^ITEM_NAME=iSRunDate^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..s_create_date IS
+   'FLAGS=A----^TITLE=S Create Date^ITEM_NAME=iSCreateDate^DATATYPE=STRING^';
+
+
+/*
+*/
+
+/*
+*/
+
+BEGIN
+Report_SYS.Refresh_('&VIEW');
+END;
+/
+
+-----------------------------------------------------------------------------
+-- PACKAGE IMPLEMENTATION
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG implementation
+
+CREATE OR REPLACE PACKAGE BODY &PKG AS
+
+PROCEDURE PU_AMOUNT (WKAmount NUMBER) IS
+
+l_amount 	NUMBER(12,2);
+l_len 		SMALLINT;
+l_start		NUMBER(12,2);
+l_second	NUMBER(12,2);
+L_string2	VARCHAR2(320);
+l_string	VARCHAR2(320);
+l_text		VARCHAR2(320);
+L_stringcent	VARCHAR2(200);
+L_cents		VARCHAR2(200);
+L_cents2	NUMBER(12,2);
+l_second1	NUMBER(12,2);
+l_third   	NUMBER(12,2);
+L_string3	VARCHAR2(320);
+
+--l_desc	VARCHAR2(320);
+
+BEGIN
+
+l_amount := WKAmount;
+
+
+IF l_AMOUNT IS NULL OR L_AMOUNT <=0 THEN
+    l_desc:=('(ZERO)');
+ELSIF TRUNC(L_AMOUNT)=0 THEN
+    L_CENTS:= (L_AMOUNT*100);
+    IF L_CENTS<>0 THEN
+    SELECT TO_CHAR(TO_DATE(L_CENTS,'J'),'JSP') INTO L_STRINGCENT FROM DUAL;
+    l_desc:=(L_STRINGCENT||' '||'PAISA ONLY.');
+    ELSE
+    l_desc:=('" NULL "');
+    END IF;
+ELSE
+   BEGIN
+     L_START:= TRUNC(L_AMOUNT/1000000);
+     L_SECOND:=TRUNC(MOD(L_AMOUNT,1000000));
+     L_CENTS2:= ((L_AMOUNT-TRUNC(L_AMOUNT))*100);
+
+   IF L_START <>0 AND  L_SECOND<>0  THEN
+
+    SELECT TO_CHAR(TO_DATE(L_START,'J'),'JSP') INTO L_STRING FROM DUAL;
+    SELECT TO_CHAR(TO_DATE(L_SECOND,'J'),'JSP') INTO L_STRING2 FROM DUAL;
+
+    IF L_CENTS2<>0 THEN
+       SELECT TO_CHAR(TO_DATE(L_CENTS2,'J'),'JSP') INTO L_STRINGCENT FROM DUAL;
+       l_desc:=(L_STRING||' MILLION AND '||L_STRING2||' TAKA AND '||L_STRINGCENT||' PAISA ONLY.');
+    ELSE
+       l_desc:=(L_STRING||' MILLION AND '||L_STRING2||' TAKA ONLY.');
+    END IF;
+
+   ELSIF L_START <>0 AND  L_SECOND=0  THEN
+
+    SELECT TO_CHAR(TO_DATE(L_START,'J'),'JSP') INTO L_STRING FROM DUAL;
+
+    IF L_CENTS2<>0 THEN
+       SELECT TO_CHAR(TO_DATE(L_CENTS2,'J'),'JSP') INTO L_STRINGCENT FROM DUAL;
+       l_desc:=(L_STRING||' '||'MILLION TAKA AND '||L_STRINGCENT||' PAISA ONLY.');
+    ELSE
+       l_desc:=(L_STRING||' '||'MILLION TAKA ONLY.');
+    END IF;
+
+  ELSIF L_START=0 AND  L_SECOND<>0  THEN
+
+     L_second1:= TRUNC(L_SECOND/1000);
+     L_Third:= TRUNC(MOD(L_SECOND,1000));
+
+     if L_second1<>0 and L_Third=0 then
+
+       SELECT TO_CHAR(TO_DATE(L_second1,'J'),'JSP') INTO L_STRING2 FROM DUAL;
+
+        IF L_CENTS2<>0 THEN
+            SELECT TO_CHAR(TO_DATE(L_CENTS2,'J'),'JSP') INTO L_STRINGCENT FROM DUAL;
+            l_desc:=(L_STRING2||' THOUSAND TAKA AND '||L_STRINGCENT||' PAISA ONLY.');
+        ELSE
+            l_desc:=(L_STRING2||' THOUSAND TAKA ONLY.');
+        END IF;
+
+     elsif L_second1<>0 and L_Third<>0 then
+
+      SELECT TO_CHAR(TO_DATE(L_second1,'J'),'JSP') INTO L_STRING2 FROM DUAL;
+      SELECT TO_CHAR(TO_DATE(L_Third,'J'),'JSP') INTO L_STRING3 FROM DUAL;
+
+        IF L_CENTS2<>0 THEN
+            SELECT TO_CHAR(TO_DATE(L_CENTS2,'J'),'JSP') INTO L_STRINGCENT FROM DUAL;
+            l_desc:=(L_STRING2||' THOUSAND '||L_STRING3||' TAKA AND '||L_STRINGCENT||' PAISA ONLY.');
+        ELSE
+            l_desc:=(L_STRING2||' THOUSAND '||L_STRING3||' TAKA ONLY.');
+        END IF;
+
+     elsif L_second1=0 and L_Third<>0 then
+
+      SELECT TO_CHAR(TO_DATE(L_Third,'J'),'JSP') INTO L_STRING3 FROM DUAL;
+
+        IF L_CENTS2<>0 THEN
+            SELECT TO_CHAR(TO_DATE(L_CENTS2,'J'),'JSP') INTO L_STRINGCENT FROM DUAL;
+            l_desc:=(L_STRING3||' TAKA AND '||L_STRINGCENT||' PAISA ONLY.');
+        ELSE
+            l_desc:=(L_STRING3||' TAKA ONLY.');
+        END IF;
+    end if;
+  END IF;
+END;
+END IF;
+
+l_desc := LOWER(l_desc);
+l_desc := INITCAP(l_desc);
+
+
+END pu_amount;
+
+
+
+
+PROCEDURE Report_Overview (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 )
+IS
+   result_key_                 NUMBER;
+   row_no_                     NUMBER := 1;
+   series_no_                  VARCHAR2(25);
+   doc_address_                VARCHAR2(10);
+
+   CURSOR get_attr (series_no_ IN VARCHAR2)IS
+      SELECT series_no,
+             create_date,
+             amount,
+             refund_amount,
+             refund_receipt_no,
+             refund_date,
+             expiry_date,
+             expired,
+             updated,
+             remarks,
+             purpose,
+             redeem_date,
+             cash_book,
+             currency,
+             str1,
+             dom_amount,
+             book_no,
+             sheet_serial_no,
+             contract,
+             customer_id,
+             order_no,
+             address_id,
+             account_code,
+             line_no,
+             rel_no,
+             line_item_no,
+             book_types,
+             salesman_code
+             -- RUN_DATE
+             -- LOGIN_USER
+
+      FROM HPNRET_ADV_PAY_TAB t
+      WHERE series_no = series_no_;
+
+   CURSOR get_doc_address (customer_no_ IN VARCHAR2)IS
+      SELECT addr_no
+      FROM   CUST_ORD_CUSTOMER_ADDRESS
+      WHERE CUST_ORD_CUSTOMER_ADDRESS_API.Is_Bill_Location(customer_no_, addr_no) = 1
+      AND      CUST_ORD_CUSTOMER_ADDRESS_API.Is_Valid(customer_no_, addr_no) = 1;
+
+      str_valid_for_ VARCHAR2(30);
+
+BEGIN
+   result_key_ := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY', report_attr_));
+   series_no_  := Client_SYS.Get_Item_Value('SERIES_NO', parameter_attr_);
+
+   FOR rec_ IN get_attr(series_no_) LOOP
+
+
+       OPEN get_doc_address(rec_.customer_id);
+       FETCH get_doc_address INTO doc_address_;
+       CLOSE get_doc_address;
+
+       PU_AMOUNT(ABS(rec_.dom_amount));
+
+       IF (rec_.account_code LIKE ('%586%')) THEN
+          IF (rec_.order_no IS NOT NULL) THEN
+             str_valid_for_ := 'VALID ONLY FOR 14 DAYS.';
+          ELSE
+              str_valid_for_ := 'VALID ONLY FOR 180 DAYS.';
+          END IF;
+          
+       ELSE
+           str_valid_for_ := NULL;
+       END IF;
+
+
+       INSERT INTO INFO_SERVICES_RPT(
+                   RESULT_KEY,
+                   ROW_NO,
+                   PARENT_ROW_NO,
+                   s1,--SERIES_NO,
+                   d1,--CREATE_DATE,
+                   n1,--AMOUNT,
+                   n2,--REFUND_AMOUNT,
+                   s2,--REFUND_RECEIPT_NO,
+                   d2,--REFUND_DATE,
+                   d3,--EXPIRY_DATE,
+                   s3,--EXPIRED,
+                   s4,--UPDATED,
+                   s5,--REMARKS,
+                   s6,--PURPOSE,
+                   d4,--REDEEM_DATE,
+                   s7,--CASH_BOOK,
+                   s8,--CURRENCY,
+                   s9,--STR1,
+                   n3,--DOM_AMOUNT,
+                   s10,--BOOK_NO,
+                   s11,--SHEET_SERIAL_NO,
+                   s12,--CONTRACT,
+                   s13,--CUSTOMER_ID,
+                   s14,--ORDER_NO,
+                   s15,--ADDRESS_ID,
+                   s16,--ACCOUNT_CODE,
+                   s17,--LINE_NO,
+                   s18,--REL_NO,
+                   n4,--LINE_ITEM_NO,
+                   s19,--BOOK_TYPES,
+                   s20,--SALESMAN_CODE,
+                   d5,--RUN_DATE,
+                   s21,--LOGIN_USER,
+                   --SHOP_NAME,
+                   --TELE_NO,
+                   --SHOP_ADDR,
+                   --RECEIVED_FROM,
+                   --NIC_NO,
+                   --CUST_ADDRESS,
+                   s22, --CUST_ADDRESS
+                   n5 ,--TAKA
+                   s23, -- RS_IN_ENGLISH
+                   s24, --  VALID_FOR
+                   s25, --ADVPAY_TYPE_DESC
+                   s26, --s_run_date
+                   s27 --s_create date
+                   )
+              VALUES
+                   (
+                   result_key_,
+                   row_no_,
+                   0,
+                   rec_.series_no,
+                   rec_.create_date,
+                   rec_.amount,
+                   rec_.refund_amount,
+                   rec_.refund_receipt_no,
+                   rec_.refund_date,
+                   rec_.expiry_date,
+                   rec_.expired,
+                   rec_.updated,
+                   rec_.remarks,
+                   rec_.purpose,
+                   rec_.redeem_date,
+                   rec_.cash_book,
+                   rec_.currency,
+                   rec_.str1,
+                   rec_.dom_amount,
+                   rec_.book_no,
+                   rec_.sheet_serial_no,
+                   rec_.contract,
+                   rec_.customer_id,
+                   rec_.order_no,
+                   rec_.address_id,
+                   rec_.account_code,
+                   rec_.line_no,
+                   rec_.rel_no,
+                   rec_.line_item_no,
+                   rec_.book_types,
+                   rec_.salesman_code,
+                   Site_Api.Get_Site_Date(rec_.contract),
+                   Fnd_Session_API.Get_Fnd_User,
+                   doc_address_,
+                   rec_.amount,
+                   l_desc, -- RS_IN_ENGLISH
+                   str_valid_for_ ,--VALID_FOR
+                   Hpnret_Adv_Basic_API.Get_Description(rec_.account_code) ,--ADVPAY_TYPE_DESC
+                   TO_CHAR(Site_Api.Get_Site_Date(rec_.contract),'YYYY/MM/DD HH24:MI:SS'),
+                   TO_CHAR(rec_.create_date,'YYYY/MM/DD')
+                   );
+       row_no_ := row_no_ +1;
+   END LOOP;
+
+          INSERT INTO INFO_SERVICES_RPT(
+                   RESULT_KEY,
+                   ROW_NO,
+                   PARENT_ROW_NO,
+                   s1,
+                   s21,
+                   s26--RUN_DATE
+                   )
+
+                   VALUES
+                   (
+                   result_key_,
+                   row_no_,
+                   0,
+                   series_no_,
+                   Fnd_Session_API.Get_Fnd_User,
+                   TO_CHAR(SYSDATE,'YYYY/MM/DD')
+
+                   );
+
+
+END Report_Overview;
+
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- END
+-----------------------------------------------------------------------------

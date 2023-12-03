@@ -1,0 +1,23 @@
+select 
+    --*/*COUNT(*)*/
+    t.stat_year,
+    t.stat_period_no,
+    t.contract,
+    t.part_no,
+    t.sales Sale,
+    t.exch_in_cash EXINCASH,
+    t.exch_in_hire EXINHIRE,
+    t.revert_bal REVERT,
+    t.exch_out_cash EXOUTCASH,
+    t.exch_out_hire EXOUTHIRE,
+    t.sale_reverse Sale_Return,
+    t.revert_rev "Reverse"
+  from REP246_TAB t
+  where 
+    t.stat_year = '&year_i' and
+    t.stat_period_no = '&period' and
+    --*** All Shops
+    t.Contract not in ('BWHW', 'KWHW', 'RWHW', 'TWHW', 'CMWH', 'SPWH', 'SWHW', 'CTGW', 'APWH', 'SYWH', 'MYWH',
+      'BSCP', 'CSCP', 'JSCP', 'RSCP', 'SSCP', 'MS1C', 'MS2C', 'BTSC',
+      'WSMO', 'SWSS', 'SAOS', 'JWSS', 'SCSM', 'SAPM', 'SESM')
+order by t.contract, t.part_no

@@ -1,0 +1,162 @@
+select t.stat_year,
+       t.stat_period_no,
+       t.contract,
+       (select s.area_code
+          from SHOP_DTS_INFO s
+         where s.shop_code = t.contract) area_code,
+       (select s.district_code
+          from SHOP_DTS_INFO s
+         where s.shop_code = t.contract) district_code,
+       t.part_no,
+       IFSAPP.INVENTORY_PRODUCT_CODE_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Code('SCOM',
+                                                                                                         t.part_no)) brand,
+       ifsapp.INVENTORY_PRODUCT_FAMILY_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM',
+                                                                                                             t.part_no)) product_family,
+       IFSAPP.COMMODITY_GROUP_API.Get_Description(IFSAPP.INVENTORY_PART_API.Get_Second_Commodity('SCOM',
+                                                                                                 t.part_no)) commodity_group2,
+       t.branch,
+       t.ad,
+       t.bf_balance,
+       t.adj_dr,
+       t.adj_cr,
+       t.debit_note,
+       t.exch_in_cash,
+       t.exch_in_hire,
+       t.revert_qty,
+       t.sale_reverse,
+       t.trf_in,
+       t.trfc_in,
+       t.direct_dr,
+       t.other_rec,
+       t.credit_note,
+       t.exch_out_cash,
+       t.exch_out_hire,
+       t.trf_out,
+       t.trfc_out,
+       t.other_iss,
+       t.revert_rev,
+       t.sales,
+       t.ad_sales,
+       t.cf_balance,
+       t.revert_bal,
+       t.school_stock,
+       t.ad_stock,
+       to_char(t.rowversion, 'MM/DD/YYYY') rowversion,
+       (select c.cost
+          from ifsapp.invent_online_cost_tab c
+         where c.year = '&year_i'
+           and c.period = '&period'
+           and c.contract = t.contract
+           and c.part_no = t.part_no) UNIT_COST,
+       nvl(decode((select s.sales_price
+                    from ifsapp.SALES_PRICE_LIST_PART s
+                   where s.price_list_no = '1'
+                     and s.valid_from_date =
+                         (select max(p.valid_from_date)
+                            from ifsapp.SALES_PRICE_LIST_PART p
+                           where p.price_list_no = '1'
+                             and p.valid_from_date <= sysdate
+                             and p.catalog_no = s.catalog_no)
+                     and s.catalog_no = t.part_no),
+                  null,
+                  (select s.sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART s
+                    where s.price_list_no = '4'
+                      and s.valid_from_date =
+                          (select max(p.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART p
+                            where p.price_list_no = '4'
+                              and p.valid_from_date <= sysdate
+                              and p.catalog_no = s.catalog_no)
+                      and s.catalog_no = t.part_no),
+                  (select s.sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART s
+                    where s.price_list_no = '1'
+                      and s.valid_from_date =
+                          (select max(p.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART p
+                            where p.price_list_no = '1'
+                              and p.valid_from_date <= sysdate
+                              and p.catalog_no = s.catalog_no)
+                      and s.catalog_no = t.part_no)),
+           0) NSP
+  from ifsapp.REP246_TAB t
+ where t.stat_year = '&year_i'
+   and t.stat_period_no = '&period'
+      --*** All Warehouses
+      /*and t.Contract in ('APWH',
+      'BBWH',
+      'BWHW',
+      'CMWH',
+      'CTGW',
+      'FWHW', -- New
+      'KWHW',
+      'MYWH',
+      'RWHW',
+      'SPWH',
+      'SWHW',
+      'SYWH',
+      'TWHW',
+      'ABWW', --Wholesale Warehouse
+      'BAWW',
+      'BGWW',
+      'CLWW',
+      'CTWW',
+      'FEWW', -- New
+      'KHWW',
+      'MHWW',
+      'RHWW',
+      'SDWW',
+      'SVWW',
+      'SLWW',
+      'TUWW',
+      'GWTW', -- New Warehouse
+      'GTWW')*/ --DWWH Dhaka Wholesale Office
+      --*** All Service Sites
+      /*and t.contract not in ('BSCP',
+      'BLSP',
+      'CLSP',
+      'CSCP',
+      'CXSP', --New Service Center
+      'DSCP',
+      'MSCP', --New Service Center
+      'JSCP',
+      'RPSP', --New Service Center
+      'RSCP',
+      'SSCP',
+      'MS1C',
+      'MS2C',
+      'BTSC')*/ --Service Sites
+      /*and t.contract not in ('JWSS', 'SAOS', 'SWSS', 'WSMO')*/ --Wholesale Sites
+      /*and t.contract not in ('SAPM', 'SCSM', 'SESM', 'SHOM', 'SISM', 'SFSM')*/ --Corporate, Employee, & Scrap Sites
+      --*** All Megashops
+      /*and t.Contract in ('CJTB',
+      'DGNB',
+      'DINB',
+      'DKBB',
+      'DMBB',
+      'DMRB',
+      'DPLB',
+      'DRRB',
+      'DRSB',
+      'DUTB',
+      'JESB',
+      'KSRB',
+      'MLVB',
+      'SCHB')*/
+      /*and t.contract not in ('SAVF', 'SACF', 'SFRF', 'SCAF', 'SMCF')*/ --Factory Sites
+      /*and t.contract = 'DGNB'*/
+      /*and t.part_no like 'BOREF-RDNT440E20ZWB'*/
+      /*and IFSAPP.PART_CATALOG_API.Get_Serial_Tracking_Code(t.part_no) <>
+      'Serial Tracking'*/
+   /*and ifsapp.INVENTORY_PRODUCT_FAMILY_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM',
+                                                                                                             t.part_no)) \*=
+       'TV-PANEL'*\ in
+       ('COMPUTER-DESKTOP', 'COMPUTER-LAPTOP', 'COMPUTER-ACCESSORIES')*/
+ order by t.stat_year,
+          t.stat_period_no,
+          to_number((select s.district_code
+                      from SHOP_DTS_INFO s
+                     where s.shop_code = t.contract)),
+          t.contract,
+          t.part_no

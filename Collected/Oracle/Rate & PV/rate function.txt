@@ -1,0 +1,117 @@
+CREATE FUNCTION dbo.Rate_fn
+(
+@nper MONEY,
+@pmt MONEY,
+@pv MONEY,
+@fv MONEY,
+@tolerance DECIMAL(18,6) = .001,
+@step DECIMAL(18, 6) = .0001,
+@maxIterations INT = 1000,
+@guess DECIMAL(18, 6) = .1
+)
+RETURNS MONEY
+AS
+BEGIN
+-- Solve variables
+DECLARE @i
+DECIMAL(18, 6)
+DECLARE @compareFV MONEY = 0
+DECLARE @iteration INT = 0
+
+SET @i = @guess
+WHILE (@iteration < @maxIterations)
+BEGIN
+IF @compareFV > @fv * (1 + @tolerance) OR @compareFV < @fv * (1 - @tolerance)
+BEGIN
+IF @compareFV > @fv
+SET @i -= @step --If the guess is high, decrement for this round
+ELSE
+SET @i += @step --If the guess is low, increment for this round
+
+SET @iteration += 1
+
+SELECT
+@compareFV = -(@pv * POWER((1 + @i), @nper) + (@pmt * ((POWER((1 + @i), @nper) - 1)/@i)))
+
+CONTINUE
+END
+ELSE
+BREAK --If we have hit the target, leave the loop and return
+END
+
+-- Return the result of the function
+RETURN @i
+END
+
+___________________________________________________________________
+
+Function for future value
+
+and result for fixed value in set.
+
+
+
+
+
+
+
+DECLARE @APR FLOAT
+SET @APR=.074;
+DECLARE @months INT  --how to break up the annual percentage
+    SET @months=12;
+DECLARE @Period INT -- (i.e. at what point in the future do you want to know the value)
+    SET @Period=36;
+DECLARE @pmt DECIMAL(18,2)  --monthly payment
+    SET @pmt=1889;
+DECLARE @PV DECIMAL(18,2)  --present value or starting point
+    SET @PV=132930;
+DECLARE @EndPeriod INT --whether compounding occurs at the beginning or the end of the period
+    SET @EndPeriod=0;
+DECLARE @FV DECIMAL(36,6)
+SELECT @FV=(@PV*POWER(1+@APR/@Months,(@PERIOD-@EndPeriod))
+                -@PMT*(POWER(1+@APR/@Months,@PERIOD) -1)/(@APR/@Months))*POWER(1+@APR/@Months,@EndPeriod)
+
+SELECT @FV
+
+
+
+
+
+___________________________________________________________________
+
+
+
+function for PMT and a fpr a preseted value
+
+
+
+
+declare @pv money
+declare @fv money
+declare @nper int
+declare @APR float
+declare @months int
+declare @pmt money
+
+set @pv=106344;
+set @fv=75960;
+set @nper=36;
+set @months=12;
+set @APR=.074;
+
+select (@PV-@FV)/@NPER --a.k.a the Principal payment
+
++ (@PV+@FV-(@PV-@FV)/@NPER)/2*(@APR/@months) --a.k.a the interest payment
+
+
+
+
+****the "interest gets applied at the END of the period" formula. For the "beginning" - it would be:
+
+
+select (@PV-@FV)/@NPER              --a.k.a the Principal payment
+         + (@PV+@FV)/2*(@APR/@months)  --a.k.a the interest payment
+
+
+
+__________________________________________________________________

@@ -1,0 +1,10 @@
+select m.spare_contract,
+m.wo_no,
+m.maint_material_order_no,
+m.line_item_no,
+m.part_no,
+m.plan_qty,
+m.qty,
+m.qty_returned
+from MAINT_MATERIAL_REQ_LINE m
+where m.wo_no = '123288'

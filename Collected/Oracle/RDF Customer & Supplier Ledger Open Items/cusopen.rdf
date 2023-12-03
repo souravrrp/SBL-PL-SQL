@@ -1,0 +1,2897 @@
+-----------------------------------------------------------------------------
+--
+--  Logical unit: Customer Open Ledger Items report
+--
+--  File:        CUSOPEN.RDF
+--
+--  Date    Sign  History           
+--  ------  ----  -----------------------------------------------------------
+--  972307  GETH  Created Report for Customer Invoice Journal Series       --
+--  970528  PICZ  Added procedure Get_Defaults_For_Report
+--  970613  PICZ  Added function Get_Blocked_Codeparts - returns 'TRUE' if
+--                codepart is enabled in company
+--  970616  PICZ  Fixed bug: information about paymentr plan for customer
+--                invoice; added column order_column; changed sieze of
+--                ledger_item_series_id to 50 characters; Column COMPANY_ID
+--                renamed on COMPANY (standard)
+--  970624  PICZ  Added column COMPANY_NAME; added Get_Company_Specific
+--  970710  DAVJ  Added column Dummycodeparts, Dummycodenames to control
+--                appearance of codestring in table page
+--  970919  DavJ  Added column print_details and flag_print_details
+--  971020  PICZ  Improved performace: removed Get_On_Account_Codestr___ nad     
+--                Get_Codestring___; using LEDGER_ITEM_TAB instead of view;
+--                rebuilded &METHOD method; added validation of codepart
+--                used as parameters
+--  971030  PICZ  Fixed bug in main SELECT; added table TABLE2, added Store_Codepart_Names
+--                removed unused functions
+--  971208  MABE  Corrected bug no 65 (uncommented call to
+--                Report_SYS.Define_Report_Text_)
+--  971210  ANDJ  Corrected bug # 2628.
+--  980108  MABE  Payment module structure rebuilt.
+--  980115  MABE  Upgraded to Foundation1 2.0.0.
+--  980130  MABE  Solution for Get_Ledger_Codestring_Id.
+--  980306  DAKA  Bug 459 in finance 8.4 corrected
+--  980306  MABE  One more correction to Get_Account_String.
+--  980327  MABE  Added ledger_item_version.
+--  980414  MABE  Corrected bug 3492.
+--  980515  MABE  Removed FEEDBACK and VERIFY
+--  980609  WOBL  Removed reference to Ledger_Item_API.Get_Voucher_Date and
+--                Ledger_Item_API.Get_All_Amounts_Info, added columns
+--                fully_paid_voucher_date, full_curr_amount, full_dom_amount
+--                to main cursor and reference to
+--                Ledger_Item_API.Get_Rest_Amounts_At_date in &METHOD
+--  980630  WOBL  Correction of printing invoice amount column
+--  981026  WOBL  Bug #6405 from version 8.3.1A corrected  comments without end '^'
+--  981030  MABE  Corrected bug no #5900 from 8.3.1A.
+--  981030  MABE  Corrected bug no #6004 from 8.3.1A.
+--  990105  NAVE  Modifications for Credit and Collection (Credit Analyst).
+--  990401  MAMI  Changed server value to client value before
+--                calling Party_Type_Id_Pay_Info_API.Get_Identity
+--  990505  Camk  # 8372 Removed invalid parameter to improve execution behaviour
+--                of the function Ledger_Item_Util_API.Get_Dom_Amount_And_Balance.
+--  990514 PACEPL Bug # 15018  Performance problems in Customer/Supplier Ledger Open
+--                Items Reports
+--  990615  MAMI  Print company in field CUSTOMER_NO for parked payments.
+--  990812 PACEPL Change Party to Identity
+--  990930 SUUMSE Bug # 10271 Fixed
+--  991027  KLKL  Added customer address, ageing calculation --FIN119
+--  000119 OVJOSE Added BoE to report
+--  000213 OVJOSE Added Voucher_No column to cust_open_item_rpt
+--  000306 PICZ   Call #35093 (changed comments on dummy_codenames and dummy_codeparts)
+--  000524 MAMI   Call #40888. Recalculate open amount of invoice to accounting currency
+--                using invoice curr. rate.
+--  000913 Camk   Company Logotype added
+--  000913 REANPL payer_identity added
+--  001013 MAMIPL Corrected WHERE statement in main loop.
+--  001031 MABEPL Corrected #51541. Default Document address (DB-INVOICE) is
+--                now fetched and not default Payment address.
+--  011004 visuus Bug# 24916:Report contains Open Payment documents too..
+--  011017 visuus Further correction to Bug# 24916.
+--  011018 DAKA   bug 25434 corrected
+--  011211 THSRLK IID10099 -  Customer Ledger Open Item Report layout changes
+--  020102 RAFA   Bug #26240 corrected
+--  020117 THSRLK Changed PROCEDURE Store_Codepart_Names to support Oracle 9i
+--  020123 Thsrlk IID10099 - Add new coloumn Dom_amount_due
+--  020205 dagalk change view comment layouts line with /paper(A4) etc.
+--  020318 Thsrlk Corrected Call Id 76475
+--  020321 AsSalk Added a currency convertion to totals.Call ID 79683.
+--  020321 Shsalk Call Id 78617 Corrected.
+--  020401 AsSalk Changed the process in obtaining the totals.Call ID 76475.
+--  020527 mgutse Bug #27578 corrected.
+--  020717 Famese Bug # 31389.
+--  020822 mgutse Bug #30979 corrected.
+--  020829 Kagalk Bug #31218 Corrected.
+--  021203 Nimalk IID FRFI132N Bad Debt Management changed View and added CURSOR get_payment_id
+--  030306 NiKaLK ITFI108E joined ledger_item_tab with customer_payment_plan to show report
+--                in installment level
+--  030317 NiKaLK B95300 Added ShowDomCurrency to the report view
+--  030319 NiKaLK B95313 Changed Table join.
+--  030325 AsSalk B95674 - Fixing Normal Items printing when queried for BADDEBT.
+--  030327 samblk ITFI108E removed the columns current_due_date and amount_due
+--  030327 NiKaLK ITFI108E Installments- Added Report text for Open Amount
+--  030602 NiKaLK ITFI108E Allowed insert to table when Ledger Status is null 
+--  030829 TiUkLk NOIID Report Bug Fix. Changed Column Titles
+--  030902 Raablk Modified Cust_Open_Item.
+--  030918 Risrlk Merged LCS Bug 36883.
+--  030918 samblk Merged LCS Bug 38655.
+--  031010 prdilk Changed the view comment for dom_currency and currency_rowtype.
+--  040120 prdilk Bug 42219 - Modified to Report Designer
+--  040202 prdilk Merged Bug 37938. Added pagefoot_three_ and pagefoot_four_. Added method Get_Pagefoot_Value___
+--  040219 Machlk Bug 39993, Hide blocked code parts in the title page.
+--  040303 Prdilk Bug 42887, Modified to Report Designer for Bug 39993
+--  040323 TsYolk Bug 43332, Installment amounts were not fetched properly. Modified Cust_Open_Item cursor.
+--  040325 Kagalk Bug 42717, Display address according to Address presentation format.
+--  040402 Risrlk Bug 43817, value for our_reference field will be fetched from order report dlg instead of customer/general tab
+--  040414 Machlk Bug 38990, fixed, Added new texts.
+--  040427 TsYolk Bug 44203, Corrected. Now for Invoice ledger items the installment amount is taken. 
+--  040427                	  For others the full amount (as before) is taken.
+--  040507 Prdilk Bug 44451  XML modifications to handle NULL Values.
+--  040510 Hawalk Bug 44500, Corrected the problem of accounting currency values being shown on report 'Statement on Account' although
+--  040510                   the header of the page/section indicated currency used in the ledger item. In order to be consistent with
+--  040510                   the report 'Customer Ledger Open Items', swapped the columns showing iOpenDomAmount and iOpenAmount on 
+--  040510                   cusopen.qrp, cusopen_ltr.qrp, cusopen_duedate.qrp and cusopen_duedate_ltr.qrp.  
+--  040604 Hawalk Bug 44500, (Related to 44556) Adding default value for ledger_status. Without a value in this, it is not possible to
+--  040604                   see data in the report Customer Open Ledger Items (when accessed through Order Reports). 
+--  040607 MACHLK Bug 44975 fixed. Report concept modification.
+--  040811 TsYolk Bug 46285, Corrected. installments only exists for invoice ledger items.    
+--  040811 RAFA   Bug 46369 changed cursor get_open_items to support partly paid invoices after upgrade.
+--  040817 TsYolk Bug 37342 Corrected the main cursor. Also filtering of cancelled checks.
+--  040908 Atsalk Bug 46842 Added condition to check for opened checks in ageing periods.
+--  040920 Shpalk Bug 46364 Added installment_id to ORDER_COLUMN_ID in CUST_OPEN_ITEM_REP view.
+--  040930 Risrlk Bug 46159, Display address according to Address presentation format
+--  041005 Atsalk Bug 45759, Modified if condition in Cust_Open_Item.
+--  041028 Shpalk Bug 46799, re-corrected bug 46369 for upgraded databases from 2003-2 to 2004-1.
+--  041105 Hawalk Bug 41058, Modification inside METHOD in order to set the Due Dates of Customer Receipt Payment Items (Original and Current)
+--  041105        and their associated PoAs (Current). This would also set the proper Due Date for these items on report Statement of Account.
+--  041105        (not directly related to the bug) Setting the Current Due Date for Checks ,BoEs and other PoAs. This would correct the problem
+--  041105        with wrong Due Dates on report Statement of Account for Checks, BoEs and other PoAs. Initializing the variables due_date_ and
+--  041105        current_due_date_ before every pass of the LOOP since they may carry previous values otherwise. 
+--  050218 Risrlk FIN-6
+------------------------------------------------------------------------------------
+
+define MODULE             = PAYLED
+define LU                 = PrintCustomerOpenItems
+define PKG                = CUST_OPEN_ITEM_RPI
+
+define TABLE              = CUST_OPEN_ITEM_RPT
+define TABLE2             = CUST_OPEN_ITEM_NAMES_RPT
+define VIEW               = CUST_OPEN_ITEM_REP
+define METHOD             = Cust_Open_Item
+define METHOD2            = Get_Current_Date
+define METHOD3            = Get_Current_Year
+define METHOD4            = Get_Current_Period
+-- Bug 44500, begin
+define METHOD5            = Get_Def_Ledg_Status      
+-- Bug 44500, end
+
+-----------------------------------------------------------------------------
+-- TABLES:                    <<< Table names >>>
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+-- PACKAGE SPECIFICATION:     <<< Package name >>>
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG specification
+
+CREATE OR REPLACE PACKAGE &PKG AS
+
+module_ CONSTANT VARCHAR2(6)   := '&MODULE';
+lu_name_ CONSTANT VARCHAR2(25) := '&LU';
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 );
+
+PROCEDURE &METHOD2 (
+   date_    OUT VARCHAR2 );
+
+PROCEDURE &METHOD3 (
+   year_    OUT VARCHAR2 );
+
+PROCEDURE &METHOD4 (
+   period_  OUT VARCHAR2 );
+
+-- Bug 44500, begin
+PROCEDURE &METHOD5 (
+   ledg_status_  OUT VARCHAR2 );
+-- Bug 44500, end
+
+PROCEDURE Get_Defaults_For_Report(
+   def_company_     IN OUT VARCHAR2,
+   def_date_        IN OUT DATE,
+   def_year_        IN OUT VARCHAR2,
+   def_period_      IN OUT VARCHAR2,
+   cust_party_type_ IN OUT VARCHAR2,
+   show_det_yes_    IN OUT VARCHAR2,
+   show_det_no_     IN OUT VARCHAR2 );
+
+PROCEDURE Get_Blocked_Codeparts (
+   code_a_          OUT VARCHAR2,
+   code_b_          OUT VARCHAR2,
+   code_c_          OUT VARCHAR2,
+   code_d_          OUT VARCHAR2,
+   code_e_          OUT VARCHAR2,
+   code_f_          OUT VARCHAR2,
+   code_g_          OUT VARCHAR2,
+   code_h_          OUT VARCHAR2,
+   code_i_          OUT VARCHAR2,
+   code_j_          OUT VARCHAR2,
+   company_         IN  VARCHAR2 );
+PRAGMA restrict_references(Get_Blocked_Codeparts, WNDS, WNPS);
+
+PROCEDURE Get_Company_Specific (
+   code_a_used_           OUT VARCHAR2,
+   code_b_used_           OUT VARCHAR2,
+   code_c_used_           OUT VARCHAR2,
+   code_d_used_           OUT VARCHAR2,
+   code_e_used_           OUT VARCHAR2,
+   code_f_used_           OUT VARCHAR2,
+   code_g_used_           OUT VARCHAR2,
+   code_h_used_           OUT VARCHAR2,
+   code_i_used_           OUT VARCHAR2,
+   code_j_used_           OUT VARCHAR2,
+   code_a_name_           OUT VARCHAR2,
+   code_b_name_           OUT VARCHAR2,
+   code_c_name_           OUT VARCHAR2,
+   code_d_name_           OUT VARCHAR2,
+   code_e_name_           OUT VARCHAR2,
+   code_f_name_           OUT VARCHAR2,
+   code_g_name_           OUT VARCHAR2,
+   code_h_name_           OUT VARCHAR2,
+   code_i_name_           OUT VARCHAR2,
+   code_j_name_           OUT VARCHAR2,
+   company_               IN  VARCHAR2 );
+PRAGMA restrict_references(Get_Company_Specific, WNDS, WNPS);
+
+PROCEDURE Store_Codepart_Names (
+   xml_                   IN OUT CLOB,
+   xml2_                  IN OUT CLOB,
+   result_key_            IN NUMBER,
+   company_               IN VARCHAR2,
+   ageing_period1_date_   IN DATE,
+   ageing_period2_date_   IN DATE,
+   ageing_period3_date_   IN DATE,
+   ageing_period1_days_   IN NUMBER,
+   ageing_period2_days_   IN NUMBER,
+   ageing_period3_days_   IN NUMBER,
+   view_                  IN VARCHAR2);
+
+PROCEDURE Enumerate_Yes_Or_No ( yes_or_no OUT VARCHAR2 );
+PRAGMA restrict_references(Enumerate_Yes_Or_No, WNDS, WNPS);
+
+PROCEDURE Get_Default_Yes_Choice ( yes_ OUT VARCHAR2 );
+PRAGMA restrict_references(Get_Default_Yes_Choice, WNDS, WNPS);
+
+PROCEDURE Get_Default_No_Choice ( no_ OUT VARCHAR2 );
+PRAGMA restrict_references(Get_Default_No_Choice, WNDS, WNPS);
+
+-- Bug 39993, begin
+PROCEDURE Get_Titlepage_Codeparts(
+   show_codestring_       IN OUT VARCHAR2,
+   company_               IN VARCHAR2 );
+-- Bug 39993, end 
+
+-- Bug #44556 Start
+-- Removed:
+--PROCEDURE Accrul_Genled_Get_Info(
+--PROCEDURE Accrul_Baddebit_Vouinfo (
+--PROCEDURE Genled_Baddebit_Vouinfo (
+--PROCEDURE Get_Paidvounumber_Accrul (
+--PROCEDURE Get_Paidvounumber_Genled (
+--PROCEDURE Get_Correct_Values (
+-- Bug #44556 End
+
+PROCEDURE Init;
+ 
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- VIEWS                      <<< Views >>>
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+-- Report:     Customer Ledger Open Items
+-- Type:       PLSQL1.2
+-- Objects:    TABLE=CUST_OPEN_ITEM_RPT
+--             VIEW=CUST_OPEN_ITEM_REP
+--             METHOD=Cust_Open_Item
+-----------------------------------------------------------------------------
+
+-- Bug 46364, begin, Added installment_id to ORDER_COLUMN_ID
+PROMPT Creating report view &VIEW
+
+CREATE OR REPLACE VIEW &VIEW AS
+SELECT n.result_key                            RESULT_KEY,
+       ROW_NO                                  ROW_NO,
+       PARTY_NAME                              PARTY_NAME,
+       CUSTOMER_NO                             CUSTOMER_NO,
+       CUSTOMER_NAME                           CUSTOMER_NAME,
+       LEDGER_ITEM_SERIES_ID                   INVOICE_NO_PP_ID,
+       BALANCE_UNTIL_DATE                      BALNCE_UNTIL_DATE,
+       BALANCE_DOM_UNTIL_DATE                  BALNCE_DOM_UNTIL_DATE,
+       INVOICE_OR_PP_DATE                      INVOICE_OR_PP_DATE,
+       DUE_DATE                                DUE_DATE,
+       PAYM_PLAN                               PAYMENT_PLAN,
+       FULL_AMOUNT                             INVOICE_AMOUNT,
+       REST_AMOUNT                             OPEN_AMOUNT,
+       DOM_CURRENCY                            DOM_CURRENCY,
+       CURRENCY_ROWTYPE                        CURRENCY_ROWTYPE,
+       FULL_DOM_AMOUNT                         INVOICE_DOM_AMOUNT,
+       REST_DOM_AMOUNT                         OPEN_DOM_AMOUNT,
+       DUE_DOM_AMOUNT                          DUE_DOM_AMOUNT,
+       NULL                                    GRAND_TOTAL,
+       NULL                                    INV_LABEL,
+       COMPANY_ID                              COMPANY,
+       COMPANY_NAME                            COMPANY_NAME,
+       BALANCE_DATE                            BALANCE_DATE,
+       SYSDATE                                 FROM_DATE,
+       NULL                                    TO_YEAR,
+       NULL                                    TO_PERIOD,
+       NULL                                    FROM_CUSTOMER,
+       NULL                                    FROM_CUST_GROUP,
+       NULL                                    PAYER_IDENTITY,
+       NULL                                    CURRENCY,
+       PAY_TERM_BASE_DATE                      PAY_TERM_BASE_DATE,
+       LEDGER_STATUS                           LEDGER_STATUS,
+       substrb(Invoice_Code_String_API.Decode_Account(codestring),1,10)   CODE_A,
+       substrb(Invoice_Code_String_API.Decode_Code_B(codestring),1,10)   CODE_B,
+       substrb(Invoice_Code_String_API.Decode_Code_C(codestring),1,10)   CODE_C,
+       substrb(Invoice_Code_String_API.Decode_Code_D(codestring),1,10)   CODE_D,
+       substrb(Invoice_Code_String_API.Decode_Code_E(codestring),1,10)   CODE_E,
+       substrb(Invoice_Code_String_API.Decode_Code_F(codestring),1,10)   CODE_F,
+       substrb(Invoice_Code_String_API.Decode_Code_G(codestring),1,10)   CODE_G,
+       substrb(Invoice_Code_String_API.Decode_Code_H(codestring),1,10)   CODE_H,
+       substrb(Invoice_Code_String_API.Decode_Code_I(codestring),1,10)   CODE_I,
+       substrb(Invoice_Code_String_API.Decode_Code_J(codestring),1,10)   CODE_J,
+       Invoice_Code_String_API.Decode_Project_Activity_Id(codestring)   PROJECT_ACTIVITY_ID,
+       NULL                                    DATE_TITLE,
+       CUST_INV_TOTAL                          CUST_INV_TOTAL,
+       CUST_OPEN_TOTAL                         CUST_OPEN_TOTAL,
+       ACCOUNTING_CURRENCY                     ACCOUNTING_CURRENCY,
+       rpad(CUSTOMER_NO,25) || TO_CHAR(CURRENT_DUE_DATE,'YYYYMMDD')   ORDER_COLUMN,
+       rpad(CUSTOMER_NO,25) || rpad(LEDGER_ITEM_SERIES_ID,25) || rpad(INSTALLMENT_ID,10)   ORDER_COLUMN_ID,
+       print_details                           FLAG_PRINT_DETAILS,
+       NULL                                    PRINT_DETAILS,
+       NULL                                    EXCLUDE_OPEN_PAY_DOCS,
+       NULL                                    DUMMY_CODENAMES,
+       NULL                                    DUMMY_CODEPARTS,
+       CODE_A_NAME || ':'                      CODE_A_NAME,
+       CODE_B_NAME || ':'                      CODE_B_NAME,
+       CODE_C_NAME || ':'                      CODE_C_NAME,
+       CODE_D_NAME || ':'                      CODE_D_NAME,
+       CODE_E_NAME || ':'                      CODE_E_NAME,
+       CODE_F_NAME || ':'                      CODE_F_NAME,
+       CODE_G_NAME || ':'                      CODE_G_NAME,
+       CODE_H_NAME || ':'                      CODE_H_NAME,
+       CODE_I_NAME || ':'                      CODE_I_NAME,
+       CODE_J_NAME || ':'                      CODE_J_NAME,
+       CANALYST                                CANALYST,
+       CAMANAGER                               CAMANAGER,
+       CURRENT_DUE_DATE                        CURRENT_DUE_DATE,
+       AMOUNT_DUE                              AMOUNT_DUE,
+       DOM_AMOUNT_DUE                          DOM_AMOUNT_DUE,
+       KEEP_VALUE                              KEEP_VALUE,
+       INSTALLMENT_ID                          INSTALLMENT_ID,
+       SHOW_VALUE                              SHOW_VALUE,
+       SHOW_DOM_CURRENCY                       SHOW_DOM_CURRENCY
+FROM  CUST_OPEN_ITEM_NAMES_RPV n, CUST_OPEN_ITEM_RPV o
+WHERE n.result_key = o.result_key (+)
+WITH  read only;
+-- Bug 46364, end
+
+-- Bug 44500, Adding QVALUE and ENUMERATE to ledger_status and changing its QFLAGS from OCS-- to MCS--. 
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=Customer Ledger Open Items^';
+
+COMMENT ON COLUMN &VIEW..result_key IS
+   'FLAGS=M----^';
+COMMENT ON COLUMN &VIEW..row_no IS
+   'FLAGS=M----^';
+COMMENT ON COLUMN &VIEW..party_name IS
+   'FLAGS=A----^DATATYPE=STRING(40)^PROMPT=Party Name: ^TITLE=Party Name: ^ITEM_NAME=iPartyName^';
+COMMENT ON COLUMN &VIEW..customer_no IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=Customer Id: ^TITLE=Customer Id: ^ITEM_NAME=iCustomerNo^';
+COMMENT ON COLUMN &VIEW..customer_name IS
+   'FLAGS=A----^DATATYPE=STRING(50)^PROMPT=Name: ^TITLE=Name: ^ITEM_NAME=iCustomerName^';
+COMMENT ON COLUMN &VIEW..invoice_no_pp_id IS
+   'FLAGS=A----^DATATYPE=STRING(75)^PROMPT=Invoice Id^TITLE=Invoice Id^ITEM_NAME=iInvoiceNoPpId^';
+COMMENT ON COLUMN &VIEW..balnce_until_date IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Balance Per^TITLE=Balance Per^ITEM_NAME=iBalanceUntilDt^';
+COMMENT ON COLUMN &VIEW..balnce_dom_until_date IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Amount Due^TITLE=Amount Due^ITEM_NAME=iBalanceDomUntilDt^';
+COMMENT ON COLUMN &VIEW..invoice_or_pp_date IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Invoice/Pre Payment Date^TITLE=Pre Payment Date^ITEM_NAME=iInvoiceOrPpDt^';
+COMMENT ON COLUMN &VIEW..due_date IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Original Due Date^TITLE=Original Due Date^ITEM_NAME=iDueDate^';
+COMMENT ON COLUMN &VIEW..payment_plan IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Pay Plan^TITLE=Pay Plan^ITEM_NAME=iPaymPlan^';
+COMMENT ON COLUMN &VIEW..invoice_amount IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Invoice Amount^TITLE=Invoice Amount^ITEM_NAME=iInvoiceAmount^';
+COMMENT ON COLUMN &VIEW..open_amount IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Open Amount^ITEM_NAME=iOpenAmount^';
+COMMENT ON COLUMN &VIEW..dom_currency IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Currency^TITLE=Curr^ITEM_NAME=iDomCurrency^';
+COMMENT ON COLUMN &VIEW..currency_rowtype IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Currency^TITLE=Curr^ITEM_NAME=iCurrencyRowType^';
+COMMENT ON COLUMN &VIEW..invoice_dom_amount IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Invoice Amount^TITLE=Invoice Amount^ITEM_NAME=iInvoiceDomAmount^';
+COMMENT ON COLUMN &VIEW..open_dom_amount IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Open Amount^TITLE=Open Amount^ITEM_NAME=iOpenDomAmount^';
+COMMENT ON COLUMN &VIEW..due_dom_amount IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Due Amount^TITLE=Due Amount^ITEM_NAME=iDueDomAmount^';
+COMMENT ON COLUMN &VIEW..grand_total IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=Grand Total^TITLE=Grand Total:^ITEM_NAME=iGrandTotal^';
+COMMENT ON COLUMN &VIEW..inv_label IS
+   'FLAGS=A----^DATATYPE=STRING(30)^PROMPT=Pre-Payment Id^TITLE=Pre-Payment Id^ITEM_NAME=iInvLabel^';
+COMMENT ON COLUMN &VIEW..company IS
+   'FLAGS=A----^DATATYPE=STRING(20)/UPPERCASE^PROMPT=Company^TITLE=Company^REF=CompanyFinance^QUERY=Company:^QFLAGS=M-S--^QVALUE=:USER_FINANCE_API.Get_Default_Company^ITEM_NAME=iCompany^';
+COMMENT ON COLUMN &VIEW..company_name IS
+   'FLAGS=A----^DATATYPE=STRING(100)^PROMPT=Company Name^TITLE=Company Name^ITEM_NAME=iCompanyName^';
+COMMENT ON COLUMN &VIEW..balance_date IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Balance Date^TITLE=Balance Date^ITEM_NAME=iBalanceDate^';
+COMMENT ON COLUMN &VIEW..from_date IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=To Date^TITLE=To Date^QUERY=To Date:^QFLAGS=OCS--^QVALUE=:Cust_Open_Item_RPI.Get_Current_Date^ITEM_NAME=iFromDate^';
+COMMENT ON COLUMN &VIEW..to_year IS
+   'FLAGS=A----^DATATYPE=STRING(4)^PROMPT=To Year^TITLE=To Year^QUERY=To Year:^QFLAGS=OCS--^QVALUE=:Cust_Open_Item_RPI.Get_Current_Year^ITEM_NAME=iToYear^';
+COMMENT ON COLUMN &VIEW..to_period IS
+   'FLAGS=A----^DATATYPE=STRING(2)^PROMPT=To Period^TITLE=To Period^QUERY=To Period:^QFLAGS=OCS--^QVALUE=:Cust_Open_Item_RPI.Get_Current_Period^ITEM_NAME=iToPeriod^';
+COMMENT ON COLUMN &VIEW..from_customer IS
+   'FLAGS=A----^DATATYPE=STRING(20)/UPPERCASE^PROMPT=From/To Customer^TITLE=From/To Customer^REF=IDENTITY_PAY_INFO_CUST(COMPANY)^QUERY=From/To Customer:^QFLAGS=OWSBL^ITEM_NAME=iFromCustomer^';
+COMMENT ON COLUMN &VIEW..from_cust_group IS
+   'FLAGS=A----^DATATYPE=STRING(20)/UPPERCASE^PROMPT=From/To Customer Group^TITLE=From/To Customer Group^QUERY=From/To Customer Group:^REF=INVOICE_CUSTOMER_TYPE_GROUP(COMPANY)^QFLAGS=OCSBL^ITEM_NAME=iFromCustGroup^';
+COMMENT ON COLUMN &VIEW..payer_identity IS
+   'FLAGS=A----^DATATYPE=STRING(20)/UPPERCASE^PROMPT=Payer Identity^TITLE=Payer Identity^QUERY=Payer Identity:^REF=IDENTITY_PAY_INFO_CUST(COMPANY)^QFLAGS=OCS--^ITEM_NAME=iPayerIdentity^';
+COMMENT ON COLUMN &VIEW..currency IS
+   'FLAGS=A----^DATATYPE=STRING(3)/UPPERCASE^PROMPT=Currency^TITLE=Currency^QUERY=Currency:^QFLAGS=OCS--^ITEM_NAME=iCurrency^REF=CurrencyCode(COMPANY)^';
+COMMENT ON COLUMN &VIEW..pay_term_base_date IS
+   'FLAGS=A----^DATATYPE=DATE\DATE^PROMPT=Pay Term Base Date^TITLE=Pay Term Base Date^ITEM_NAME=iPayTermBaseDate^';
+COMMENT ON COLUMN &VIEW..ledger_status IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=Ledger Status^TITLE=Ledger Status^ITEM_NAME=iLedgerStatus^QUERY=Ledger Status:^QFLAGS=MCS--^ENUMERATE=Ledger_Status_Type_API.Enumerate^QVALUE=:&PKG..&METHOD5^';
+COMMENT ON COLUMN &VIEW..code_a IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code A^TITLE=Code A^QUERY=Code A:^QFLAGS=OCS--^ITEM_NAME=iCodeA^REF=Account(company)^';
+COMMENT ON COLUMN &VIEW..code_b IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code B^TITLE=Code B^QUERY=Code B:^QFLAGS=OCS--^ITEM_NAME=iCodeB^REF=CodeB(company)^';
+COMMENT ON COLUMN &VIEW..code_c IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code C^TITLE=Code C^QUERY=Code C:^QFLAGS=OCS--^ITEM_NAME=iCodeC^REF=CodeC(company)^';
+COMMENT ON COLUMN &VIEW..code_d IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code D^TITLE=Code D^QUERY=Code D:^QFLAGS=OCS--^ITEM_NAME=iCodeD^REF=CodeD(company)^';
+COMMENT ON COLUMN &VIEW..code_e IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code E^TITLE=Code E^QUERY=Code E:^QFLAGS=OCS--^ITEM_NAME=iCodeE^REF=CodeE(company)^';
+COMMENT ON COLUMN &VIEW..code_f IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code F^TITLE=Code F^QUERY=Code F:^QFLAGS=OCS--^ITEM_NAME=iCodeF^REF=CodeF(company)^';
+COMMENT ON COLUMN &VIEW..code_g IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code G^TITLE=Code G^QUERY=Code G:^QFLAGS=OCS--^ITEM_NAME=iCodeG^REF=CodeG(company)^';
+COMMENT ON COLUMN &VIEW..code_h IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code H^TITLE=Code H^QUERY=Code H:^QFLAGS=OCS--^ITEM_NAME=iCodeH^REF=CodeH(company)^';
+COMMENT ON COLUMN &VIEW..code_i IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code I^TITLE=Code I^QUERY=Code I:^QFLAGS=OCS--^ITEM_NAME=iCodeI^REF=CodeI(company)^';
+COMMENT ON COLUMN &VIEW..code_j IS
+   'FLAGS=A----^DATATYPE=STRING(10)/UPPERCASE^PROMPT=Code J^TITLE=Code J^QUERY=Code J:^QFLAGS=OCS--^ITEM_NAME=iCodeJ^REF=CodeJ(company)^';
+COMMENT ON COLUMN &VIEW..project_activity_id IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Project Activity Id^TITLE=Project Activity Id^QUERY=Project Activity Id:^QFLAGS=OCS--^ITEM_NAME=iProjectActivityId^';
+COMMENT ON COLUMN &VIEW..date_title IS
+   'FLAGS=A----^DATATYPE=STRING(50)^PROMPT=Invoice Date^TITLE=Invoice Date^ITEM_NAME=iInvoiceDate^';
+COMMENT ON COLUMN &VIEW..cust_inv_total IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Invoice Amount^TITLE=Invoice Amount^ITEM_NAME=iCustInvTotal^';
+COMMENT ON COLUMN &VIEW..cust_open_total IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Invoice Amount^TITLE=Invoice Amount^ITEM_NAME=iCustOpenTotal^';
+COMMENT ON COLUMN &VIEW..accounting_currency IS
+   'FLAGS=A----^DATATYPE=STRING(3)^PROMPT=Accounting Currency^TITLE=Accounting Currency^ITEM_NAME=iAccountingCurrency^';
+COMMENT ON COLUMN &VIEW..order_column IS
+   'FLAGS=A----^DATATYPE=STRING(100)^PROMPT=Order Column^TITLE=Order Column^ITEM_NAME=iOrderColumn^';
+COMMENT ON COLUMN &VIEW..order_column_id IS
+   'FLAGS=A----^DATATYPE=STRING(100)^PROMPT=Order Column^TITLE=Order Column Id^ITEM_NAME=iOrderColumnId^';
+COMMENT ON COLUMN &VIEW..flag_print_details IS
+   'FLAGS=A----^DATATYPE=NUMBER^TITLE=Flag Print Details^ITEM_NAME=iFlagPrintDetails^';
+COMMENT ON COLUMN &VIEW..print_details IS
+   'FLAGS=A----^DATATYPE=STRING(20)^TITLE=Print Details^ENUMERATE=&PKG..Enumerate_Yes_Or_No^QUERY=Print Details:^
+   ^QFLAGS=MCS--^QVALUE=:CUST_OPEN_ITEM_RPI.Get_Default_Yes_Choice^ITEM_NAME=iPrintDetails^';
+COMMENT ON COLUMN &VIEW..exclude_open_pay_docs IS
+   'FLAGS=A----^DATATYPE=STRING(20)^TITLE=Exclude Open Pay Documents^ENUMERATE=&PKG..Enumerate_Yes_Or_No^QUERY=Exclude Open Pay Documents:^
+   ^QFLAGS=MCS--^QVALUE=:SUP_OPEN_ITEM_RPI.Get_Default_No_Choice^ITEM_NAME=iExOpenPayDocs^';
+COMMENT ON COLUMN &VIEW..dummy_codenames IS
+   'FLAGS=A----^DATATYPE=STRING(1000)^PROMPT=Dummy Codenames^TITLE=Dummy Codenames^ITEM_NAME=iDummyCodenames^';
+COMMENT ON COLUMN &VIEW..dummy_codeparts IS
+   'FLAGS=A----^DATATYPE=STRING(20)^PROMPT=Dummy Codeparts^TITLE=Dummy Codeparts^ITEM_NAME=iDummyCodeparts^';
+COMMENT ON COLUMN &VIEW..code_a_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code A Name^TITLE=Code A Name^ITEM_NAME=iCodeAName^';
+COMMENT ON COLUMN &VIEW..code_b_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code B Name^TITLE=Code B Name^ITEM_NAME=iCodeBName^';
+COMMENT ON COLUMN &VIEW..code_c_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code C Name^TITLE=Code D Name^ITEM_NAME=iCodeCName^';
+COMMENT ON COLUMN &VIEW..code_d_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code D Name^TITLE=Code D Name^ITEM_NAME=iCodeDName^';
+COMMENT ON COLUMN &VIEW..code_e_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code F Name^TITLE=Code G Name^ITEM_NAME=iCodeEName^';
+COMMENT ON COLUMN &VIEW..code_f_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code F Name^TITLE=Code F Name^ITEM_NAME=iCodeFName^';
+COMMENT ON COLUMN &VIEW..code_g_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code G Name^TITLE=Code G Name^ITEM_NAME=iCodeGName^';
+COMMENT ON COLUMN &VIEW..code_h_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code H Name^TITLE=Code H Name^ITEM_NAME=iCodeHName^';
+COMMENT ON COLUMN &VIEW..code_i_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code I Name^TITLE=Code I Name^ITEM_NAME=iCodeIName^';
+COMMENT ON COLUMN &VIEW..code_j_name IS
+   'FLAGS=A----^DATATYPE=STRING(10)^PROMPT=Code J Name^TITLE=Code J Name^ITEM_NAME=iCodeJName^';
+COMMENT ON COLUMN &VIEW..canalyst IS
+   'FLAGS=A----^DATATYPE=STRING(125)^PROMPT=Credit Analyst^TITLE=Credit Analyst^ITEM_NAME=iCAnalyst^';
+COMMENT ON COLUMN &VIEW..camanager IS
+   'FLAGS=A----^DATATYPE=STRING(125)^PROMPT=Credit Manager^TITLE=Credit Manager^ITEM_NAME=iCAManager^';
+COMMENT ON COLUMN &VIEW..current_due_date IS
+   'FLAGS=A----^DATATYPE=DATE^PROMPT=Current Due Date^TITLE=Current Due Date^ITEM_NAME=iCurrentDueDate^';
+COMMENT ON COLUMN &VIEW..amount_due IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Pay Plan Amount^TITLE=Pay Plan Amount^ITEM_NAME=iAmountDue^';
+COMMENT ON COLUMN &VIEW..dom_amount_due IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Pay Plan Amount^TITLE=Pay Plan Dom Amount^ITEM_NAME=iDomAmountDue^';
+COMMENT ON COLUMN &VIEW..keep_value IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Keep Value^TITLE=Keep Value^ITEM_NAME=iKeepValue^';
+COMMENT ON COLUMN &VIEW..installment_id IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Inst. Id^TITLE=Inst. Id^ITEM_NAME=iInstallmentId^';
+COMMENT ON COLUMN &VIEW..show_value IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Show Value^TITLE=Show Value^ITEM_NAME=iShowValue^';
+COMMENT ON COLUMN &VIEW..show_dom_currency IS
+   'FLAGS=A----^DATATYPE=NUMBER^PROMPT=Show Dom Currencye^TITLE=Show Dom Currency^ITEM_NAME=iShowDomCurrency^';
+-- Bug 44500, end
+
+-- Bug 38990 begin.
+BEGIN
+   Report_Sys.Define_Report_('&VIEW', '&MODULE', '&LU', 'Customer Ledger Open Items', '&TABLE', '&PKG..&METHOD', 30);
+
+   Report_SYS.Define_Report_Layout_('&VIEW', 'CUSOPEN_DUEDATE.qrp','Order by Due Date','A4', 'ORDER_COLUMN');
+   Report_SYS.Define_Report_Layout_('&VIEW', 'CUSOPEN_DUEDATE_LTR.qrp','Order by Due Date','LETTER', 'ORDER_COLUMN');
+   Report_SYS.Define_Report_Layout_('&VIEW', 'CUSOPEN.qrp','Order by Invoice ID','A4', 'ORDER_COLUMN_ID');
+   Report_SYS.Define_Report_Layout_('&VIEW', 'CUSOPEN_LTR.qrp','Order by Invoice ID','LETTER', 'ORDER_COLUMN_ID');  
+   -- Bug #44556 Start
+   Report_SYS.Define_Report_Layout_('&VIEW', 'CUSOPEN_NODET.qrp','No Details','A4', 'ORDER_COLUMN_ID');
+   Report_SYS.Define_Report_Layout_('&VIEW', 'CUSOPEN_NODET_LTR.qrp','No Details','LETTER', 'ORDER_COLUMN_ID');  
+   -- Bug #44556 End
+   Report_SYS.Define_Report_Layout_('&VIEW', 'CustOpenItemRep_OrderByDueDate.xsl','Order by Due Date', 'DYNAMIC', NULL, 'DESIGNER');
+   Report_SYS.Define_Report_Layout_('&VIEW', 'CustOpenItemRep_OrderByInvoiceId.xsl','Order by Invoice ID', 'DYNAMIC', NULL, 'DESIGNER');
+-----------------------------------------------------------------------------
+-- REPORT TEXTS               <<< Report1, variables >>>
+-----------------------------------------------------------------------------
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtCompany','Company' );
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtOrderText2','- Order By Due Date' );
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtOrderText1','- Order by Invoice ID' );
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtOpenAmt','Open Amount');
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtOpenAmt2',' in Acc Curr');
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtOriginalDueDate','Original ,Due Date');
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtCurrentDueDate','Current ,Due Date');
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtPayTermBaseDate','Pay Term ,Base Date');
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtInstId','Inst. ,Id');
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtInstAmount','Installment,Amount');
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtOrderTitle','Sorting Order:');
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtInvoiceId','Invoice Id');
+   Report_SYS.Define_Report_Text_('&VIEW', 'txtDueDate','Due Date');
+   
+   Report_SYS.Refresh_('&VIEW');
+END;
+/
+-- Bug 38990 end.
+ 
+-----------------------------------------------------------------------------
+-- PACKAGE IMPLEMENTATION     <<< Package name >>>
+-----------------------------------------------------------------------------
+PROMPT Creating &PKG implementation
+
+CREATE OR REPLACE PACKAGE BODY &PKG AS
+   true_sign_         CONSTANT VARCHAR2(1) := 'X';
+   false_sign_        CONSTANT VARCHAR2(1) := NULL;
+
+   do_xml_  			 CONSTANT BOOLEAN := Report_SYS.Should_Generate_Xml('&VIEW');
+   do_rs_   			 CONSTANT BOOLEAN := Report_SYS.Should_Generate_Result_Set('&VIEW');
+   do_xml2_  			 CONSTANT BOOLEAN := Report_SYS.Should_Generate_Xml('CUST_OPEN_STATE_REP');
+   do_rs2_   			 CONSTANT BOOLEAN := Report_SYS.Should_Generate_Result_Set('CUST_OPEN_STATE_REP');
+
+TYPE pagefoot_type IS RECORD(
+   val1		VARCHAR2(100),
+	val2		VARCHAR2(100),
+	val3		VARCHAR2(100),
+	val4		VARCHAR2(100),
+	val5		VARCHAR2(100),
+	val6		VARCHAR2(100),
+	val7		VARCHAR2(100)
+);
+
+PROCEDURE Split_Pagefoot___(
+	pagefoot_rec_ OUT pagefoot_type,
+   pagefoot_ IN VARCHAR2 )
+IS
+   i_     NUMBER := 1;
+   from_  NUMBER := 1;
+   to_    NUMBER;
+   delim_ VARCHAR2(1) := CHR(9);
+   tmp_   VARCHAR2(100);
+BEGIN
+   to_ := INSTR(pagefoot_, delim_, from_);
+   WHILE (to_ > 0) LOOP
+      tmp_ := SUBSTR(pagefoot_, from_, to_ - from_);
+      from_ := to_ + 1;
+      to_ := INSTR(pagefoot_, delim_, from_);
+      IF (i_ = 1) THEN
+         pagefoot_rec_.val1 := tmp_;
+      ELSIF (i_ = 2) THEN
+         pagefoot_rec_.val2 := tmp_;
+      ELSIF (i_ = 3) THEN
+         pagefoot_rec_.val3 := tmp_;
+      ELSIF (i_ = 4) THEN
+         pagefoot_rec_.val4 := tmp_;
+      ELSIF (i_ = 5) THEN
+         pagefoot_rec_.val5 := tmp_;
+      ELSIF (i_ = 6) THEN
+         pagefoot_rec_.val6 := tmp_;
+      ELSIF (i_ = 7) THEN
+         pagefoot_rec_.val7 := tmp_;
+      END IF;
+      i_ := i_+1;
+   END LOOP;
+END Split_Pagefoot___;
+
+FUNCTION Decode_Boolean___ (
+   value_         IN VARCHAR2,
+   null_as_false_ IN BOOLEAN  ) RETURN VARCHAR2
+IS
+BEGIN
+   IF (value_ = 'TRUE') THEN
+      RETURN true_sign_;
+   ELSIF (value_ = 'FALSE') THEN
+      RETURN false_sign_;
+   ELSIF (value_ IS NULL AND null_as_false_) THEN
+      RETURN false_sign_;
+   ELSE
+      RETURN NULL;
+   END IF;
+END Decode_Boolean___;
+
+
+FUNCTION Codeparts_Ok___ (
+   codestring_                   IN VARCHAR2,
+   code_a_                       IN VARCHAR2,
+   code_b_                       IN VARCHAR2,
+   code_c_                       IN VARCHAR2,
+   code_d_                       IN VARCHAR2,
+   code_e_                       IN VARCHAR2,
+   code_f_                       IN VARCHAR2,
+   code_g_                       IN VARCHAR2,
+   code_h_                       IN VARCHAR2,
+   code_i_                       IN VARCHAR2,
+   code_j_                       IN VARCHAR2,
+   project_activity_id_          IN NUMBER ) RETURN BOOLEAN
+IS
+   code_buff_                    VARCHAR2(20);
+   project_activity_id_buff_     NUMBER;
+BEGIN
+   IF (code_a_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Account(codestring_);
+      IF (code_a_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_b_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_B(codestring_);
+      IF (code_b_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_c_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_C(codestring_);
+      IF (code_c_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_d_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_D(codestring_);
+      IF (code_d_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_e_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_E(codestring_);
+      IF (code_e_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_f_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_F(codestring_);
+      IF (code_f_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_g_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_G(codestring_);
+      IF (code_g_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_h_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_H(codestring_);
+      IF (code_h_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_i_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_I(codestring_);
+      IF (code_i_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (code_j_ IS NOT NULL) THEN
+      code_buff_ :=  Invoice_Code_String_API.Decode_Code_J(codestring_);
+      IF (code_j_ != code_buff_ OR code_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   IF (project_activity_id_ IS NOT NULL) THEN
+      project_activity_id_buff_ :=  Invoice_Code_String_API.Decode_Project_Activity_Id(codestring_);
+      IF (project_activity_id_ != project_activity_id_buff_ OR project_activity_id_buff_ IS NULL) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   RETURN TRUE;
+END Codeparts_Ok___;
+
+FUNCTION Check_Code_Part___ (
+   mask_                    IN VARCHAR2,
+   value_                   IN VARCHAR2 ) RETURN BOOLEAN
+IS
+BEGIN
+   IF (mask_ IS NOT NULL) THEN
+      IF (mask_ != value_) THEN
+         RETURN FALSE;
+      END IF;
+   END IF;
+   RETURN TRUE;
+END Check_Code_Part___;
+
+-- Bug 43817, begin, Included our_reference_ parameter
+PROCEDURE Fetch_Report_Parameters___ (
+   result_key_              IN OUT NUMBER,
+   company_                 IN OUT VARCHAR2,
+   to_date_                 IN OUT DATE,
+   fromtocustomer_          IN OUT VARCHAR2,
+   fromtocustgrp_           IN OUT VARCHAR2,
+   payer_identity_          IN OUT VARCHAR2,
+   currency_                IN OUT VARCHAR2,
+   to_year_                 IN OUT NUMBER,
+   to_period_               IN OUT NUMBER,
+   print_details_           IN OUT VARCHAR2,
+   exclude_open_pay_docs_   IN OUT VARCHAR2,
+   code_a_                  IN OUT VARCHAR2,
+   code_b_                  IN OUT VARCHAR2,
+   code_c_                  IN OUT VARCHAR2,
+   code_d_                  IN OUT VARCHAR2,
+   code_e_                  IN OUT VARCHAR2,
+   code_f_                  IN OUT VARCHAR2,
+   code_g_                  IN OUT VARCHAR2,
+   code_h_                  IN OUT VARCHAR2,
+   code_i_                  IN OUT VARCHAR2,
+   code_j_                  IN OUT VARCHAR2,
+   project_activity_id_     IN OUT NUMBER,
+   ageing_period1_days_     IN OUT NUMBER,
+   ageing_period2_days_     IN OUT NUMBER,
+   ageing_period3_days_     IN OUT NUMBER,
+   ledger_status_           IN OUT VARCHAR2,
+   view_                    IN OUT VARCHAR2,
+   our_reference_           OUT    VARCHAR2,
+   report_attr_             IN     VARCHAR2,
+   parameter_attr_          IN     VARCHAR2 )
+IS
+   code_part_not_used       EXCEPTION;
+   code_part_               VARCHAR2(1);
+   ledger_status_type_      ledger_status_tab.ledger_status_type%TYPE;
+
+BEGIN
+   result_key_            := CLIENT_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY', report_attr_));
+   company_               := CLIENT_SYS.Get_Item_Value('COMPANY', parameter_attr_);
+   to_date_               := to_date(CLIENT_SYS.Get_Item_Value('FROM_DATE', parameter_attr_),Report_SYS.date_format_);
+   fromtocustomer_        := CLIENT_SYS.Get_Item_Value('FROM_CUSTOMER', parameter_attr_);
+   fromtocustgrp_         := CLIENT_SYS.Get_Item_Value('FROM_CUST_GROUP', parameter_attr_);
+   currency_              := CLIENT_SYS.Get_Item_Value('CURRENCY', parameter_attr_);
+   payer_identity_        := CLIENT_SYS.Get_Item_Value('PAYER_IDENTITY', parameter_attr_);
+   to_year_               := CLIENT_SYS.Attr_Value_To_Number(CLIENT_SYS.Get_Item_Value('TO_YEAR', parameter_attr_));
+   to_period_             := CLIENT_SYS.Attr_Value_To_Number(CLIENT_SYS.Get_Item_Value('TO_PERIOD', parameter_attr_));
+   print_details_         := CLIENT_SYS.Get_Item_Value('PRINT_DETAILS', parameter_attr_);
+   exclude_open_pay_docs_ := CLIENT_SYS.Get_Item_Value('EXCLUDE_OPEN_PAY_DOCS', parameter_attr_);  --Bug # 24916
+   -- fetch codeparts
+   code_a_                := Client_SYS.Get_Item_Value( 'CODE_A', parameter_attr_ );
+   code_b_                := Client_SYS.Get_Item_Value( 'CODE_B', parameter_attr_ );
+   code_c_                := Client_SYS.Get_Item_Value( 'CODE_C', parameter_attr_ );
+   code_d_                := Client_SYS.Get_Item_Value( 'CODE_D', parameter_attr_ );
+   code_e_                := Client_SYS.Get_Item_Value( 'CODE_E', parameter_attr_ );
+   code_f_                := Client_SYS.Get_Item_Value( 'CODE_F', parameter_attr_ );
+   code_g_                := Client_SYS.Get_Item_Value( 'CODE_G', parameter_attr_ );
+   code_h_                := Client_SYS.Get_Item_Value( 'CODE_H', parameter_attr_ );
+   code_i_                := Client_SYS.Get_Item_Value( 'CODE_I', parameter_attr_ );
+   code_j_                := Client_SYS.Get_Item_Value( 'CODE_J', parameter_attr_ );
+   project_activity_id_   := Client_SYS.Attr_Value_To_Number(CLIENT_SYS.Get_Item_Value('PROJECT_ACTIVITY_ID', parameter_attr_));
+   view_                  := NVL(Client_SYS.Get_Item_Value( 'VIEW', parameter_attr_ ),'1');
+
+   -- Bug 43817, begin
+   our_reference_         := Client_SYS.Get_Item_Value( 'OUR_REFERENCE', parameter_attr_ );
+   -- Bug 43817, end
+
+   -- and validate codeparts ...
+   IF (code_a_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'A') = 'FALSE') THEN
+         code_part_ := 'A';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_b_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'B') = 'FALSE') THEN
+         code_part_ := 'B';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_c_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'C') = 'FALSE') THEN
+         code_part_ := 'C';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_d_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'D') = 'FALSE') THEN
+         code_part_ := 'D';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_e_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'E') = 'FALSE') THEN
+         code_part_ := 'E';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_f_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'F') = 'FALSE') THEN
+         code_part_ := 'F';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_g_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'G') = 'FALSE') THEN
+         code_part_ := 'G';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_h_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'H') = 'FALSE') THEN
+         code_part_ := 'H';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_i_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'I') = 'FALSE') THEN
+         code_part_ := 'I';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   IF (code_j_ IS NOT NULL) THEN
+      IF (Accounting_Code_Parts_API.Is_Code_Used(company_,'J') = 'FALSE') THEN
+         code_part_ := 'J';
+         RAISE code_part_not_used;
+      END IF;
+   END IF;
+   -- FIN119: fetch ageing days 
+   ageing_period1_days_ := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('AGEING_PERIOD1_DAYS',
+                                                                                     parameter_attr_));
+   ageing_period2_days_ := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('AGEING_PERIOD2_DAYS',
+                                                                                     parameter_attr_));
+   ageing_period3_days_ := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('AGEING_PERIOD3_DAYS',
+                                                                                     parameter_attr_));
+   ledger_status_type_  := Client_SYS.Get_Item_Value ('LEDGER_STATUS', parameter_attr_);
+   ledger_status_ := ledger_status_type_api.Encode(ledger_status_type_);   
+
+EXCEPTION
+   WHEN code_part_not_used THEN
+      Error_SYS.Record_General(lu_name_,'CUS_OP1: Code part :P1 is not used in cosmpny :P2',
+                               code_part_,
+                               company_);
+END Fetch_Report_Parameters___;
+-- Bug 43817, end
+
+FUNCTION Get_Inv_Voucher_No___ (
+   ledger_item_series_id_   IN VARCHAR2,
+   ledger_item_id_          IN VARCHAR2,
+   company_                 IN VARCHAR2,
+   identity_                IN VARCHAR2,
+   party_type_db_           IN VARCHAR2,
+   voucher_date_            IN DATE) RETURN NUMBER
+IS
+voucher_no1_        NUMBER;
+   CURSOR Get_Inv_Voucher_No (ledger_item_series_id_ IN VARCHAR2, ledger_item_id_ IN VARCHAR2,
+          company_ IN VARCHAR2, identity_ IN VARCHAR2)
+      IS
+      SELECT    voucher_no
+      FROM      ledger_transaction_cu_qry
+      WHERE     company                = company_
+      AND       party_type_db          = party_type_db_
+      AND       ledger_item_series_id  = ledger_item_series_id_
+      AND       identity               = identity_
+      AND       voucher_date           = voucher_date_      
+      AND       ledger_item_id         = ledger_item_id_;
+BEGIN
+   OPEN Get_Inv_Voucher_No(ledger_item_series_id_, ledger_item_id_, company_,identity_);
+   FETCH Get_Inv_Voucher_No INTO voucher_no1_;
+   CLOSE Get_Inv_Voucher_No;
+   IF (voucher_no1_ IS NULL) THEN      
+      voucher_no1_ := 0;
+      RETURN (voucher_no1_);
+   END IF;
+   RETURN (voucher_no1_);
+END Get_Inv_Voucher_No___;
+
+FUNCTION Find_payment_id___ (
+   ledger_item_series_id_   IN VARCHAR2,
+   ledger_item_id_          IN VARCHAR2,
+   company_                 IN VARCHAR2,
+   amount_                  IN NUMBER) RETURN NUMBER
+IS
+pay_        NUMBER;
+   CURSOR find_payment_id (ledger_item_series_id_ IN VARCHAR2, ledger_item_id_ IN VARCHAR2,
+          company_ IN VARCHAR2, amount_ IN NUMBER)
+      IS
+      SELECT    payment_id
+      FROM      ledger_transaction
+      WHERE     company_               = company
+      AND       ledger_item_series_id_ = ledger_item_series_id
+      AND       ledger_item_id_        = ledger_item_id
+      AND       amount_                = curr_amount;
+BEGIN
+   OPEN find_payment_id(ledger_item_series_id_, ledger_item_id_, company_,amount_);
+   FETCH find_payment_id INTO pay_;
+   CLOSE find_payment_id;
+   IF (pay_ IS NULL) THEN
+      
+      pay_ := 0;
+      RETURN (pay_);
+   END IF;
+   RETURN (pay_);
+END Find_payment_id___;
+
+PROCEDURE Get_Voucher_No___(
+   company_                   IN    VARCHAR2,
+   identity_                  IN    VARCHAR2,
+   party_type_db_             IN    VARCHAR2,
+   ledger_item_series_id_     IN    VARCHAR2,
+   ledger_item_id_            IN    VARCHAR2,
+   payment_id_                IN    NUMBER,
+   voucher_date_              IN    DATE,
+   voucher_no_                OUT   NUMBER,
+   pay_curr_                   OUT   VARCHAR2) 
+IS
+voucher_       NUMBER;
+pay_curr1_     VARCHAR2(5);
+   CURSOR Get_Voucher_No (company_                IN VARCHAR2,
+                           identity_               IN VARCHAR2,
+                           party_type_db_          IN VARCHAR2,
+                           ledger_item_series_id_  IN VARCHAR2,
+                           ledger_item_id_         IN VARCHAR2)
+      IS
+      SELECT    voucher_no,   currency
+      FROM      ledger_transaction_cu_qry
+      WHERE     company                = company_
+      AND       identity               = identity_
+      AND       party_type_db          = party_type_db_
+      AND       ledger_item_series_id  = ledger_item_series_id_
+      AND       ledger_item_id         = ledger_item_id_
+      AND       payment_id             = payment_id_;     
+
+BEGIN
+   IF (payment_id_ = 0) THEN
+      voucher_no_ := Get_Inv_Voucher_No___(ledger_item_series_id_, ledger_item_id_, company_, identity_,
+                     party_type_db_, voucher_date_);
+      pay_curr_ := ' ';
+   ELSE
+      OPEN Get_Voucher_No(company_, identity_, party_type_db_,ledger_item_series_id_, ledger_item_id_);
+      FETCH Get_Voucher_No INTO voucher_no_, pay_curr1_;
+      CLOSE Get_Voucher_No;
+      pay_curr_ := Language_SYS.Translate_Constant(lu_name_, 'INCURR: in :P1', NULL, pay_curr1_);
+   END IF;
+END Get_Voucher_No___;
+
+-- Bug 37938 Begin
+FUNCTION Get_Pagefoot_Value___(
+   page_foot_   IN VARCHAR2,
+   vat_no_      IN VARCHAR2) RETURN &TABLE2..pagefoot_one%TYPE
+IS
+   counter_        NUMBER;   
+   pos_            NUMBER;
+   pagefoot_       VARCHAR2(2000);
+   pagefoot_out_   &TABLE2..pagefoot_one%TYPE;
+BEGIN
+   counter_ := 0;
+   pagefoot_ := page_foot_;  
+
+   pos_ := INSTR(NVL(pagefoot_,' '),'^', 1);
+
+   WHILE (pos_ > 0) LOOP
+      pos_ := INSTR(pagefoot_,'^', pos_);
+
+      IF (pos_ = 0)  THEN
+         EXIT; 
+      ELSE
+         pos_ := pos_ + 1;
+         counter_ := counter_ + 1;
+      END IF;
+   END LOOP;
+   
+   WHILE (counter_ <= 4) LOOP
+      counter_ := counter_ + 1;
+      pagefoot_ := pagefoot_ || '^';
+   END LOOP;
+
+   IF (pagefoot_ = '^^^^^') THEN
+      pagefoot_out_ := TRANSLATE(pagefoot_ ,'^',CHR(9));
+   ELSE
+      pagefoot_out_ := TRANSLATE(pagefoot_ || '^' || vat_no_,'^',CHR(9));   
+   END IF;
+   RETURN pagefoot_out_;
+END Get_Pagefoot_Value___;
+-- Bug 37938 End 
+
+-- Bug #44556 Start
+PROCEDURE Insert___ (
+   newrec_     IN OUT &TABLE%ROWTYPE )
+IS
+BEGIN
+   INSERT INTO &TABLE (
+       result_key,
+       row_no,
+       party_name,    
+       customer_no,
+       customer_name,
+       ledger_item_series_id,
+       ledger_item_version,
+       installment_id,
+       balance_until_date,
+       balance_dom_until_date,
+       invoice_or_pp_date,
+       due_date,
+       paym_plan,
+       pay_term_base_date,
+       ledger_status,
+       full_amount,
+       rest_amount,
+       dom_currency,
+       currency_rowtype,
+       full_dom_amount,
+       rest_dom_amount,
+       due_dom_amount,
+       company_id,
+       balance_date,
+       cust_inv_total,
+       cust_open_total,
+       codestring,
+       accounting_currency,
+       company_name,
+       print_details,
+       canalyst,
+       camanager,
+       our_reference,
+       address_line1,
+       address_line2,
+       address_line3,
+       address_line4,
+       address_line5,
+       amount_before_period1,
+       amount_of_period1,
+       amount_of_period2,
+       amount_of_period3,
+       amount_after_period3,
+       invoice_type,
+       voucher_no,
+       current_due_date,
+       amount_due,
+       dom_amount_due,
+       keep_value,
+       show_value,
+       show_dom_currency,
+       address_line6 )
+   VALUES (
+       newrec_.result_key,
+       newrec_.row_no,
+       newrec_.party_name,    
+       newrec_.customer_no,
+       newrec_.customer_name,
+       newrec_.ledger_item_series_id,
+       newrec_.ledger_item_version,
+       newrec_.installment_id,
+       newrec_.balance_until_date,
+       newrec_.balance_dom_until_date,
+       newrec_.invoice_or_pp_date,
+       newrec_.due_date,
+       newrec_.paym_plan,
+       newrec_.pay_term_base_date,
+       newrec_.ledger_status,
+       newrec_.full_amount,
+       newrec_.rest_amount,
+       newrec_.dom_currency,
+       newrec_.currency_rowtype,
+       newrec_.full_dom_amount,
+       newrec_.rest_dom_amount,
+       newrec_.due_dom_amount,
+       newrec_.company_id,
+       newrec_.balance_date,
+       newrec_.cust_inv_total,
+       newrec_.cust_open_total,
+       newrec_.codestring,
+       newrec_.accounting_currency,
+       newrec_.company_name,
+       newrec_.print_details,
+       newrec_.canalyst,
+       newrec_.camanager,
+       newrec_.our_reference,
+       newrec_.address_line1,
+       newrec_.address_line2,
+       newrec_.address_line3,
+       newrec_.address_line4,
+       newrec_.address_line5,
+       newrec_.amount_before_period1,
+       newrec_.amount_of_period1,
+       newrec_.amount_of_period2,
+       newrec_.amount_of_period3,
+       newrec_.amount_after_period3,
+       newrec_.invoice_type,
+       newrec_.voucher_no,
+       newrec_.current_due_date,
+       newrec_.amount_due,
+       newrec_.dom_amount_due,
+       newrec_.keep_value,
+       newrec_.show_value,
+       newrec_.show_dom_currency,
+       newrec_.address_line6 );
+END Insert___;
+
+PROCEDURE Insert_Cust___ (
+   newrec_     IN OUT &TABLE%ROWTYPE )
+IS
+BEGIN
+   INSERT INTO &TABLE (
+       result_key,
+       row_no,
+       party_name,    
+       customer_no,
+       customer_name,
+       balance_until_date,
+       balance_dom_until_date,
+       accounting_currency,
+       company_id,
+       balance_date,
+       cust_open_total,
+       due_dom_amount,
+       company_name,
+       print_details )
+   VALUES (
+       newrec_.result_key,
+       newrec_.row_no,
+       newrec_.party_name,    
+       newrec_.customer_no,
+       newrec_.customer_name,
+       newrec_.balance_until_date,
+       newrec_.balance_dom_until_date,
+       newrec_.accounting_currency,
+       newrec_.company_id,
+       newrec_.balance_date,
+       newrec_.cust_open_total,
+       newrec_.due_dom_amount,
+       newrec_.company_name,
+       newrec_.print_details );
+END Insert_Cust___;
+-- Bug #44556 End
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 )
+IS
+   identity_                    VARCHAR2(20); 
+   party_type_                  VARCHAR2(20);
+   ledger_item_series_id_       VARCHAR2(20);
+   ledger_item_id_              VARCHAR2(50);
+   company_                     VARCHAR2(20);
+   prev_company_                VARCHAR2(20) := NULL;
+   prev_identity_               VARCHAR2(20) := NULL;
+   curr_                        VARCHAR2(20);
+   fromtocustomer_              VARCHAR2(30);
+   fromtocustgrp_               VARCHAR2(30);
+   payer_identity_              VARCHAR2(20);
+   currency_                    VARCHAR2(30);
+   acc_curr_                    VARCHAR2(3);
+   acc_inverted_                VARCHAR2(5);  -- Bug #44556
+   company_name_                VARCHAR2(200);
+   print_details_               VARCHAR2(20);
+   exclude_open_pay_docs_       VARCHAR2(5);
+   cl_party_type_               VARCHAR2(100);
+   cl_company_                  VARCHAR2(100);
+   party_to_use_                VARCHAR2(100);
+   codestring_                  VARCHAR2(2000);
+   -- Bug #30979, start
+   from_cust_                   VARCHAR2(100);
+   to_cust_                     VARCHAR2(100);
+   logotype_                    VARCHAR2(100);
+   -- Bug #30979, end
+   party_name_                  VARCHAR2(100);
+   customer_no_                 VARCHAR2(20);
+   tmp_party_type_              VARCHAR2(20);
+   -- Credit and Collection, start
+   canalyst_                    VARCHAR2(125);
+   camanager_                   VARCHAR2(125);
+   -- Credit and Collection, end
+   multiple_pay_plan_           VARCHAR2(20);
+   code_a_                      VARCHAR2(20);
+   code_b_                      VARCHAR2(20);
+   code_c_                      VARCHAR2(20);
+   code_d_                      VARCHAR2(20);
+   code_e_                      VARCHAR2(20);
+   code_f_                      VARCHAR2(20);
+   code_g_                      VARCHAR2(20);
+   code_h_                      VARCHAR2(20);
+   code_i_                      VARCHAR2(20);
+   code_j_                      VARCHAR2(20);
+   tmp_identity_                VARCHAR2(20) := CHR(0);
+   tmp_group_id_                VARCHAR2(20) := CHR(0);
+   -- Bug 43817, begin
+   our_reference_               VARCHAR2(200);
+   report_id_                   VARCHAR2(30);
+   -- Bug 43817, end
+   address_line1_               VARCHAR2(200);
+   address_line2_               VARCHAR2(200);
+   address_line3_               VARCHAR2(200);
+   address_line4_               VARCHAR2(200);
+   address_line5_               VARCHAR2(200);
+   invoice_type_                VARCHAR2(50);
+   pay_curr_                    VARCHAR2(30);
+   current_status_              VARCHAR2(50);
+   check_account2_              VARCHAR2(10);
+   address_line6_               VARCHAR2(200);
+   country_db_                  VARCHAR2(5);
+   company_country_db_          VARCHAR2(5);
+   previous_customer_no_        VARCHAR2(20):=NULL;
+   previous_invoice_no_         VARCHAR2(75):=NULL;
+   current_invoice_no_          VARCHAR2(75);
+   previous_customer_currency_  VARCHAR2(45):=NULL;
+   current_customer_currency_   VARCHAR2(45);
+   pay_type_                    VARCHAR2(50);
+   new_state_                   VARCHAR2(15);
+   -- Bug 46159, begin, country_ variable is no longer required
+   cus_country_                 VARCHAR2(200);
+   -- Bug 46159, end
+   -- Report Designer Begin (variables)
+   package_name_                VARCHAR2(30) := 'CUST_OPEN_ITEM_REP';   
+   package_name2_               VARCHAR2(30) := 'CUST_OPEN_STATE_REP';
+   view_                        VARCHAR2(1)   := NULL;
+   -- Report Designer End
+   -- Bug 39993, begin
+   show_codestring_             VARCHAR2(60);
+   -- Bug 39993, end  
+   -- Bug 42717, begin
+   display_layout_              VARCHAR2(2000);
+   -- Bug 42717, end 
+   -- Bug #44556 Start
+   check_if_use_                VARCHAR2(5); 
+   store_details_               VARCHAR2(5);
+   cust_to_store_               VARCHAR2(5) := 'FALSE';
+   -- Bug #44556 End
+   row_due_amount_out_          NUMBER;
+   rst_dom_amount_out_          NUMBER;
+   result_key_                  NUMBER;
+   row_no_                      NUMBER := 1;
+   invoicedamt_                 NUMBER;
+   opendamt_                    NUMBER;
+   to_year_                     NUMBER(4);
+   to_period_                   NUMBER(2);
+   -- Bug #30979, start
+   rest_amt_today_              NUMBER; 
+   rest_dom_amt_today_          NUMBER; 
+   -- Bug #30979, end
+   acc_rounding_                NUMBER;       -- Bug #44556
+   dom_balance_                 NUMBER;
+   dom_due_amount_              NUMBER;
+   dom_due_amount2_             NUMBER;
+   row_due_amount_              NUMBER;
+   flag_print_details_          NUMBER;
+   rest_amount_                 NUMBER;
+   rest_dom_amount_             NUMBER;
+   i                            NUMBER;
+   pay_plan_rows_               NUMBER;
+   project_activity_id_         NUMBER;
+   amount_before_period1_       NUMBER;
+   amount_of_period1_           NUMBER;
+   amount_of_period2_           NUMBER;
+   amount_of_period3_           NUMBER;
+   amount_after_period3_        NUMBER;
+   ageing_period1_days_         NUMBER := 0;
+   ageing_period2_days_         NUMBER := 0;
+   ageing_period3_days_         NUMBER := 0;
+   payment_id_                  NUMBER;
+   voucher_no_                  NUMBER;
+   --Payment Plan Details, start
+   amount_due_                  NUMBER;
+   dom_amount_due_              NUMBER;
+   keep_value_                  NUMBER;
+   installment_id_              NUMBER;
+   cleared_curr_amount_         NUMBER;
+   cleared_dom_amount_          NUMBER;
+   old_amount_due_              NUMBER;
+   old_dom_amount_due_          NUMBER;
+   --Payment Plan Details, end
+   amount_due_dom_              NUMBER;
+   max_payment_id_              NUMBER;
+   invoice_id_                  NUMBER;
+   show_value_                  NUMBER;
+   show_dom_currency_           NUMBER;
+   dom_balance_ex_pay_doc_      NUMBER;
+   dom_due_amount_ex_pay_doc_   NUMBER := 0;
+   -- Bug #44556 Start
+   cust_balance_until_date_     NUMBER := 0;
+   cust_balance_dom_until_date_ NUMBER := 0;
+   cust_cust_open_total_        NUMBER := 0;
+   cust_due_dom_amount_         NUMBER := 0;
+   -- Bug #44556 End
+   to_date_                     DATE;
+   dummy_date_                  DATE;
+   merge_date_                  DATE;
+   invoice_or_pp_date_          DATE := NULL;
+   due_date_                    DATE := NULL;
+   pay_term_base_date_          DATE := NULL;
+   --Payment Plan Details, start
+   current_due_date_            DATE;
+   payment_date_                DATE;
+   --Payment Plan Details, end
+   ageing_period1_date_         DATE;
+   ageing_period2_date_         DATE;
+   ageing_period3_date_         DATE;
+   codeparts_ok_                BOOLEAN;
+   -- Bug #30979, start
+   first_plan_item_             BOOLEAN;
+   -- Bug #30979, end
+   first_time_                  BOOLEAN;
+   switch_                      BOOLEAN;
+   tmp_parse_                   BOOLEAN;
+   --Payment Plan Details, start
+   no_line_                     BOOLEAN;
+   --Payment Plan Details, end
+   -- Report Designer Begin (variables)
+   xml_                         CLOB;
+   xml2_                        CLOB;
+   -- Report Designer End
+   ledger_status_               ledger_status_tab.status_id%TYPE;
+   address_id_                  customer_info_address_tab.address_id%TYPE;
+   -- Bug #44556 Start
+   invoice_rec_                 Invoice_API.Public_Rec;
+   payment_rec_                 Payment_API.Public_Rec;
+   newrec_                      &TABLE%ROWTYPE;
+   -- Bug #44556 End
+
+   --check_value_                     NUMBER :=0;     -- Bug #44556
+   --accrul_exist_                    VARCHAR2(10);   -- Bug #44556
+   --genled_exist_                    VARCHAR2(10);   -- Bug #44556
+   --voucher_account_                VARCHAR2(20);    -- Bug #44556
+   --debit_amount_                   NUMBER;          -- Bug #44556
+   --posting_                        VARCHAR2(20);    -- Bug #44556
+   --voucher_no1_                    NUMBER;          -- Bug #44556
+   --voucher_date2_                  DATE;            -- Bug #44556
+   --exist_value_                    VARCHAR2(10);    -- Bug #44556
+   
+   -- Bug 37342, begin, '=' sign added when comparing to to_date_   
+   -- Bug 46369, start changed where statement and added union all
+	-- Bug 43332, begin, installment curr amount and dom amount are added to the cursor.       
+	-- Cursor created to get the Report Values
+   -- Bug #44556 Added series_id,payment_id, trans_id, due_date, code_string, dom_amount
+   -- Bug 46799, begin, set installment_id to 0 (oracle problem)  
+   CURSOR get_open_items IS
+      SELECT l.company,
+             l.party_type                                      party_type_db,
+             l.identity                                        identity,   
+             rowtype                                           rowtype,
+             l.ledger_item_series_id                           ledger_item_series_id,
+             l.ledger_item_id                                  ledger_item_id,
+             l.ledger_item_version                             ledger_item_version,
+             parked_pay_type                                   parked_pay_type,
+             l.currency                                        currency,
+             l.curr_rate,
+             l.div_factor,
+             decode(full_curr_amount-l.cleared_curr_amount,  
+                    0,fully_paid_voucher_date, 
+                    NULL)                                      fully_paid_voucher_date,
+             full_curr_amount                                  full_curr_amount,
+             full_dom_amount                                   full_dom_amount,
+             l.cleared_curr_amount                             cleared_curr_amount,
+             l.cleared_dom_amount                              cleared_dom_amount,
+             l.full_curr_amount                                inst_full_curr_amt,
+             l.full_dom_amount                                 inst_full_dom_amt,
+             status_id                                         ledger_status,
+             l.rowstate                                        rowstate,
+             0                                                 installment_id,
+             l.full_curr_amount                                amount_due,
+             l.full_dom_amount                                 dom_amount_due,
+             l.invoice_id                                      invoice_id,
+             l.series_id                                       series_id,
+             l.payment_id                                      payment_id,
+             l.trans_id                                        trans_id,
+             l.due_date                                        due_date,
+             Invoice_Code_String_API.Pack (l.code_a, l.code_b, l.code_c, l.code_d, l.code_e,
+                                           l.code_f, l.code_g, l.code_h, l.code_i, l.code_j,
+                                           l.project_activity_id  )
+                                                               code_string
+      FROM   ledger_item_tab l
+      WHERE  l.company                = company_ 
+      AND    l.identity               BETWEEN from_cust_ AND to_cust_ 
+      AND    (payer_identity          = payer_identity_ OR 
+              payer_identity_         IS NULL)
+      AND    ((DECODE(full_curr_amount-l.cleared_curr_amount,  
+                    0,fully_paid_voucher_date,NULL) >= to_date_)
+          OR (full_curr_amount-l.cleared_curr_amount != 0))
+      AND   (l.party_type = 'CUSTOMER' OR (l.party_type = 'COMPANY' AND parked_pay_type = 'CUSTOMER'))
+      AND is_upgraded = 'TRUE'
+      UNION ALL
+      SELECT l.company,
+             l.party_type                                      party_type_db,
+             l.identity                                        identity,   
+             rowtype                                           rowtype,
+             l.ledger_item_series_id                           ledger_item_series_id,
+             l.ledger_item_id                                  ledger_item_id,
+             l.ledger_item_version                             ledger_item_version,
+             parked_pay_type                                   parked_pay_type,
+             l.currency                                        currency,
+             l.curr_rate,
+             l.div_factor,
+             decode(full_curr_amount-l.cleared_curr_amount,  
+                    0,fully_paid_voucher_date, 
+                    NULL)                                      fully_paid_voucher_date,
+             full_curr_amount                                  full_curr_amount,
+             full_dom_amount                                   full_dom_amount,
+             l.cleared_curr_amount                             cleared_curr_amount,
+             l.cleared_dom_amount                              cleared_dom_amount,
+             c.curr_amount                                     inst_full_curr_amt,
+             c.dom_amount                                      inst_full_dom_amt,
+             status_id                                         ledger_status,
+             l.rowstate                                        rowstate,
+             c.installment_id                                  installment_id,
+             c.curr_amount                                     amount_due,
+             c.dom_amount                                      dom_amount_due,
+             l.invoice_id                                      invoice_id,
+             l.series_id                                       series_id,
+             l.payment_id                                      payment_id,
+             l.trans_id                                        trans_id,
+             l.due_date                                        due_date,
+             Invoice_Code_String_API.Pack (l.code_a, l.code_b, l.code_c, l.code_d, l.code_e,
+                                           l.code_f, l.code_g, l.code_h, l.code_i, l.code_j,
+                                           l.project_activity_id  )
+                                                               code_string            
+      FROM   ledger_item_tab l,
+             payment_plan_tab c
+      WHERE  l.company                = company_ 
+      AND    l.identity               BETWEEN from_cust_ AND to_cust_ 
+      AND    (payer_identity          = payer_identity_ OR 
+              payer_identity_         IS NULL)
+      AND    ((DECODE(full_curr_amount-l.cleared_curr_amount,  
+                    0,fully_paid_voucher_date,NULL) >= to_date_)
+          OR (full_curr_amount-l.cleared_curr_amount != 0))
+      AND    l.company               = c.company(+)
+      AND    l.identity              = c.identity(+)
+      AND    l.party_type            = c.party_type(+)
+      AND    l.invoice_id            = c.invoice_id(+)
+      AND   (l.party_type = 'CUSTOMER' OR (l.party_type = 'COMPANY' AND parked_pay_type = 'CUSTOMER'))
+      AND is_upgraded IS NULL
+      ORDER BY 1, -- company
+               3, -- identity
+               9; -- currency
+	-- Bug 43332, end     
+   -- Bug 46369, end
+   -- Bug 37342, end
+   -- Bug 46799, end
+    -- Bug #44556 Start
+    --CURSOR creditanalyst IS
+    --   SELECT rtrim(credit_analyst_code) 
+    --   FROM CUSTOMER_CREDIT_INFO
+    --   WHERE company = company_
+    --   AND identity = identity_;
+    -- Bug #44556 Start
+
+    CURSOR get_payment_id (pay_id_ NUMBER) IS
+       SELECT MAX(payment_id) 
+       FROM   Payment_Transaction_Tab
+       WHERE  company               = company_
+       AND    ledger_item_series_id = ledger_item_series_id_
+       AND    ledger_item_id        = ledger_item_id_
+       AND    interest_date         <= to_date_
+       AND    payment_id            < NVL(pay_id_,payment_id+1);
+
+   CURSOR  get_payment_plan IS
+      SELECT due_date,
+             payment_date
+      FROM   Payment_Plan_Tab
+      WHERE  company               = company_
+      AND    identity              = identity_               
+      AND    party_type            = party_type_             
+      AND    invoice_id            = invoice_id_  
+      AND    installment_id        = installment_id_;
+
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', '&METHOD');
+  
+   first_time_ := TRUE;
+   -- Bug 43817, begin, included our_reference parameter
+   Fetch_Report_Parameters___( result_key_,
+                               company_, to_date_, fromtocustomer_, fromtocustgrp_, payer_identity_,
+                               currency_, to_year_, to_period_, print_details_,exclude_open_pay_docs_,   --Bug # 24916
+                               code_a_, code_b_, code_c_, code_d_, code_e_, code_f_,
+                               code_g_, code_h_, code_i_, code_j_, project_activity_id_,
+                               ageing_period1_days_, ageing_period2_days_, ageing_period3_days_,
+                               ledger_status_, view_, our_reference_,report_attr_, parameter_attr_ );
+   -- Bug 43817, end
+
+   -- Bug 43817, begin
+   report_id_ := Client_SYS.Get_Item_Value('REPORT_ID', report_attr_); 
+   -- Bug 43817, end
+
+   IF ( NOT Company_Finance_API.Is_User_Authorized(company_) ) THEN
+      RETURN;
+   END IF;
+   IF (to_year_ IS NULL) OR (to_period_ IS NULL) THEN
+      merge_date_ := to_date('2099-12-31','YYYY-MM-DD');
+   ELSE
+      Accounting_Period_Api.Get_Period_Date(dummy_date_, merge_date_, company_, to_year_,
+         to_period_);
+   END IF;
+
+   IF to_date_ IS NULL THEN
+      to_date_ := merge_date_;
+   END IF;
+
+   
+   IF ((to_date_ IS NOT NULL) AND ((to_year_ IS NOT NULL) OR (to_period_ IS NOT NULL))) THEN
+      IF (to_date_ <> merge_date_) THEN
+          Error_SYS.Record_General(lu_name_,'NOTCORRESPOND : To Date does not correspond to the entered period. Please remove either To Date or To Year/Period');
+      END IF;
+   END IF;
+
+   ageing_period1_date_ := trunc(to_date_)      - ageing_period1_days_;
+   ageing_period2_date_ := ageing_period1_date_ - ageing_period2_days_;
+   ageing_period3_date_ := ageing_period2_date_ - ageing_period3_days_;
+
+   acc_curr_      := Company_Finance_API.Get_Currency_Code(company_);
+   -- Bug #44556 Start
+   acc_inverted_  := Currency_Code_API.Get_Inverted (company_, acc_curr_);
+   acc_rounding_  := Currency_Code_API.Get_Currency_Rounding (company_, acc_curr_);
+   -- Bug #44556 Start
+   cl_party_type_ := Party_Type_API.Decode( 'CUSTOMER' );
+   cl_company_    := Party_Type_API.Decode( 'COMPANY' );
+   company_name_  := Company_Finance_API.Get_Description(company_);
+   company_country_db_ := Company_API.Get_Country_Db(company_);
+   IF (Show_Details_API.Encode(print_details_) = 'TRUE' ) THEN
+      flag_print_details_ := 1;
+   ELSE
+      flag_print_details_ := 0;
+   END IF;
+
+   -- Bug #44556 Start
+   IF (do_xml_ OR do_xml2_ OR flag_print_details_ = 1) THEN
+      store_details_ := 'TRUE';
+   ELSE
+      store_details_ := 'FALSE';
+   END IF;
+   -- Bug #44556 End
+
+   IF (view_ = '1') THEN
+      IF (do_xml_) THEN
+         Xml_Record_Writer_SYS.Create_Report_Header(xml_,'&VIEW',package_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'COMPANY',company_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'COMPANY_NAME',company_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'BALANCE_DATE',to_date_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'ACCOUNTING_CURRENCY',acc_curr_);
+      END IF;
+   ELSE
+      IF (do_xml2_) THEN
+         Xml_Record_Writer_SYS.Create_Report_Header(xml2_,'CUST_OPEN_STATE_REP',package_name2_);   
+         Xml_Record_Writer_SYS.Add_Element(xml2_,'COMPANY',company_);
+         Xml_Record_Writer_SYS.Add_Element(xml2_,'COMPANY_NAME',company_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml2_,'BALANCE_DATE',to_date_);
+      END IF;
+   END IF;
+
+   -- Bug 39993, begin
+   IF (first_time_) THEN
+      Store_Codepart_Names(xml_,
+                           xml2_,
+                           result_key_, 
+                           company_,
+                           ageing_period1_date_,
+                           ageing_period2_date_,
+                           ageing_period3_date_,
+                           ageing_period1_days_,
+                           ageing_period2_days_,
+                           ageing_period3_days_,
+                           view_);
+      first_time_ := FALSE;
+   END IF;         
+
+   Get_Titlepage_Codeparts(show_codestring_, company_ ); 
+
+   archive_variable_api.Set_Variable(result_key_, 'tCodestring', show_codestring_);
+   -- Bug 39993, end
+
+   switch_:=FALSE;
+   IF (Payment_Library_API.Switch_Parse_Parameter(fromtocustomer_,from_cust_,to_cust_)) THEN
+      switch_:=TRUE;   
+   ELSE
+      switch_:=FALSE;   
+   END IF;
+   
+   FOR the_record_ IN get_open_items LOOP
+      dom_amount_due_   := NULL; 
+      dom_balance_      := NULL; 
+      dom_due_amount_   := NULL;
+      -- Bug 41058, begin
+      due_date_         := NULL;
+      current_due_date_ := NULL;
+      -- Bug 41058, end
+      -- Bug #44556 Start (Old code and tags are removed for redability)
+      --
+      check_if_use_ := 'TRUE';
+      --
+      --Bug 45759, begin, modified the if condition check for exclude_open_pay_docs  
+      -- Test if rowtype is open pay docs and if this should be excluded
+      IF (Show_Details_API.Encode(exclude_open_pay_docs_)='TRUE' AND                                 
+         the_record_.rowtype IN ( 'BillOfExchange','CheckLedgerItem') ) THEN 
+         check_if_use_ := 'FALSE';
+      -- Bug 37342, begin         
+      ELSIF ( (the_record_.rowtype = 'CheckLedgerItem') AND
+         (the_record_.rowstate IN ('Cancelled','Returned','UnderRemitted')) ) THEN
+         check_if_use_ := 'FALSE';                                
+      END IF;
+      -- Bug 37342, end      
+      --
+      --Bug 45759, end
+      
+      IF (check_if_use_ = 'TRUE') THEN
+         IF (tmp_identity_ != the_record_.identity) THEN
+            tmp_group_id_ := Identity_Invoice_Info_API.Get_Group_Id(the_record_.company,
+                                                                      the_record_.identity,
+                                                                      cl_party_type_); 
+         END IF;
+         tmp_identity_ := the_record_.identity;
+      END IF;
+      -- Test if there are parameters for customer group or currency 
+      IF (check_if_use_ = 'TRUE') THEN
+         IF (tmp_identity_ != the_record_.identity) THEN
+            tmp_group_id_ := Identity_Invoice_Info_API.Get_Group_Id(the_record_.company,
+                                                                    the_record_.identity,
+                                                                    cl_party_type_); 
+         END IF;
+         IF (Report_SYS.Parse_Parameter(tmp_group_id_, fromtocustgrp_) = 'TRUE' AND
+             Report_SYS.Parse_Parameter(the_record_.currency,currency_) = 'TRUE') THEN
+            check_if_use_ := 'TRUE';
+         ELSE
+            check_if_use_ := 'FALSE';
+         END IF;
+      END IF;
+      -- Some Bad dept controls
+      IF (check_if_use_ = 'TRUE') THEN
+         current_status_  := NULL;
+         check_account2_  := 'FALSE';
+         Bad_Debt_Util_API.Bad_Debt_Controls (current_status_,
+                                              check_if_use_,
+                                              check_account2_,
+                                              company_,
+                                              the_record_.ledger_item_series_id,
+                                              the_record_.ledger_item_id,
+                                              to_date_,
+                                              code_a_);
+      END IF;
+      --
+      IF (check_if_use_ = 'TRUE') THEN
+         IF ((ledger_status_ = current_status_ ) OR (ledger_status_ = 'ALL')) THEN
+            check_if_use_ := 'TRUE';
+         ELSE
+            check_if_use_ := 'FALSE';
+         END IF;
+      END IF;
+      --
+      IF (check_if_use_ = 'TRUE') THEN
+         codestring_   := the_record_.code_string;
+         codeparts_ok_ := Codeparts_Ok___(codestring_,
+                                          code_a_,
+                                          code_b_,
+                                          code_c_,
+                                          code_d_,
+                                          code_e_,
+                                          code_f_,
+                                          code_g_,
+                                          code_h_,
+                                          code_i_,
+                                          code_j_,
+                                          project_activity_id_ );
+         IF ( codeparts_ok_ OR check_account2_ ='TRUE')  THEN
+            check_if_use_ := 'TRUE';
+         ELSE
+            check_if_use_ := 'FALSE';
+         END IF;
+      END IF;
+
+      --
+      -- All tests if this record should included is passed when check_if_use_ = 'TRUE'
+      --
+      IF (check_if_use_ = 'TRUE') THEN
+         identity_ := the_record_.identity;
+         -- Fetch some credit analyst information
+         IF (store_details_ = 'TRUE') THEN
+            IF (prev_identity_ != identity_ ) AND (prev_company_ != company_) THEN
+               canalyst_ := NVL(Customer_Credit_Info_API.Get_Credit_Analyst_Code (the_record_.company,
+                                                                                  the_record_.identity),'???');
+               IF (canalyst_ = '???') THEN
+                  camanager_ := '???';
+               ELSE
+                  canalyst_  := canalyst_ || ' - ' || 
+                                Credit_Analyst_API.Get_Description(company_,canalyst_);
+                  camanager_ := RTRIM(Credit_Analyst_API.Get_Manager(company_,canalyst_)) || ' - ' || 
+                                Credit_Analyst_API.Get_Manager_Description(company_,canalyst_);
+               END IF;
+            END IF; 
+         END IF;
+         tmp_identity_ := the_record_.identity;
+         IF (the_record_.parked_pay_type IS NULL) THEN
+            party_to_use_ := cl_party_type_;
+         ELSE
+            party_to_use_ := cl_company_;
+         END IF;
+
+         IF (the_record_.party_type_db = 'CUSTOMER') THEN
+            tmp_party_type_ := cl_party_type_;
+         ELSIF (the_record_.party_type_db = 'COMPANY') THEN
+            tmp_party_type_ := cl_company_;
+         END IF;
+         pay_term_base_date_ := NULL;
+         IF (store_details_ = 'TRUE') THEN
+            payment_rec_        := Payment_API.Get(the_record_.company,
+                                                   the_record_.series_id,
+                                                   the_record_.payment_id);
+            IF (the_record_.rowtype = 'InvoiceLedgerItem') THEN
+               invoice_rec_        := Invoice_API.Get (the_record_.company,
+                                                       the_record_.invoice_id);
+               invoice_or_pp_date_ := invoice_rec_.invoice_date;
+               pay_term_base_date_ := invoice_rec_.pay_term_base_date;
+            ELSIF (the_record_.rowtype IN ('OnAccountLedgerItem',
+                                           'BillOfExchange',
+                                           'CheckLedgerItem')) THEN
+               invoice_or_pp_date_ := payment_rec_.pay_date;
+            ELSIF (the_record_.rowtype = 'CustomerReceipt') THEN
+               invoice_or_pp_date_ := Payment_Receipt_API.Get_Receipt_Date(
+                                         the_record_.company,
+                                         the_record_.ledger_item_series_id,
+                                         the_record_.ledger_item_id);
+            END IF;
+         END IF;
+            
+         IF (the_record_.rowtype = 'InvoiceLedgerItem') THEN
+            due_date_ := NVL(Payment_Plan_API.Get_Due_Date(the_record_.company,
+                                                 the_record_.identity,
+                                                 the_record_.party_type_db,
+                                                 the_record_.invoice_id,
+                                                 the_record_.installment_id),
+                                                 Invoice_Ledger_Item_API.Get_Due_Date(the_record_.company,
+                                                                                      the_record_.identity,
+                                                                                      tmp_party_type_,
+                                                                                      the_record_.ledger_item_series_id,
+                                                                                      the_record_.ledger_item_id,
+                                                                                      the_record_.ledger_item_version,
+                                                                                      the_record_.invoice_id)); -- Bug #44556
+           
+         ELSIF (the_record_.rowtype = 'OnAccountLedgerItem') THEN
+            due_date_ := On_Account_Ledger_Item_API.Get_Due_Date(the_record_.company,
+                                                                 the_record_.identity,
+                                                                 tmp_party_type_,
+                                                                 the_record_.ledger_item_series_id,
+                                                                 the_record_.ledger_item_id,
+                                                                 the_record_.ledger_item_version,
+                                                                 the_record_.series_id,
+                                                                 the_record_.payment_id,
+                                                                 the_record_.due_date);
+                                                                 
+            -- Bug 41058, begin
+            current_due_date_ := due_date_;     
+            -- Bug 41058, end
+         ELSIF (the_record_.rowtype = 'BillOfExchange') THEN
+            due_date_ := Bill_Of_Exchange_API.Get_Due_Date(the_record_.company,
+                                                           the_record_.identity,
+                                                           tmp_party_type_,
+                                                           the_record_.ledger_item_series_id,
+                                                           the_record_.ledger_item_id,
+                                                           the_record_.ledger_item_version,
+                                                           the_record_.due_date);
+            -- Bug 41058, begin
+            current_due_date_ := due_date_;
+            -- Bug 41058, end
+         -- Bug 41058, Added 'CustomerReceipt' with IN. 
+         ELSIF (the_record_.rowtype IN ('CheckLedgerItem', 'CustomerReceipt')) THEN
+            due_date_         := payment_rec_.pay_date;
+            -- Bug 41058, begin
+            current_due_date_ := payment_rec_.pay_date;
+            -- Bug 41058, end
+         END IF;
+         -- Bug 41058, end
+         IF (the_record_.rowtype = 'InvoiceLedgerItem') THEN               
+            Ledger_Item_API.Get_Rest_Amounts_At_Date (
+               rest_amount_,
+               rest_dom_amount_,
+               company_,
+               the_record_.identity,
+               party_to_use_,
+               the_record_.ledger_item_series_id,
+               the_record_.ledger_item_id,
+               the_record_.ledger_item_version,
+               to_date_,
+               known_fully_paid_voucher_date_ => the_record_.fully_paid_voucher_date,
+               fetch_fully_paid_voucher_date_ => FALSE,
+               known_full_curr_amount_        => the_record_.inst_full_curr_amt,
+               fetch_full_curr_amount_        => FALSE,
+               known_full_dom_amount_         => the_record_.inst_full_dom_amt,
+               fetch_full_dom_amount_         => FALSE,
+               known_ledger_item_type_        => the_record_.rowtype,
+               fetch_ledger_item_type_        => FALSE,
+               known_exist_at_voucher_date_   => NULL,
+               fetch_exist_at_voucher_date_   => TRUE,
+               installment_id_                => NVL(the_record_.installment_id,''),
+               known_rowtype_                 => the_record_.rowtype,
+               known_invoice_id_              => the_record_.invoice_id,
+               known_series_id_               => the_record_.series_id,    
+               known_payment_id_              => the_record_.payment_id,    
+               known_trans_id_                => the_record_.trans_id,    
+               known_due_date_                => the_record_.due_date,
+               known_p_curr_amount_           => the_record_.amount_due,
+               known_p_dom_amount_            => the_record_.dom_amount_due);
+         ELSE
+            Ledger_Item_API.Get_Rest_Amounts_At_Date (
+               rest_amount_,
+               rest_dom_amount_,
+               company_,
+               the_record_.identity,
+               party_to_use_,
+               the_record_.ledger_item_series_id,
+               the_record_.ledger_item_id,
+               the_record_.ledger_item_version,
+               to_date_,
+               known_fully_paid_voucher_date_ => the_record_.fully_paid_voucher_date,
+               fetch_fully_paid_voucher_date_ => FALSE,
+               known_full_curr_amount_        => the_record_.full_curr_amount,
+               fetch_full_curr_amount_        => FALSE,
+               known_full_dom_amount_         => the_record_.full_dom_amount,
+               fetch_full_dom_amount_         => FALSE,
+               known_ledger_item_type_        => the_record_.rowtype,
+               fetch_ledger_item_type_        => FALSE,
+               known_exist_at_voucher_date_   => NULL,
+               fetch_exist_at_voucher_date_   => TRUE,
+               installment_id_                => NVL(the_record_.installment_id,''),
+               known_rowtype_                 => the_record_.rowtype,
+               known_invoice_id_              => the_record_.invoice_id,
+               known_series_id_               => the_record_.series_id,    
+               known_payment_id_              => the_record_.payment_id,    
+               known_trans_id_                => the_record_.trans_id,    
+               known_due_date_                => the_record_.due_date,
+               known_p_curr_amount_           => the_record_.amount_due,
+               known_p_dom_amount_            => the_record_.dom_amount_due);
+         END IF;                  
+         Trace_SYS.Message ('rest_amount_ : '||rest_amount_||' rest_dom_amount_ : '||rest_dom_amount_);
+
+         IF (rest_amount_ != 0 AND rest_amount_ IS NOT NULL) THEN --  AND voucher_date_ <= to_date_)
+            --
+            -- If the accounting currency and the invoice currency are the same only
+            -- the accounting currency(domestic) values are shown on the report.
+            --
+            IF ( acc_curr_ = the_record_.currency ) THEN
+               curr_        := NULL;
+               invoicedamt_ := NULL;
+               opendamt_    := rest_amount_;
+            ELSE
+               curr_        := acc_curr_;
+               invoicedamt_ := the_record_.full_dom_amount;
+               opendamt_    := rest_dom_amount_;
+            END IF;
+            Trace_SYS.Message ('opendamt_ : '||opendamt_||' acc_curr_ : '||acc_curr_||' the_record_.currency : '||the_record_.currency);
+            -- If payment plan is returned True Print X on the Report
+            -- Otherwise print Blank.
+            IF (store_details_ = 'TRUE') THEN
+               pay_plan_rows_ := Customer_Payment_Plan_API.Get_Plan_Rows( the_record_.company,
+                                                                       the_record_.identity,
+                                                                       cl_party_type_,
+                                                                       the_record_.ledger_item_series_id,
+                                                                       the_record_.ledger_item_id,
+                                                                       the_record_.ledger_item_version );
+               IF (pay_plan_rows_ > 1) THEN
+                  multiple_pay_plan_ := 'TRUE';
+               ELSE
+                  multiple_pay_plan_ := 'FALSE';
+               END IF;
+               multiple_pay_plan_ := Decode_Boolean___(multiple_pay_plan_, FALSE);
+            END IF;
+            IF (prev_identity_ != the_record_.identity OR prev_identity_ IS NULL) THEN
+               IF (cust_to_store_ = 'TRUE' AND 
+                   (do_rs_ OR do_rs2_) AND 
+                   flag_print_details_ = 0) THEN
+                  newrec_.result_key             := result_key_;
+                  newrec_.row_no                 := row_no_;
+                  newrec_.party_name             := party_name_;    
+                  newrec_.customer_no            := customer_no_;
+                  newrec_.customer_name          := party_name_;
+                  newrec_.balance_until_date     := cust_balance_until_date_;
+                  newrec_.balance_dom_until_date := cust_balance_dom_until_date_;
+                  newrec_.accounting_currency    := acc_curr_;
+                  newrec_.accounting_currency    := acc_curr_;
+                  newrec_.balance_date           := to_date_;
+                  newrec_.cust_open_total        := cust_cust_open_total_;
+                  newrec_.due_dom_amount         := cust_due_dom_amount_;
+                  newrec_.company_id             := company_;
+                  newrec_.company_name           := company_name_;
+                  newrec_.print_details          := flag_print_details_;
+                  IF (cust_balance_until_date_     != 0 OR
+                      cust_balance_dom_until_date_ != 0 OR
+                      cust_cust_open_total_        != 0 OR
+                      cust_due_dom_amount_         != 0) THEN
+                     Insert_Cust___ ( newrec_ );
+                     row_no_ := row_no_ + 1;
+                  END IF;
+                  cust_balance_until_date_       := 0;
+                  cust_balance_dom_until_date_   := 0;
+                  cust_cust_open_total_          := 0;
+                  cust_due_dom_amount_           := 0;
+               END IF;
+               cust_to_store_ := 'TRUE';
+               party_name_    := substrb(Payment_Library_API.Get_Identity_Name( company_, the_record_.identity,Party_Type_API.Decode(the_record_.party_type_db)),1,100);
+               IF (report_id_ != 'CUST_OPEN_STATE_REP') THEN
+                  our_reference_ := Customer_Info_Our_Id_API.Get_Our_Id ( the_record_.identity,
+                                                                          company_);
+               ELSE
+                  our_reference_ := SUBSTRB(our_reference_,1,35);
+               END IF;
+               IF (store_details_ = 'TRUE') THEN
+                  address_id_    := Customer_Info_Address_API.Get_Default_Address(the_record_.identity,
+                                                                                  Address_Type_Code_API.Decode('INVOICE'));
+                  -- Bug 46159, begin, corrections done for bug 38655 and 42717 is also included with this modification
+                  country_db_     := Customer_Info_Address_API.Get_Country_Code( the_record_.identity,
+                                                                                 address_id_);                     
+                  display_layout_ := Address_Presentation_API.Get_Display_Layout(country_db_);
+
+                  IF (display_layout_ IS NOT NULL) THEN
+                     Customer_Info_Address_API.Get_All_Address_Lines (address_line1_,
+                                                                      address_line2_,
+                                                                      address_line3_,
+                                                                      address_line4_,
+                                                                      address_line5_,
+                                                                      address_line6_,
+                                                                      the_record_.identity,
+                                                                      address_id_,
+                                                                      'FALSE',
+                                                                      'FALSE' );
+                     IF (company_country_db_ = country_db_) THEN
+                        cus_country_ := Customer_Info_Address_API.Get_Country( the_record_.identity,
+                                                                               address_id_);
+                        IF (INSTR(address_line1_, cus_country_, 1) != 0) THEN
+                           address_line1_ := NULL;
+                        ELSIF (INSTR(address_line2_, cus_country_, 1) != 0) THEN
+                           address_line2_ := NULL;
+                        ELSIF (INSTR(address_line3_, cus_country_, 1) != 0) THEN
+                           address_line3_ := NULL;
+                        ELSIF (INSTR(address_line4_, cus_country_, 1) != 0) THEN
+                           address_line4_ := NULL;
+                        ELSIF (INSTR(address_line5_, cus_country_, 1) != 0) THEN
+                           address_line5_ := NULL;
+                        ELSIF (INSTR(address_line6_, cus_country_, 1) != 0) THEN
+                           address_line6_ := NULL;
+                        END IF;
+                     END IF;
+
+                  END IF;
+                  -- Bug 46159, end
+               END IF;
+               IF (party_to_use_ = cl_company_) THEN
+                  customer_no_ := company_;
+               ELSE
+               customer_no_ := the_record_.identity;
+               END IF;
+               Ledger_Item_Util_API.Get_Dom_Amount_And_Balance(
+                  dom_due_amount_,
+                  dom_balance_,
+                  company_,
+                  the_record_.identity,
+                  cl_party_type_,
+                  exclude_open_pay_docs_,   
+                  sysdate);
+               cust_balance_dom_until_date_ := dom_due_amount_;
+               prev_identity_ := the_record_.identity;
+               Trace_SYS.Message ('1 dom_balance_ : '||dom_balance_);
+            END IF;
+            
+            -- Bug 46285, begin, IF condition added         
+            IF (the_record_.rowtype = 'InvoiceLedgerItem') THEN
+               Ledger_Item_API.Get_Rest_Amounts_At_Date ( 
+                     rest_amt_today_,
+                     rest_dom_amt_today_,
+                     company_,
+                     the_record_.identity,
+                     party_to_use_,
+                     the_record_.ledger_item_series_id,
+                     the_record_.ledger_item_id,
+                     the_record_.ledger_item_version,
+                     TO_DATE(to_char(sysdate,'YYYY-MM-DD'),'YYYY-MM-DD'),
+                     known_fully_paid_voucher_date_ => the_record_.fully_paid_voucher_date,
+                     fetch_fully_paid_voucher_date_ => FALSE,
+                     known_full_curr_amount_        => the_record_.inst_full_curr_amt,
+                     fetch_full_curr_amount_        => FALSE,
+                     known_full_dom_amount_         => the_record_.inst_full_dom_amt,
+                     fetch_full_dom_amount_         => FALSE,
+                     known_ledger_item_type_        => the_record_.rowtype,
+                     fetch_ledger_item_type_        => FALSE,
+                     known_exist_at_voucher_date_   => NULL,
+                     fetch_exist_at_voucher_date_   => TRUE,
+                     installment_id_                => NVL(the_record_.installment_id,''));
+            ELSE
+               Ledger_Item_API.Get_Rest_Amounts_At_Date (
+                     rest_amt_today_,
+                     rest_dom_amt_today_,
+                     company_,
+                     the_record_.identity,
+                     party_to_use_,
+                     the_record_.ledger_item_series_id,
+                     the_record_.ledger_item_id,
+                     the_record_.ledger_item_version,
+                     TO_DATE(to_char(sysdate,'YYYY-MM-DD'),'YYYY-MM-DD'),
+                     known_fully_paid_voucher_date_ => the_record_.fully_paid_voucher_date,
+                     fetch_fully_paid_voucher_date_ => FALSE,
+                     known_full_curr_amount_        => the_record_.full_curr_amount,
+                     fetch_full_curr_amount_        => FALSE,
+                     known_full_dom_amount_         => the_record_.full_dom_amount,
+                     fetch_full_dom_amount_         => FALSE,
+                     known_ledger_item_type_        => the_record_.rowtype,
+                     fetch_ledger_item_type_        => FALSE,
+                     known_exist_at_voucher_date_   => NULL,
+                     fetch_exist_at_voucher_date_   => TRUE,
+                     installment_id_                => NVL(the_record_.installment_id,''));
+            END IF;
+            -- Bug 46285, end                                             
+
+            dom_balance_             := rest_dom_amt_today_;   -- ???
+            cust_balance_until_date_ := cust_balance_until_date_ + rest_dom_amt_today_;   -- ???
+            IF (TRUNC(due_date_) > TRUNC(to_date_)) OR 
+               (due_date_ IS NULL) THEN  
+               row_due_amount_ := 0;               
+            ELSE
+               row_due_amount_ := rest_dom_amount_;                   
+            END IF;     
+            amount_before_period1_ := 0;
+            amount_of_period1_     := 0;
+            amount_of_period2_     := 0;
+            amount_of_period3_     := 0;
+            amount_after_period3_  := 0;
+            
+            -- Bug 46842, begin, condition added for the_record_.rowtype
+            IF (the_record_.rowtype = 'InvoiceLedgerItem' OR 
+                the_record_.rowtype = 'BillOfExchange'    OR
+                the_record_.rowtype = 'OnAccountLedgerItem' OR
+                the_record_.rowtype = 'CheckLedgerItem') THEN
+               IF (TRUNC(due_date_) >= TRUNC(to_date_)) THEN
+                  amount_before_period1_ := rest_amount_;
+               ELSIF (TRUNC(due_date_) BETWEEN (ageing_period1_date_+1) AND TRUNC(due_date_)) THEN
+                  amount_of_period1_     := rest_amount_;
+               ELSIF (TRUNC(due_date_) BETWEEN (ageing_period2_date_+1) AND ageing_period1_date_) THEN
+                  amount_of_period2_     := rest_amount_;
+               ELSIF (TRUNC(due_date_) BETWEEN (ageing_period3_date_+1) AND ageing_period2_date_) THEN
+                  amount_of_period3_     := rest_amount_;
+               ELSE
+                  amount_after_period3_  := rest_amount_;
+               END IF;
+            END IF;
+            -- Bug 46842, end
+            
+            IF (the_record_.rowtype = 'InvoiceLedgerItem') THEN
+               IF (the_record_.full_curr_amount >= 0) THEN
+                  invoice_type_ := 'INVOICE';
+               ELSE
+                  invoice_type_ := 'CREDIT_INVOICE';
+               END IF;
+            ELSIF (the_record_.rowtype = 'OnAccountLedgerItem') THEN
+               invoice_type_ := 'PAYM_ON_ACCOUNT';
+            ELSIF (the_record_.rowtype = 'BillOfExchange') THEN
+               invoice_type_ := 'BILL_OF_EXCHANGE';
+            END IF;
+            --
+            IF (store_details_ = 'TRUE') THEN
+               payment_id_ := Find_payment_id___(the_record_.ledger_item_series_id, 
+                                                 the_record_.ledger_item_id,
+                                                 company_,
+                                                 rest_amount_);
+               Get_Voucher_No___(company_, 
+                                 the_record_.identity, 
+                                 Party_Type_API.Encode(cl_party_type_),
+                                 the_record_.ledger_item_series_id, 
+                                 the_record_.ledger_item_id, 
+                                 payment_id_, 
+                                 invoice_or_pp_date_, 
+                                 voucher_no_, 
+                                 pay_curr_);
+            END IF;
+            prev_identity_        := identity_ ;
+            prev_company_         := company_ ;
+            cleared_curr_amount_  := the_record_.cleared_curr_amount;
+            cleared_dom_amount_   := the_record_.cleared_dom_amount;
+            -- 
+            party_type_           := the_record_.party_type_db;
+            ledger_item_series_id_:= the_record_.ledger_item_series_id;
+            ledger_item_id_       := the_record_.ledger_item_id;
+            no_line_              := TRUE;
+            invoice_id_           := the_record_.invoice_id;
+            installment_id_       := the_record_.installment_id;
+            first_plan_item_ := TRUE;
+            IF (installment_id_ IS NOT NULL) THEN
+               OPEN  get_payment_plan;
+               FETCH get_payment_plan INTO due_date_,current_due_date_;
+               CLOSE get_payment_plan;
+            END IF;
+               -- only write balance once per invoice (for the rest, write 0) 
+            IF first_plan_item_ THEN
+               first_plan_item_ := FALSE;
+            ELSE
+               dom_balance_ := 0;
+            END IF;
+            Trace_SYS.Message ('3 dom_balance_ : '||dom_balance_);
+            Payment_Library_API.Recalculate_To_Dom_Round (dom_amount_due_ ,   
+                                                          company_    ,
+                                                          amount_due_,
+                                                          the_record_.curr_rate  ,      
+                                                          the_record_.div_factor,
+                                                          NULL,
+                                                          acc_inverted_,
+                                                          acc_curr_,
+                                                          acc_rounding_);
+
+            keep_value_         := 1;
+            no_line_            := FALSE;
+            rst_dom_amount_out_ := rest_dom_amount_;
+            IF  (installment_id_ IS NULL) THEN 
+               keep_value_       := 0;
+               show_value_       := 1;
+            ELSE
+               show_value_       := 0;
+            END IF;
+
+            IF (curr_ IS NULL) THEN
+               show_dom_currency_ := 0;
+            ELSE
+               show_dom_currency_ := 1;
+            END IF;
+            Currency_Amount_API.Calc_Amount (amount_due_dom_,
+                                             company_    ,
+                                             the_record_.currency,
+                                             the_record_.curr_rate  ,
+                                             amount_due_,
+                                             the_record_.div_factor,
+                                             acc_curr_ );
+            old_amount_due_ := amount_due_;
+            amount_due_ := amount_due_ - cleared_curr_amount_;
+            IF (amount_due_ < 0 ) THEN
+               amount_due_ := 0;
+            END IF;   
+            cleared_curr_amount_ := cleared_curr_amount_ - old_amount_due_;
+            IF (cleared_curr_amount_ <0) THEN
+                 cleared_curr_amount_ := 0;
+            END IF;
+            old_dom_amount_due_ := dom_amount_due_;
+            dom_amount_due_ := dom_amount_due_ - cleared_dom_amount_;
+            IF (dom_amount_due_ < 0 ) THEN
+               dom_amount_due_ := 0;
+            END IF;   
+            cleared_dom_amount_ := cleared_dom_amount_ - old_dom_amount_due_;
+            IF (cleared_dom_amount_ <0) THEN
+               cleared_dom_amount_ := 0;
+            END IF;
+            IF (acc_curr_ = the_record_.currency) THEN
+               dom_amount_due_ := NULL;
+            END IF;
+            -- The state is already checked in and after call to Bad_Debt_Controls - Start
+            new_state_ := NVL( current_status_ , 'NORMAL' );
+            -- The state is already checked in and after call to Bad_Debt_Controls - End
+            IF  (dom_due_amount_  IS NULL) THEN
+               dom_due_amount_   := 0; 
+            END IF;
+            cust_cust_open_total_ := cust_cust_open_total_ + rst_dom_amount_out_;
+            cust_due_dom_amount_  := cust_due_dom_amount_ + row_due_amount_;
+
+            IF (view_ = '1') THEN
+               IF (do_xml_) THEN
+                  IF previous_customer_no_ <> customer_no_ OR previous_customer_no_ IS NULL  THEN
+                     IF previous_customer_no_ IS NOT NULL THEN
+                        Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_INVOICE_DETAILS');
+                        Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_INVOICE');
+                        Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_INVOICES');
+                        Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_CUSTOMER');
+                        previous_invoice_no_ := NULL;
+                     END IF;
+                     Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_ITEM_CUSTOMER');
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'CUSTOMER_NO',customer_no_);
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'CUSTOMER_NAME',party_name_);
+                     Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_ITEM_INVOICES');
+                  END IF;
+                  
+                  current_invoice_no_:= the_record_.ledger_item_series_id || ' ' || the_record_.ledger_item_id;
+                  
+                  IF previous_invoice_no_<> current_invoice_no_ OR previous_invoice_no_ IS NULL THEN
+                     IF previous_invoice_no_ IS NOT NULL THEN
+                        Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_INVOICE_DETAILS');
+                        Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_INVOICE');
+                     END IF;
+                     Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_ITEM_INVOICE');
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'INVOICE_NO_PP_ID',the_record_.ledger_item_series_id || ' ' || the_record_.ledger_item_id);
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'INVOICE_OR_PP_DATE',invoice_or_pp_date_);
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'PAY_TERM_BASE_DATE',pay_term_base_date_);
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'LEDGER_STATUS',new_state_);
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'INVOICE_AMOUNT',the_record_.full_curr_amount);
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'CURRENCY_ROWTYPE',the_record_.currency);
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'INVOICE_DOM_AMOUNT',invoicedamt_);
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'DOM_CURRENCY',curr_);
+                     Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_ITEM_INVOICE_DETAILS');
+                  END IF;
+                  Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_ITEM_INVOICE_DETAIL');
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'CANALYST',canalyst_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'CAMANAGER',camanager_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'CURRENT_DUE_DATE',current_due_date_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'AMOUNT_DUE',the_record_.amount_due);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'DOM_AMOUNT_DUE',dom_amount_due_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'KEEP_VALUE',keep_value_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'INSTALLMENT_ID',the_record_.installment_id);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'SHOW_VALUE',show_value_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'SHOW_DOM_CURRENCY',show_dom_currency_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'PARTY_NAME',party_name_);
+                  IF dom_balance_ IS NULL THEN
+                     dom_balance_ := 0;
+                  END IF;
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'BALNCE_UNTIL_DATE',dom_balance_);
+                  IF dom_due_amount_ IS NULL THEN
+                     dom_due_amount_ := 0;
+                  END IF;
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'BALNCE_DOM_UNTIL_DATE', dom_due_amount_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'DUE_DATE',due_date_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'PAYMENT_PLAN',multiple_pay_plan_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'OPEN_AMOUNT',rest_amount_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'OPEN_DOM_AMOUNT',opendamt_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'DUE_DOM_AMOUNT',row_due_amount_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'GRAND_TOTAL',0);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'INV_LABEL','');
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'DATE_TITLE','');
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'CUST_INV_TOTAL',the_record_.full_dom_amount);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'CUST_OPEN_TOTAL',rst_dom_amount_out_);
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'ORDER_COLUMN',rpad(customer_no_,25) || TO_CHAR(current_due_date_,'YYYYMMDD'));
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'ORDER_COLUMN_ID',rpad(customer_no_,25) || rpad(the_record_.ledger_item_series_id || ' ' || the_record_.ledger_item_id,25));
+                  Xml_Record_Writer_SYS.Add_Element(xml_,'FLAG_PRINT_DETAILS',flag_print_details_);
+                  Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_INVOICE_DETAIL');
+               END IF;
+            ELSE
+               IF (do_xml2_) THEN
+                  IF previous_customer_no_ <> customer_no_ OR previous_customer_no_ IS NULL  THEN
+                     IF previous_customer_no_ IS NOT NULL THEN
+                        Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_INVOICES');
+                        Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_CURRENCY');
+                        Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_CURRENCIES');
+                        Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_CUSTOMER');
+                        previous_customer_currency_ := NULL;
+                     END IF;
+                     Xml_Record_Writer_SYS.Start_Element(xml2_, 'CUST_OPEN_STATE_CUSTOMER');
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'ADDRESS_LINE6',address_line6_);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'CUSTOMER_NO',customer_no_);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'CUSTOMER_NAME',party_name_);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'OUR_REFERENCE',our_reference_);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'ADDRESS_LINE1',address_line1_);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'ADDRESS_LINE2',address_line2_);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'ADDRESS_LINE3',address_line3_);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'ADDRESS_LINE4',address_line4_);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'ADDRESS_LINE5',address_line5_);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'AGEING_PERIOD1_DAYS',NVL(ageing_period1_days_,0));
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'AGEING_PERIOD2_DAYS',NVL(ageing_period2_days_,0));
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'AGEING_PERIOD3_DAYS',NVL(ageing_period3_days_,0));
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'AGEING_PERIOD1_DAYS_ONE',NVL(ageing_period1_days_,0)+1);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'AGEING_PERIOD1_PERIOD2_DAYS',NVL(ageing_period1_days_,0)+NVL(ageing_period2_days_,0));
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'AGEING_PERIOD1_PERIOD2_DAYS_ONE',NVL(ageing_period1_days_,0)+NVL(ageing_period2_days_,0)+1);
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'TOTAL_AGEING_PERIOD',NVL(ageing_period1_days_,0)+NVL(ageing_period2_days_,0)+NVL(ageing_period3_days_,0));
+                     Xml_Record_Writer_SYS.Start_Element(xml2_, 'CUST_OPEN_STATE_CURRENCIES');
+                  END IF;
+                  
+                  current_customer_currency_ := rpad(customer_no_,25) || the_record_.currency;
+                     
+                  IF previous_customer_currency_<> current_customer_currency_ OR previous_customer_currency_ IS NULL THEN
+                     IF previous_customer_currency_ IS NOT NULL THEN
+                        Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_INVOICES');
+                        Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_CURRENCY');
+                     END IF;
+                     Xml_Record_Writer_SYS.Start_Element(xml2_, 'CUST_OPEN_STATE_CURRENCY');
+                     Xml_Record_Writer_SYS.Add_Element(xml2_,'CUSTOMER_CURRENCY',current_customer_currency_);
+                     Xml_Record_Writer_SYS.Add_Element(xml_,'CURRENCY_ROWTYPE',the_record_.currency);
+                     Xml_Record_Writer_SYS.Start_Element(xml2_, 'CUST_OPEN_STATE_INVOICES');
+                  END IF;
+                 
+                  Xml_Record_Writer_SYS.Start_Element(xml2_, 'CUST_OPEN_STATE_INVOICE');
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'INVOICE_NO_PP_ID',the_record_.ledger_item_series_id || ' ' || the_record_.ledger_item_id);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'INSTALLMENT_ID',the_record_.installment_id);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'INVOICE_OR_PP_DATE',invoice_or_pp_date_);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'PAY_TERM_BASE_DATE',pay_term_base_date_);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'DUE_DATE',current_due_date_);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'PAYMENT_PLAN',multiple_pay_plan_);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'INVOICE_AMOUNT',the_record_.full_curr_amount);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'OPEN_AMOUNT',rest_amount_);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'ORDER_COLUMN',rpad(customer_no_,12) || rpad(the_record_.currency,3) || rpad(TO_CHAR(invoice_or_pp_date_,'YYYY-MM-DD'),12) || 
+                                                                         rpad(voucher_no_,12) || rpad(the_record_.ledger_item_series_id || ' ' || the_record_.ledger_item_id,25) || rpad(TO_CHAR(current_due_date_,'YYYY-MM-DD'),12) ||rpad(the_record_.installment_id,3) );
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'INVOICE_TYPE',substrb(From_Ledger_Item_API.Decode(invoice_type_),1,20));
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'AMOUNT_BEFORE_PERIOD1',amount_before_period1_);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'AMOUNT_OF_PERIOD1',amount_of_period1_);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'AMOUNT_OF_PERIOD2',amount_of_period2_);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'AMOUNT_OF_PERIOD3',amount_of_period3_);
+                  Xml_Record_Writer_SYS.Add_Element(xml2_,'AMOUNT_AFTER_PERIOD3',amount_after_period3_);
+
+                  Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_INVOICE');
+               END IF;
+            END IF;
+            previous_invoice_no_  := the_record_.ledger_item_series_id || ' ' || the_record_.ledger_item_id ;
+            previous_customer_no_ := customer_no_ ;
+            previous_customer_currency_:= rpad(customer_no_,25) || the_record_.currency;
+
+            IF ((do_rs_ OR do_rs2_) AND flag_print_details_ = 1)  THEN
+               newrec_.result_key             := result_key_;
+               newrec_.row_no                 := row_no_;
+               newrec_.party_name             := party_name_;    
+               newrec_.customer_no            := customer_no_;
+               newrec_.customer_name          := party_name_;
+               newrec_.ledger_item_series_id  := the_record_.ledger_item_series_id || ' ' || the_record_.ledger_item_id;
+               newrec_.ledger_item_version    := the_record_.ledger_item_version;
+               newrec_.installment_id         := the_record_.installment_id;
+               newrec_.balance_until_date     := dom_balance_;
+               newrec_.balance_dom_until_date := dom_due_amount_;
+               Trace_SYS.Message ('4 dom_balance_ : '||dom_balance_);
+               newrec_.invoice_or_pp_date     := invoice_or_pp_date_;
+               newrec_.due_date               := due_date_;
+               newrec_.paym_plan              := multiple_pay_plan_;
+               newrec_.pay_term_base_date     := pay_term_base_date_;
+               newrec_.ledger_status          := new_state_;
+               newrec_.full_amount            := the_record_.full_curr_amount;
+               newrec_.rest_amount            := rest_amount_;
+               newrec_.dom_currency           := curr_;
+               newrec_.currency_rowtype       := the_record_.currency;
+               newrec_.full_dom_amount        := invoicedamt_;
+               newrec_.rest_dom_amount        := opendamt_;
+               newrec_.due_dom_amount         := row_due_amount_;
+               newrec_.company_id             := company_;
+               newrec_.balance_date           := to_date_;
+               newrec_.cust_inv_total         := the_record_.full_dom_amount;
+               newrec_.cust_open_total        := rst_dom_amount_out_;
+               newrec_.codestring             := codestring_;
+               newrec_.accounting_currency    := acc_curr_;
+               newrec_.company_name           := company_name_;
+               newrec_.print_details          := flag_print_details_;
+               newrec_.canalyst               := canalyst_;
+               newrec_.camanager              := camanager_;
+               newrec_.our_reference          := our_reference_;
+               newrec_.address_line1          := address_line1_;
+               newrec_.address_line2          := address_line2_;
+               newrec_.address_line3          := address_line3_;
+               newrec_.address_line4          := address_line4_;
+               newrec_.address_line5          := address_line5_;
+               newrec_.amount_before_period1  := amount_before_period1_;
+               newrec_.amount_of_period1      := amount_of_period1_;
+               newrec_.amount_of_period2      := amount_of_period2_;
+               newrec_.amount_of_period3      := amount_of_period3_;
+               newrec_.amount_after_period3   := amount_after_period3_;
+               newrec_.invoice_type           := invoice_type_;
+               newrec_.voucher_no             := voucher_no_;
+               newrec_.current_due_date       := current_due_date_;
+               newrec_.amount_due             := the_record_.amount_due;
+               newrec_.dom_amount_due         := dom_amount_due_;
+               newrec_.keep_value             := keep_value_;
+               newrec_.show_value             := show_value_;
+               newrec_.show_dom_currency      := show_dom_currency_;
+               newrec_.address_line6          := address_line6_;
+               Trace_SYS.Message ('newrec_.rest_amount : '||newrec_.rest_amount||' newrec_.rest_dom_amount : '||newrec_.rest_dom_amount);
+               --
+               Insert___ ( newrec_);
+               --
+               row_no_ := row_no_ + 1;
+            END IF;
+         END IF;
+         -- Bug #44556 End
+      END IF;
+   END LOOP; 
+   --
+   -- If no details are going to be printed we have to check if there are something to store
+   IF (cust_to_store_ = 'TRUE' AND 
+       (do_rs_ OR do_rs2_) AND 
+       flag_print_details_ = 0) THEN
+      newrec_.result_key             := result_key_;
+      newrec_.row_no                 := row_no_;
+      newrec_.party_name             := party_name_;    
+      newrec_.customer_no            := customer_no_;
+      newrec_.customer_name          := party_name_;
+      newrec_.balance_until_date     := cust_balance_until_date_;
+      newrec_.balance_dom_until_date := cust_balance_dom_until_date_;
+      newrec_.accounting_currency    := acc_curr_;
+      newrec_.accounting_currency    := acc_curr_;
+      newrec_.balance_date           := to_date_;
+      newrec_.cust_open_total        := cust_cust_open_total_;
+      newrec_.due_dom_amount         := cust_due_dom_amount_;
+                  newrec_.company_id             := company_;
+      newrec_.company_name           := company_name_;
+      newrec_.print_details          := flag_print_details_;
+      IF (cust_balance_until_date_     != 0 OR
+          cust_balance_dom_until_date_ != 0 OR
+          cust_cust_open_total_        != 0 OR
+          cust_due_dom_amount_         != 0) THEN
+         Insert_Cust___ ( newrec_ );
+         row_no_ := row_no_ + 1;
+      END IF;
+      cust_balance_until_date_       := 0;
+      cust_balance_dom_until_date_   := 0;
+      cust_cust_open_total_          := 0;
+      cust_due_dom_amount_           := 0;
+   END IF;
+   --
+   logotype_ := Company_API.Get_Logotype(company_);
+   company_name_ := Company_API.Get_Name(company_);
+
+   IF (logotype_ IS NOT NULL ) THEN
+      Archive_Variable_API.Set_Object(result_key_, 
+                                      'rhSysLogo', 
+                                      logotype_);
+      Archive_Variable_API.Set_Variable(result_key_, 
+                                      'companyName', 
+                                      company_name_);
+   END IF; 
+
+   -- Xml End Elements
+   IF (view_ = '1') THEN
+      IF (do_xml_) THEN
+         IF row_no_>1 THEN
+            Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_INVOICE_DETAILS');
+            Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_INVOICE');
+            Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_INVOICES');
+            Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_CUSTOMER');
+         END IF;
+         Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_ITEM_CUSTOMERS');
+         Xml_Record_Writer_SYS.End_Element(xml_,'&VIEW');
+         Report_SYS.Finish_Xml_Report('&VIEW',result_key_,xml_);
+      END IF;
+   ELSE
+      IF (do_xml2_) THEN
+         IF row_no_>1 THEN
+            Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_INVOICES');
+            Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_CURRENCY');
+            Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_CURRENCIES');
+            Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_CUSTOMER');
+         END IF;
+         Xml_Record_Writer_SYS.End_Element(xml2_, 'CUST_OPEN_STATE_CUSTOMERS');
+         Xml_Record_Writer_SYS.End_Element(xml2_,'CUST_OPEN_STATE_REP');
+         Report_SYS.Finish_Xml_Report('CUST_OPEN_STATE_REP',result_key_,xml2_);
+      END IF;
+   END IF;
+
+
+END &METHOD;
+
+PROCEDURE &METHOD2 (
+   date_    OUT VARCHAR2 )
+IS
+   company_    VARCHAR2(20);
+   from_date_  DATE;
+   to_date_    DATE;
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', '&METHOD2');
+
+   User_Finance_API.Get_Default_Company(company_);
+   Accounting_Period_Api.Get_Period_Date(from_date_, to_date_, company_,
+      Accounting_Period_Api.Get_Accounting_Year(company_, SYSDATE),
+      Accounting_Period_Api.Get_Accounting_Period(company_, SYSDATE));
+   date_ := to_char(to_date_, Report_SYS.date_format_);
+END &METHOD2;
+
+PROCEDURE &METHOD3 (
+   year_    OUT VARCHAR2 )
+IS
+   company_    VARCHAR2(20);
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', '&METHOD3');
+   User_Finance_API.Get_Default_Company(company_);
+   year_ := to_char(Accounting_Period_Api.Get_Accounting_Year(company_, SYSDATE));
+END &METHOD3;
+
+PROCEDURE &METHOD4 (
+   period_    OUT VARCHAR2 )
+IS
+   company_    VARCHAR2(20);
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', '&METHOD4');
+   User_Finance_API.Get_Default_Company(company_);
+   period_ := to_char(Accounting_Period_Api.Get_Accounting_Period(company_, SYSDATE));
+END &METHOD4;
+
+-- Bug 44500, begin
+PROCEDURE &METHOD5 (
+   ledg_status_    OUT VARCHAR2 )
+IS
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', '&METHOD5');
+   ledg_status_ := Ledger_Status_Type_API.Get_Client_Value(0);
+END &METHOD5;
+-- Bug 44500, end
+
+PROCEDURE Get_Defaults_For_Report(
+   def_company_     IN OUT VARCHAR2,
+   def_date_        IN OUT DATE,
+   def_year_        IN OUT VARCHAR2,
+   def_period_      IN OUT VARCHAR2,
+   cust_party_type_ IN OUT VARCHAR2,
+   show_det_yes_    IN OUT VARCHAR2,
+   show_det_no_     IN OUT VARCHAR2 )
+IS
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', 'Get_Defaults_For_Report');
+
+   def_date_        := trunc( sysdate );
+   def_year_        := to_char(Accounting_Period_Api.Get_Accounting_Year(def_company_, def_date_));
+   def_period_      := to_char(Accounting_Period_Api.Get_Accounting_Period(def_company_, def_date_));
+   cust_party_type_ := Party_Type_API.Decode( 'CUSTOMER' );
+   show_det_yes_    := Show_Details_API.Decode( 'TRUE' );
+   show_det_no_     := Show_Details_API.Decode( 'FALSE' );
+END Get_Defaults_For_Report;
+
+PROCEDURE Get_Blocked_Codeparts (
+   code_a_          OUT VARCHAR2,
+   code_b_          OUT VARCHAR2,
+   code_c_          OUT VARCHAR2,
+   code_d_          OUT VARCHAR2,
+   code_e_          OUT VARCHAR2,
+   code_f_          OUT VARCHAR2,
+   code_g_          OUT VARCHAR2,
+   code_h_          OUT VARCHAR2,
+   code_i_          OUT VARCHAR2,
+   code_j_          OUT VARCHAR2,
+   company_         IN  VARCHAR2 )
+IS
+BEGIN
+   code_a_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'A' );
+   code_b_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'B' );
+   code_c_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'C' );
+   code_d_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'D' );
+   code_e_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'E' );
+   code_f_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'F' );
+   code_g_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'G' );
+   code_h_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'H' );
+   code_i_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'I' );
+   code_j_ := Accounting_Code_Parts_API.Is_Code_Used( company_, 'J' );
+END Get_Blocked_Codeparts;
+
+PROCEDURE Get_Company_Specific (
+   code_a_used_           OUT VARCHAR2,
+   code_b_used_           OUT VARCHAR2,
+   code_c_used_           OUT VARCHAR2,
+   code_d_used_           OUT VARCHAR2,
+   code_e_used_           OUT VARCHAR2,
+   code_f_used_           OUT VARCHAR2,
+   code_g_used_           OUT VARCHAR2,
+   code_h_used_           OUT VARCHAR2,
+   code_i_used_           OUT VARCHAR2,
+   code_j_used_           OUT VARCHAR2,
+   code_a_name_           OUT VARCHAR2,
+   code_b_name_           OUT VARCHAR2,
+   code_c_name_           OUT VARCHAR2,
+   code_d_name_           OUT VARCHAR2,
+   code_e_name_           OUT VARCHAR2,
+   code_f_name_           OUT VARCHAR2,
+   code_g_name_           OUT VARCHAR2,
+   code_h_name_           OUT VARCHAR2,
+   code_i_name_           OUT VARCHAR2,
+   code_j_name_           OUT VARCHAR2,
+   company_               IN  VARCHAR2 )
+IS
+BEGIN
+   code_a_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'A' );
+   code_b_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'B' );
+   code_c_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'C' );
+   code_d_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'D' );
+   code_e_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'E' );
+   code_f_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'F' );
+   code_g_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'G' );
+   code_h_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'H' );
+   code_i_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'I' );
+   code_j_used_ := Accounting_Code_Parts_API.Is_Code_Used(company_, 'J' );
+   code_a_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'A' );
+   code_b_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'B' );
+   code_c_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'C' );
+   code_d_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'D' );
+   code_e_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'E' );
+   code_f_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'F' );
+   code_g_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'G' );
+   code_h_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'H' );
+   code_i_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'I' );
+   code_j_name_ := Accounting_Code_Parts_API.Get_Name(company_, 'J' );
+END Get_Company_Specific;
+
+PROCEDURE Enumerate_Yes_Or_No ( yes_or_no OUT VARCHAR2 ) IS
+BEGIN
+   yes_or_no := Show_Details_API.Decode( 'TRUE' ) || Client_SYS.Field_Separator_ || Show_Details_API.Decode( 'FALSE' );
+END Enumerate_Yes_Or_No;
+
+PROCEDURE Get_Default_Yes_Choice (
+   yes_ OUT VARCHAR2 )
+IS
+BEGIN
+   yes_ := Show_Details_API.Decode( 'TRUE' );
+END Get_Default_Yes_Choice;
+
+PROCEDURE Get_Default_No_Choice (
+   no_ OUT VARCHAR2 )
+IS
+BEGIN
+   no_ := Show_Details_API.Decode( 'FALSE' );
+END Get_Default_No_Choice;
+
+PROCEDURE Store_Codepart_Names (
+   xml_                   IN OUT CLOB,
+   xml2_                  IN OUT CLOB,
+   result_key_            IN NUMBER,
+   company_               IN VARCHAR2,
+   ageing_period1_date_   IN DATE,
+   ageing_period2_date_   IN DATE,
+   ageing_period3_date_   IN DATE,
+   ageing_period1_days_   IN NUMBER,
+   ageing_period2_days_   IN NUMBER,
+   ageing_period3_days_   IN NUMBER,
+   view_                  IN VARCHAR2)
+  
+IS
+   code_a_name_    &TABLE2..code_a_name%TYPE;
+   code_b_name_    &TABLE2..code_b_name%TYPE;
+   code_c_name_    &TABLE2..code_c_name%TYPE;
+   code_d_name_    &TABLE2..code_d_name%TYPE;
+   code_e_name_    &TABLE2..code_e_name%TYPE;
+   code_f_name_    &TABLE2..code_f_name%TYPE;
+   code_g_name_    &TABLE2..code_g_name%TYPE;
+   code_h_name_    &TABLE2..code_h_name%TYPE;
+   code_i_name_    &TABLE2..code_i_name%TYPE;
+   code_j_name_    &TABLE2..code_j_name%TYPE;
+   pagefoot_one_   &TABLE2..pagefoot_one%TYPE;
+   pagefoot_two_   &TABLE2..pagefoot_two%TYPE;
+   
+   -- Bug 37938 Begin 
+   pagefoot_three_ &TABLE2..pagefoot_three%TYPE;
+   pagefoot_four_  &TABLE2..pagefoot_four%TYPE;
+   vat_no_         VARCHAR2(50);
+   pagefoot1_      VARCHAR2(2000);
+   pagefoot2_      VARCHAR2(2000);
+   pagefoot3_      VARCHAR2(2000);
+   pagefoot4_      VARCHAR2(2000);
+   -- Bug 37938 End 
+
+   --Bug 42887 Begin
+   check_codestring_ VARCHAR2(60);
+   --Bug 42887 Begin
+   
+   pf_rec1_        pagefoot_type;
+   pf_rec2_        pagefoot_type;
+   pf_rec3_        pagefoot_type;
+   pf_rec4_        pagefoot_type;
+   
+      
+
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', 'Store_Codepart_Names');
+
+   code_a_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'A' ),1,10);
+   code_b_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'B' ),1,10);
+   code_c_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'C' ),1,10);
+   code_d_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'D' ),1,10);
+   code_e_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'E' ),1,10);
+   code_f_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'F' ),1,10);
+   code_g_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'G' ),1,10);
+   code_h_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'H' ),1,10);
+   code_i_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'I' ),1,10);
+   code_j_name_  :=  substr(Accounting_Code_Parts_API.Get_Name(company_, 'J' ),1,10);
+   
+   -- Bug 37938 Begin 
+   vat_no_           := Company_Invoice_Info_API.Get_Vat_No(company_); 
+
+   pagefoot1_        := Company_Invoice_Info_API.Get_Footing_Line(company_, 1);
+   pagefoot2_        := Company_Invoice_Info_API.Get_Footing_Line(company_, 2);
+   pagefoot3_        := Company_Invoice_Info_API.Get_Footing_Line(company_, 3);
+   pagefoot4_        := Company_Invoice_Info_API.Get_Footing_Line(company_, 4);
+   
+   pagefoot_one_   :=  Get_Pagefoot_Value___(pagefoot1_, vat_no_);
+   pagefoot_two_   :=  Get_Pagefoot_Value___(pagefoot2_, vat_no_);
+   pagefoot_three_ :=  Get_Pagefoot_Value___(pagefoot3_, vat_no_);
+   pagefoot_four_  :=  Get_Pagefoot_Value___(pagefoot4_, vat_no_);    
+   -- Bug 37938 End
+
+   --Bug 42887 Begin
+   Get_Titlepage_Codeparts(check_codestring_, company_ ); 
+   --Bug 42887 End
+   
+   IF (view_ = '1') THEN
+      IF (do_xml_) THEN
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_A_NAME',code_a_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_B_NAME',code_b_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_C_NAME',code_c_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_D_NAME',code_d_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_E_NAME',code_e_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_F_NAME',code_f_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_G_NAME',code_g_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_H_NAME',code_h_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_I_NAME',code_i_name_);
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_J_NAME',code_j_name_);
+         --Bug 42887 Begin
+         Xml_Record_Writer_SYS.Add_Element(xml_,'CODE_STRING',check_codestring_);
+         --Bug 42887 Begin
+         Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_ITEM_CUSTOMERS');
+      END IF;
+   ELSE
+      IF (do_xml2_) THEN
+         -- split footer into rec
+         Split_Pagefoot___(pf_rec1_, pagefoot_one_);
+         Split_Pagefoot___(pf_rec2_, pagefoot_two_);
+         Split_Pagefoot___(pf_rec3_, pagefoot_three_);
+         Split_Pagefoot___(pf_rec4_, pagefoot_four_);
+         
+         Xml_Record_Writer_SYS.Add_Element(xml2_,'PAGEFOOT_ONE',pagefoot_one_);
+         Xml_Record_Writer_SYS.Add_Element(xml2_,'PAGEFOOT_TWO',pagefoot_two_);
+         Xml_Record_Writer_SYS.Add_Element(xml2_,'PAGEFOOT_THREE',pagefoot_three_);
+         Xml_Record_Writer_SYS.Add_Element(xml2_,'PAGEFOOT_FOUR',pagefoot_four_);
+         
+         --Page Footer One
+         Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_STATE_FOOTER_ONE');
+         Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_STATE_FOOTER');
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'VISIT_ADDRESS',   pf_rec1_.val1);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'INVOICE_ADDRESS', pf_rec1_.val2);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'PHONE',           pf_rec1_.val3);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'FAX',             pf_rec1_.val4);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'BANK_GIRO',       pf_rec1_.val5);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'POSTAL_GIRO',     pf_rec1_.val6);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'TAX_NUMBER',      pf_rec1_.val7);
+         Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_STATE_FOOTER');
+         Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_STATE_FOOTER_ONE');
+         --Page Footer Two
+         Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_STATE_FOOTER_TWO');
+         Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_STATE_FOOTER');
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'VISIT_ADDRESS',   pf_rec2_.val1);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'INVOICE_ADDRESS', pf_rec2_.val2);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'PHONE',           pf_rec2_.val3);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'FAX',             pf_rec2_.val4);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'BANK_GIRO',       pf_rec2_.val5);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'POSTAL_GIRO',     pf_rec2_.val6);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'TAX_NUMBER',      pf_rec2_.val7);
+         Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_STATE_FOOTER');
+         Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_STATE_FOOTER_TWO');
+         --Page Footer Three
+         Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_STATE_FOOTER_THREE');
+         Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_STATE_FOOTER');
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'VISIT_ADDRESS',   pf_rec3_.val1);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'INVOICE_ADDRESS', pf_rec3_.val2);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'PHONE',           pf_rec2_.val3);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'FAX',             pf_rec3_.val4);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'BANK_GIRO',       pf_rec3_.val5);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'POSTAL_GIRO',     pf_rec3_.val6);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'TAX_NUMBER',      pf_rec3_.val7);
+         Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_STATE_FOOTER');
+         Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_STATE_FOOTER_THREE');
+         --Page Footer Four
+         Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_STATE_FOOTER_FOUR');
+         Xml_Record_Writer_SYS.Start_Element(xml_, 'CUST_OPEN_STATE_FOOTER');
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'VISIT_ADDRESS',   pf_rec4_.val1);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'INVOICE_ADDRESS', pf_rec4_.val2);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'PHONE',           pf_rec4_.val3);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'FAX',             pf_rec4_.val4);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'BANK_GIRO',       pf_rec4_.val5);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'POSTAL_GIRO',     pf_rec4_.val6);
+         Xml_Record_Writer_SYS.Add_Element(xml_, 'TAX_NUMBER',      pf_rec4_.val7);
+         Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_STATE_FOOTER');
+         Xml_Record_Writer_SYS.End_Element(xml_, 'CUST_OPEN_STATE_FOOTER_FOUR');
+
+         Xml_Record_Writer_SYS.Start_Element(xml2_, 'CUST_OPEN_STATE_CUSTOMERS');
+      END IF;
+   END IF;
+   -- Bug 37938 Added pagefoot_three_ and pagefoot_four_
+   IF (do_rs_) OR (do_rs2_) THEN
+      INSERT INTO &TABLE2 (
+         result_key,
+         code_a_name,
+         code_b_name,
+         code_c_name,
+         code_d_name,
+         code_e_name,
+         code_f_name,
+         code_g_name,
+         code_h_name,
+         code_i_name,
+         code_j_name,
+         pagefoot_one,
+         pagefoot_two,
+         pagefoot_three,
+         pagefoot_four,
+         ageing_period1_date,
+         ageing_period2_date,
+         ageing_period3_date,
+         ageing_period1_days,
+         ageing_period2_days,
+         ageing_period3_days )
+      VALUES (
+         result_key_,
+         code_a_name_,
+         code_b_name_,
+         code_c_name_,
+         code_d_name_,
+         code_e_name_,
+         code_f_name_,
+         code_g_name_,
+         code_h_name_,
+         code_i_name_,
+         code_j_name_,
+         pagefoot_one_,
+         pagefoot_two_,
+         pagefoot_three_,
+         pagefoot_four_,
+         ageing_period1_date_,
+         ageing_period2_date_,
+         ageing_period3_date_,
+         ageing_period1_days_,
+         ageing_period2_days_,
+         ageing_period3_days_
+         );
+      -- Bug 37938 End
+   END IF;
+END Store_Codepart_Names;
+
+-- Bug 39993, begin
+PROCEDURE Get_Titlepage_Codeparts(
+   show_codestring_       IN OUT VARCHAR2,
+   company_               IN VARCHAR2 )
+IS 
+   code_a_used_           VARCHAR2(5);
+   code_b_used_           VARCHAR2(5);
+   code_c_used_           VARCHAR2(5);
+   code_d_used_           VARCHAR2(5);
+   code_e_used_           VARCHAR2(5);
+   code_f_used_           VARCHAR2(5);
+   code_g_used_           VARCHAR2(5);
+   code_h_used_           VARCHAR2(5);
+   code_i_used_           VARCHAR2(5);
+   code_j_used_           VARCHAR2(5); 
+
+BEGIN
+   General_SYS.Init_Method(lu_name_, '&PKG', 'Get_Titlepage_Codeparts');
+
+   Get_Blocked_Codeparts(code_a_used_, code_b_used_, code_c_used_, code_d_used_,
+                         code_e_used_, code_f_used_, code_g_used_, code_h_used_,
+                         code_i_used_, code_j_used_, company_);
+
+   show_codestring_ := code_a_used_ || ',' || code_b_used_ || ',' || code_c_used_ || ',' || 
+                       code_d_used_ || ',' || code_e_used_ || ',' || code_f_used_ || ',' || 
+                       code_g_used_ || ',' || code_h_used_ || ',' || code_i_used_ || ',' || 
+                       code_j_used_;
+
+END Get_Titlepage_Codeparts;
+-- Bug 39993, end 
+
+-- Bug #44556 Start
+-- Removed:
+--PROCEDURE Accrul_Genled_Get_Info(
+--PROCEDURE Accrul_Baddebit_Vouinfo (
+--PROCEDURE Genled_Baddebit_Vouinfo (
+--PROCEDURE Get_Paidvounumber_Accrul (
+--PROCEDURE Get_Paidvounumber_Genled (
+--PROCEDURE Get_Correct_Values (
+-- Bug #44556 Start
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+PROCEDURE Init
+IS
+BEGIN
+   NULL;
+END Init;
+ 
+     
+END &PKG;
+/
+SHOW ERROR
+
+
+----------------------------------------------------------
+-- <UNDEFINE_SECTION>
+----------------------------------------------------------
+-- This section is reserved for undefine statements
+-- nothing should be manually written below because
+-- that would be overwritten everytime the IFS / Undefine
+-- tool is run.
+-- Also do NOT make any changes to the above tag because
+-- this will result in duplicated code
+----------------------------------------------------------
+UNDEFINE TABLE2
+UNDEFINE METHOD2
+UNDEFINE METHOD3
+UNDEFINE METHOD4
+
+

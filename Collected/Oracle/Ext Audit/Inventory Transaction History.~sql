@@ -1,0 +1,31 @@
+--***** Inventory Transaction History
+select t.* /*,
+       case
+         when t.order_type_db = 'PUR ORDER' then
+          (select p.vendor_no
+             from PURCHASE_ORDER_TAB p
+            where p.order_no = t.order_no)
+         when t.order_type_db = 'CUST ORDER' then
+          (select c.customer_no
+             from HPNRET_CUSTOMER_ORDER c
+            where c.order_no = t.order_no)
+         else
+          ''
+       END "VENDOR/CUSTOMER"*/
+  from IFSAPP.INVENTORY_TRANSACTION_HIST t
+ where t.direction in ('+', '-')
+      /*and t.contract in ('CTGW', 'CTWW', 'CTCW')*/
+      /*and t.transaction in ('INVM-ISS', 'INVM-IN', 'NISS', 'NREC')*/
+   and trunc(t.dated) between to_date('&from_date', 'YYYY/MM/DD') and
+       to_date('&to_date', 'YYYY/MM/DD')
+   and t.part_no in ('AECOM-MD711ZA/A',
+                     'BOREF-ASDL251B',
+                     'DLCOM-INSP-5570-I7-GR-SLV',
+                     'PCAC-CS/CU-C18PKH-H',
+                     'PCAC-CS/CU-C24PKH-H',
+                     'PCAC-CS/CU-US24SKD-3',
+                     'SGTV-UA49K5300ARSER',
+                     'SGTV-UA50MU6100RSER',
+                     'SGTV-UA65NU7100RSER',
+                     'SRREF-SINGER-FF2-66')
+ order by t.transaction_id

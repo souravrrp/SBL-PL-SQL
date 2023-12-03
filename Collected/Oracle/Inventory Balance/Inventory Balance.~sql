@@ -1,0 +1,4 @@
+select *
+  from INVENTORY_BALANCE_TAB t
+ where t.year = 2015
+   and t.period = 7

@@ -1,0 +1,207 @@
+-----------------------------------------------------------------------------
+--
+--  Logical unit: <<< Enter your logical unit description here >>>
+--
+--  File:         TEMPLATE.RDF
+--  Version:      Foundation1 2.2
+--
+--  Date    Sign  History
+--  ------  ----  -----------------------------------------------------------
+--
+-----------------------------------------------------------------------------
+
+define MODULE             = HPNRET
+define LU                 = HpnretCustomerOrder
+define PKG                = VOUCHER_DETAILS_RPI
+
+define TABLE              = INFO_SERVICES_RPT
+define VIEW               = VOUCHER_DETAILS_REP
+define METHOD             = Report_Overview
+
+-----------------------------------------------------------------------------
+-- PACKAGE SPECIFICATION:
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG specification
+
+CREATE OR REPLACE PACKAGE &PKG AS
+
+module_ CONSTANT VARCHAR2(6) := '&MODULE';
+lu_name_ CONSTANT VARCHAR2(25) := '&LU';
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 );
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- REPORTS
+-----------------------------------------------------------------------------
+
+PROMPT Creating report view &VIEW
+
+CREATE OR REPLACE VIEW &VIEW AS
+SELECT RESULT_KEY                              RESULT_KEY,
+       ROW_NO                                  ROW_NO,
+       s1                                      VOUCHER_TYPE,
+       s2                                      VOUCHER_NO,
+       s3                                      VOUCHER_TEXT,
+       s4                                      USERID,
+       s5                                      APPROVED_BY_USERID,
+       s6                                      ACCOUNT,
+       s7                                      ACCOUNT_DESC,
+       s8                                      CODE_B,
+       n2                                      CREDIT_AMOUNT,
+       n3                                      DEBET_AMOUNT,
+       s9                                      VOUCHER_DATE,
+	   s10                                     TEXT
+FROM  &TABLE
+WITH  read only;
+
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=&LU^
+   ^METHOD=&PKG..&METHOD^MODE=PLSQL1.2^TABLE=&TABLE^TITLE=VOUCHER DTLS REPORT^LAYOUTS=VOUCHER_DETAILS.qrp=^';
+
+COMMENT ON COLUMN &VIEW..result_key IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..row_no IS
+   'FLAGS=M----^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..VOUCHER_TYPE IS
+   'FLAGS=A----^TITLE=VOUCHER_TYPE^ITEM_NAME=iVOUCHER_TYPE^DATATYPE=STRING^QUERY=VOU TYPE:^';
+COMMENT ON COLUMN &VIEW..VOUCHER_NO IS
+   'FLAGS=A----^TITLE=VOUCHER_NO^ITEM_NAME=iVOUCHER_NO^DATATYPE=STRING^QUERY=VOUCHER NO:^';
+COMMENT ON COLUMN &VIEW..VOU_No IS
+   'FLAGS=A----^TITLE=VOU_No^ITEM_NAME=iVOU_No^DATATYPE=STRING^QUERY=VOUCHER NO:^';
+COMMENT ON COLUMN &VIEW..VOU_TYPE IS
+   'FLAGS=A----^TITLE=VOU_TYPE^ITEM_NAME=iVOU_TYPE^DATATYPE=STRING^QUERY=VOU TYPE:^';
+COMMENT ON COLUMN &VIEW..VOUCHER_TEXT IS
+   'FLAGS=A----^TITLE=VOUCHER_TEXT^ITEM_NAME=iVOUCHER_TEXT^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..USERID IS
+   'FLAGS=A----^TITLE=USERID^ITEM_NAME=iUSERID^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..APPROVED_BY_USERID IS
+   'FLAGS=A----^TITLE=APPROVED_BY_USERID^ITEM_NAME=iAPPROVED_BY_USERID^DATATYPE=STRING';
+COMMENT ON COLUMN &VIEW..ACCOUNT IS
+   'FLAGS=A----^TITLE=ACCOUNT^ITEM_NAME=iACCOUNT^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..ACCOUNT_DESC IS
+   'FLAGS=A----^TITLE=ACCOUNT_DESC^ITEM_NAME=iACCOUNT_DESC^DATATYPE=STRING^';
+
+COMMENT ON COLUMN &VIEW..CREDIT_AMOUNT IS
+   'FLAGS=A----^TITLE=CREDIT_AMOUNT^ITEM_NAME=iCREDIT_AMOUNT^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..DEBET_AMOUNT IS
+   'FLAGS=A----^TITLE=DEBET_AMOUNT^ITEM_NAME=iDEBET_AMOUNT^DATATYPE=NUMBER^';
+COMMENT ON COLUMN &VIEW..VOUCHER_DATE IS
+   'FLAGS=A----^TITLE=VOUCHER_DATE^ITEM_NAME=iVOUCHER_DATE^DATATYPE=STRING^';
+COMMENT ON COLUMN &VIEW..TEXT IS
+   'FLAGS=A----^TITLE=TEXT^ITEM_NAME=iTEXT^DATATYPE=STRING^';
+
+COMMENT ON TABLE &VIEW IS
+   'MODULE=&MODULE^LU=&LU^PROMPT=&LU^
+   ^METHOD=&PKG..&METHOD^MODE=PLSQL1.2^TABLE=&TABLE^TITLE=VOUCHER DTLS REPORT^LAYOUTS=VOUCHER_DETAILS.qrp=^';
+
+BEGIN
+   Report_Sys.Define_Report_('&VIEW', '&MODULE', '&LU', 'VOUCHER DTLS REPORT', '&TABLE', '&PKG..&METHOD', 0);
+   Report_SYS.Define_Report_Layout_('&VIEW', 'VOUCHER_DETAILS.qrp','VOUCHER DTLS REPORT','A4');
+   Report_SYS.Refresh_('&VIEW');
+
+END;
+/
+
+-----------------------------------------------------------------------------
+-- PACKAGE IMPLEMENTATION
+-----------------------------------------------------------------------------
+
+PROMPT Creating &PKG implementation
+
+CREATE OR REPLACE PACKAGE BODY &PKG AS
+
+PROCEDURE &METHOD (
+   report_attr_    IN VARCHAR2,
+   parameter_attr_ IN VARCHAR2 )
+IS
+   result_key_ NUMBER;
+   row_no_     NUMBER := 1;
+   voucher_no_      VARCHAR2(30);
+   voucher_type_    VARCHAR2(20);
+
+      CURSOR   get_vou IS      
+select
+v.VOUCHER_TYPE,
+v.VOUCHER_NO,
+v.VOUCHER_DATE,
+v.VOUCHER_TEXT,
+v.USERID,
+v.APPROVED_BY_USERID,
+I.ACCOUNT,
+I.ACCOUNT_DESC,
+I.CODE_B,
+nvl(I.CURRENCY_CREDIT_AMOUNT,0) CREDIT_AMOUNT,
+nvl(I.CURRENCY_DEBET_AMOUNT,0) DEBET_AMOUNT,
+I.TEXT
+from
+IFSAPP.GEN_LED_VOUCHER2 V,
+IFSAPP.GEN_LED_VOUCHER_ROW_UNION_QRY I
+where
+v.VOUCHER_NO=I.VOUCHER_NO
+and  v.VOUCHER_NO like voucher_no_ 
+and v.VOUCHER_TYPE like  voucher_type_;
+
+
+    rec_ get_vou%ROWTYPE;
+
+
+BEGIN
+   result_key_   := Client_SYS.Attr_Value_To_Number(Client_SYS.Get_Item_Value('RESULT_KEY', report_attr_));
+   voucher_no_   := Client_Sys.Get_Item_Value('VOU_No',parameter_attr_);
+   voucher_type_ := UPPER(Client_Sys.Get_Item_Value('VOU_TYPE',parameter_attr_));
+
+   FOR rec_ IN get_vou LOOP
+  INSERT INTO INFO_SERVICES_RPT
+        (result_key,
+         row_no,
+         s1,
+         s2,
+         s3,
+         s4,
+         s5,
+         s6,
+         s7,
+         s8,
+         s9,
+         s10,
+         n2,
+         n3
+         )
+      VALUES
+         (result_key_,
+         row_no_,      
+         rec_.VOUCHER_TYPE,
+         rec_.VOUCHER_NO,
+         to_char(rec_.VOUCHER_DATE,'YYYY/MM/DD'),
+         rec_.VOUCHER_TEXT,
+         rec_.USERID,
+         rec_.APPROVED_BY_USERID, 
+         rec_.ACCOUNT,
+         rec_.ACCOUNT_DESC,        
+         rec_.CODE_B,
+		 rec_.TEXT,
+         rec_.CREDIT_AMOUNT,
+		 rec_.DEBET_AMOUNT
+         );
+         row_no_:=row_no_+1;
+    
+END LOOP;
+
+
+
+END &METHOD;
+
+END &PKG;
+/
+SHOW ERROR
+
+-----------------------------------------------------------------------------
+-- END
+---------------

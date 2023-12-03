@@ -1,0 +1,3 @@
+select *
+from ifsapp.SBL_LATEST_SALES_PRICE p
+where p.catalog_no like '&catalog_no'

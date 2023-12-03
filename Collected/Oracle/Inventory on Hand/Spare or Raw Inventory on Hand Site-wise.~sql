@@ -1,0 +1,63 @@
+--***** Spare or Raw Inventory on Hand Site-wise
+select i.contract,
+       i.part_no,
+       ifsapp.inventory_part_api.Get_Description('SCOM', i.part_no) part_desc,
+       ifsapp.INVENTORY_PRODUCT_FAMILY_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM',
+                                                                                                             i.part_no)) product_family,
+       sum(i.qty_onhand) qty_onhand
+  from IFSAPP.INVENTORY_PART_IN_STOCK i
+ where i.qty_onhand > 0
+   and ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM', i.part_no) in
+       ('AVRAW', 'PCB', 'RC')
+   and i.part_no like '&PART_NO'
+   and i.contract in ('BSCP',
+                      'BLSP',
+                      'CLSP',
+                      'CSCP',
+                      'CXSP', --New Service Center
+                      'DSCP',
+                      'JSCP',
+                      'MSCP',
+                      'RPSP', --New Service Center
+                      'RSCP',
+                      'SSCP',
+                      'MS1C',
+                      'MS2C',
+                      'BTSC') --Service Sites
+ group by i.contract,
+          i.part_no,
+          ifsapp.INVENTORY_PRODUCT_FAMILY_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM',
+                                                                                                                i.part_no))
+ ORDER BY 1, 2;
+
+
+--***** Opening Balance
+select t.stat_year,
+       t.stat_period_no,
+       t.contract,
+       t.part_no,
+       ifsapp.inventory_part_api.Get_Description('SCOM', t.part_no) part_desc,
+       ifsapp.INVENTORY_PRODUCT_FAMILY_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM',
+                                                                                                             t.part_no)) product_family,
+       t.bf_balance
+  from ifsapp.REP246_TAB t
+ where t.stat_year = '&year_i'
+   and t.stat_period_no = '&period'
+   and ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM', t.part_no) in
+       ('AVRAW', 'PCB', 'RC')
+      --*** All Service Sites
+   and t.contract in ('BSCP',
+                      'BLSP',
+                      'CLSP',
+                      'CSCP',
+                      'CXSP', --New Service Center
+                      'DSCP',
+                      'MSCP', --New Service Center
+                      'JSCP',
+                      'RPSP', --New Service Center
+                      'RSCP',
+                      'SSCP',
+                      'MS1C',
+                      'MS2C',
+                      'BTSC') --Service Sites   
+ order by t.stat_year, t.stat_period_no, t.contract, t.part_no;

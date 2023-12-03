@@ -1,0 +1,37 @@
+select sv1.company_id "Company",
+    sv1.company_name "Company Name",
+    sv1.supplier_no "Party No",
+    sv1.supplier_name "Party Name",
+    sv2.party_type "Party Type",
+    sv2.code_a "Account No",
+    sv1.ledger_item_series_id "Invoice ID/Pre-Payment ID",
+    sv1.invoice_or_pp_date "Invoice/PP Date",
+    sv1.pay_term_base_date "Pay Term Base Date",
+    sv1.ledger_status "Ledger Status",
+    sv1.sup_inv_total "Invoice Amount",
+    sv1.accounting_currency "Curr",
+    sv1.installment_id "Inst. ID",
+    sv1.due_date "Due Date",
+    sv1.full_amount "Installment Amount",
+    sv1.sup_open_total "Open Amount",
+    sv1.rest_amount "Open Amount in Acc Curr"
+from
+(select soi.company_id,soi.company_name,soi.supplier_no,soi.supplier_name,substr(soi.codestring, 1, instr(soi.codestring, '^') - 1) CODE_A,soi.ledger_item_series_id,soi.invoice_or_pp_date,soi.pay_term_base_date,soi.ledger_status,soi.sup_inv_total,soi.accounting_currency,soi.installment_id,soi.due_date,soi.full_amount,soi.sup_open_total,soi.rest_amount
+from SUP_OPEN_ITEM_RPT soi
+where substr(soi.codestring, 1, instr(soi.codestring, '^') - 1) = '10100200' and soi.result_key = (select max(soin.result_key) from SUP_OPEN_ITEM_NAMES_RPT soin)) sv1
+left outer join
+(select li.company,li.identity,li.party_type,li.ledger_item_series_id,li.ledger_item_id,li.ledger_item_series_id || ' ' || li.ledger_item_id,li.full_curr_amount,li.cleared_curr_amount,li.full_curr_amount - li.cleared_curr_amount "Open Amount",li.currency,li.curr_rate,li.status_id,li.code_a,li.rowstate
+from LEDGER_ITEM_TAB li
+WHERE li.CODE_A = '10100200' AND li.party_type = 'SUPPLIER' and li.ROWSTATE IN ('Unpaid', 'PartlyPaid')) sv2 on
+sv1.company_id = sv2.company and sv1.supplier_no = sv2.identity and sv1.ledger_item_series_id = (sv2.ledger_item_series_id || ' ' || sv2.ledger_item_id)
+union
+select cv1.company_id "Company",cv1.company_name "Company Name",cv1.customer_no "Party No",cv1.customer_name "Party Name",cv2.party_type "Party Type",cv2.code_a "Account No",cv1.ledger_item_series_id "Invoice ID/Pre-Payment ID",cv1.invoice_or_pp_date "Invoice/PP Date",cv1.pay_term_base_date "Pay Term Base Date",cv1.ledger_status "Ledger Status",cv1.cust_inv_total "Invoice Amount",cv1.accounting_currency "Curr",cv1.installment_id "Inst. ID",cv1.due_date "Due Date",cv1.full_amount "Installment Amount",cv1.cust_open_total "Open Amount",cv1.rest_amount "Open Amount in Acc Curr"
+from
+(select coi.company_id,coi.company_name,coi.customer_no,coi.customer_name,substr(coi.codestring,1,instr(coi.codestring, '^') - 1) CODE_A,coi.ledger_item_series_id,coi.invoice_or_pp_date,coi.pay_term_base_date,coi.ledger_status,coi.cust_inv_total,coi.accounting_currency,coi.installment_id,coi.due_date,coi.current_due_date,coi.full_amount,coi.cust_open_total,coi.rest_amount,coi.balance_until_date,coi.balance_dom_until_date
+from CUST_OPEN_ITEM_RPT coi
+where substr(coi.codestring,1,instr(coi.codestring, '^') - 1) = '10100200' and coi.result_key = (select max(coin.result_key) from CUST_OPEN_ITEM_NAMES_RPT coin)) cv1
+left outer join
+(select li.company,li.identity,li.party_type,li.ledger_item_series_id,li.ledger_item_id,li.ledger_item_series_id || ' ' || li.ledger_item_id,li.full_curr_amount,li.cleared_curr_amount,li.full_curr_amount - li.cleared_curr_amount "Open Amount",li.currency,li.curr_rate,li.status_id,li.code_a,li.rowstate
+from LEDGER_ITEM_TAB li
+WHERE li.CODE_A = '10100200' AND li.party_type = 'CUSTOMER' and li.ROWSTATE IN ('Unpaid', 'PartlyPaid')) cv2 on
+cv1.company_id = cv2.company and cv1.customer_no = cv2.identity and cv1.ledger_item_series_id = (cv2.ledger_item_series_id ||' '|| cv2.ledger_item_id)

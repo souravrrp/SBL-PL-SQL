@@ -1,0 +1,33 @@
+ctr+0+RMB
+
+select 
+t.CONTRACT,
+t.ORDER_NO,
+t.WANTED_DELIVERY_DATE "SALE DATE",
+t.CUSTOMER_NO,
+customer_info_api.Get_Name(t.CUSTOMER_NO),
+c.CATALOG_NO,
+c.BUY_QTY_DUE,
+customer_order_line_api.Get_Sale_Price_Total(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "SALE PRICE",
+customer_order_line_api.Get_Total_Discount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "DISCOUNT",
+customer_order_line_api.Get_Total_Tax_Amount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "TAX PRICE",
+o.ORDER_NO
+from
+customer_order_tab t,
+customer_order_line_tab c,
+purchase_order_line_tab o
+where
+c.ORDER_NO=t.ORDER_NO
+and t.ORDER_NO=o.DEMAND_ORDER_NO
+and t.WANTED_DELIVERY_DATE  between to_date('01/02/2013','dd/mm/yyyy') and to_date('28/02/2013','dd/mm/yyyy')
+and cust_ord_customer_api.get_cust_grp(t.CUSTOMER_NO) like '003'
+and t.ROWSTATE in ('Invoiced','Delivered','PartiallyDelivered','Released')
+and o.ORDER_NO  in 
+( select 
+t2.INTERNAL_PO_NO 
+from
+trn_trip_plan_co_line_tab t3,
+external_customer_order_tab t2
+where 
+t3.ORDER_NO=t2.ORDER_NO
+)

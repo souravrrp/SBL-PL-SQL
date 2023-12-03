@@ -1,0 +1,38 @@
+--INV Sales
+select I.SITE,
+       I.ORDER_NO,
+       I.LINE_NO,
+       I.REL_NO,
+       I.STATUS,
+       I.SALES_DATE,
+       I.PRODUCT_CODE,
+       I.SALES_QUANTITY,
+       I.SALES_PRICE,
+       I.UNIT_NSP,
+       I.DISCOUNT,
+       I.VAT,
+       I.AMOUNT_RSP
+  from IFSAPP.SBL_JR_SALES_DTL_INV I
+ WHERE I.SALES_DATE BETWEEN TO_DATE('&FROM_DATE', 'YYYY/MM/DD') AND
+       TO_DATE('&TO_DATE', 'YYYY/MM/DD')
+
+UNION ALL
+
+--COMP Sales
+select C.SITE,
+       C.ORDER_NO,
+       C.LINE_NO,
+       C.REL_NO,
+       C.STATUS,
+       C.SALES_DATE,
+       C.PRODUCT_CODE,
+       C.SALES_QUANTITY,
+       C.SALES_PRICE,
+       C.UNIT_NSP,
+       C.DISCOUNT,
+       C.VAT,
+       C.AMOUNT_RSP
+  from IFSAPP.SBL_JR_SALES_DTL_PKG_COMP C
+ WHERE C.SALES_DATE BETWEEN TO_DATE('&FROM_DATE', 'YYYY/MM/DD') AND
+       TO_DATE('&TO_DATE', 'YYYY/MM/DD')
+ORDER BY 2,3,4,6,7

@@ -1,0 +1,18 @@
+SELECT distinct
+t1.ORDER_NO,
+o.DEMAND_ORDER_NO,
+t1.REAL_SHIP_DATE,
+t1.CATALOG_NO,
+t1.QTY_SHIPPED,
+ t1.DEMAND_ORDER_REF1 'PO NO',
+customer_info_api.get_name(customer_order_api.Get_Customer_No(o.DEMAND_ORDER_NO)) "Customer Name"
+
+FROM customer_order_line_tab t1,
+purchase_order_line_tab o ,
+inv_transit_tracking_tab i
+WHERE
+
+ t1.contract = 'SWHW'
+and t1.DEMAND_ORDER_REF1=o.ORDER_NO
+and t1.order_no=i.order_no
+AND cust_ord_customer_api.get_cust_grp(Customer_Order_API.Get_Customer_No(o.DEMAND_ORDER_NO)) = '003'

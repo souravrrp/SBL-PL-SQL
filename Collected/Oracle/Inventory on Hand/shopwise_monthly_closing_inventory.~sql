@@ -1,0 +1,41 @@
+select 
+    --*/*COUNT(*)*/
+    t.stat_year,
+    t.stat_period_no,
+    t.contract,
+    t.part_no,
+    /*t.branch,
+    t.ad,*/
+    t.bf_balance--,
+    /*t.adj_dr,
+    t.adj_cr,
+    t.debit_note,
+    t.exch_in_cash,
+    t.exch_in_hire,
+    t.revert_qty,
+    t.sale_reverse,
+    t.trf_in,
+    t.trfc_in,
+    t.direct_dr,
+    t.other_rec,
+    t.credit_note,
+    t.exch_out_cash,
+    t.exch_out_hire,
+    t.trf_out,
+    t.trfc_out,
+    t.other_iss,
+    t.revert_rev,
+    t.sales,
+    t.ad_sales,
+    t.cf_balance,
+    t.revert_bal,
+    t.school_stock,
+    t.ad_stock,
+    to_char(t.rowversion, 'MM/DD/YYYY') rowversion*/
+  from REP246_TAB t
+  where t.stat_year = 2014 and
+    t.stat_period_no = 3 --and
+    --t.Contract in ('BWHW', 'KWHW', 'RWHW', 'TWHW', 'CMWH', 'SPWH', 'SWHW', 'CTGW', 'APWH', 'SYWH') AND
+    --t.Contract in ('CJTB', 'DGNB', 'DMRB', 'DKBB', 'DRRB', 'DPLB', 'DINB', 'JESB', 'MLVB', 'SCHB')
+    --t.part_no like '%REF%'
+order by t.contract, t.part_no

@@ -1,0 +1,25 @@
+--Stock Position partwise & sitewise
+select i.contract,
+       (SELECT S.AREA_CODE
+          FROM IFSAPP.SHOP_DTS_INFO s
+         WHERE S.SHOP_CODE = I.contract) AREA_CODE,
+       (SELECT S.DISTRICT_CODE
+          FROM IFSAPP.SHOP_DTS_INFO s
+         WHERE S.SHOP_CODE = I.contract) DISTRICT_CODE,
+       i.part_no,
+       IFSAPP.INVENTORY_PRODUCT_CODE_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Code('SCOM',
+                                                                                                         i.part_no)) BRAND,
+       ifsapp.INVENTORY_PRODUCT_FAMILY_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM',
+                                                                                                             i.part_no)) PRODUCT_FAMILY,
+       sum(i.qty_onhand) qty_onhand
+  from IFSAPP.INVENTORY_PART_IN_STOCK i
+ where i.qty_onhand > 0
+   and ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM', i.part_no) !=
+       'RBOOK'
+   and i.contract LIKE '&SITE'
+   /*and ifsapp.inventory_part_api.Get_Part_Product_Code('SCOM', i.part_no) !=
+       'RAW'
+   and ifsapp.inventory_part_api.Get_Second_Commodity('SCOM', i.part_no) not like
+       'S-%'*/
+ group by i.contract, I.part_no
+ ORDER BY 2, 3, 1, 4

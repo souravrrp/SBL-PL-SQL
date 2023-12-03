@@ -1,0 +1,21 @@
+select * from LEDGER_ITEM_TAB li
+
+select distinct(li.rowstate) from LEDGER_ITEM_TAB li
+
+select * from Payment_Plan_Tab p
+where p.installment_id != 1
+
+SELECT due_date,
+  payment_date,
+  authorized,
+  auth_id
+FROM   Payment_Plan_Tab
+WHERE  company               = company_
+AND    identity              = identity_               
+AND    party_type            = party_type_db_             
+AND    invoice_id            = invoice_id_  
+AND    installment_id        = installment_id_;
+
+Company_Finance_API
+
+Payment_Library_API

@@ -1,0 +1,50 @@
+select 
+t.ORDER_NO,
+t.WANTED_DELIVERY_DATE "SALE DATE",
+c.PART_NO,
+customer_order_line_api.Get_Sale_Price_Total(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "SALE PRICE",
+(SELECT SUM(t.discount_amount)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = c.order_no
+ AND t.line_no = c.LINE_NO
+ AND t.rel_no =  c.REL_No
+ AND t.line_item_no = c.LINE_ITEM_NO ) "DISCOUNT",
+customer_order_line_api.Get_Total_Tax_Amount(c.order_no, c.LINE_NO, c.REL_NO ,c.LINE_ITEM_NO) "TAX PRICE"
+from
+customer_order_tab t,
+customer_order_line_tab c
+where
+c.ORDER_NO = t.ORDER_NO
+and t.WANTED_DELIVERY_DATE between to_date('01/01/2013','dd/mm/yyyy') and to_date('31/01/2013','dd/mm/yyyy')
+and cust_ord_customer_api.get_cust_grp(t.CUSTOMER_NO) like '003'
+and t.ROWSTATE in ('Invoiced','Delivered','PartiallyDelivered')
+and t.ORDER_NO = 'WSM-R2618';
+
+ 
+
+/***** select distinct id.ORDER_NO,
+  cl.CONTRACT TR_PLACE,
+  'OUT' TR_TYPE,
+  CUST.CUSTOMER_NO DEST_SOURCE, 
+  CL.PART_NO PART_CODE,
+  CL.REAL_SHIP_DATE TR_DATE, 
+  0 QTY_IN,
+CL.QTY_SHIPPED QTY_OUT,
+cust.INTERNAL_PO_NO DOC_REF1,
+ cl.ORDER_NO DOC_REF2, 
+ im.DBN_ID Debit_note  
+from  CUSTOMER_ORDER_LINE cl,EXTERNAL_CUSTOMER_ORDER  cust,
+IFSAPP.TRN_TRIP_PLAN_tab im, IFSAPP.TRN_TRIP_PLAN_CO_LINE id,purchase_order_line_tab po
+where 
+CL.ORDER_NO=CUST.ORDER_NO
+and  im.TRIP_NO=id.TRIP_NO
+and id.ORDER_NO=cl.ORDER_NO 
+and cust.INTERNAL_PO_NO=po.ORDER_NO
+and cl.CONTRACT='$shop_code'
+AND cl.STATE in ('Invoiced/Closed','Partially Delivered') 
+And to_date(to_char( CL.REAL_SHIP_DATE,'dd-MON-yy')) between '$Date' and '$Date1'
+and cust.INTERNAL_PO_NO not in
+(select  po.ORDER_NO 
+      from  IFSAPP.EXTERNAL_CUSTOMER_ORDER eco,ifsapp.purchase_order_line_tab po,ifsapp.customer_order co
+      where po.ORDER_NO=eco.INTERNAL_PO_NO
+      and po.DEMAND_ORDER_NO(+)=co.ORDER_NO)

@@ -1,0 +1,26 @@
+--Shopwise Product Model Sales Summary (Monthly)
+SELECT R.AREA_CODE,
+       /*R.DISTRICT_CODE,
+       R.SHOP_CODE,
+       R.PRODUCT_CODE,*/
+       P.PRODUCT_GROUP,
+       SUM(R.SALES_QUANTITY) TOTAL_SALES_QUANTITY --,
+       /*SUM(R.SALES_PRICE) TOTAL_SALES_PRICE*/
+  FROM IFSAPP.SBL_JR_SALES_INV_COMP_VIEW R,
+       (select L.GROUP_NO, I.PRODUCT_GROUP, L.PRODUCT_CODE
+          from PRODUCT_CATEGORY_INFO L, product_info I
+         WHERE L.GROUP_NO = I.GROUP_NO) P
+ WHERE R.PRODUCT_CODE = P.PRODUCT_CODE
+   AND R.SALES_DATE BETWEEN TO_DATE('&FROM_DATE', 'YYYY/MM/DD') AND
+       TO_DATE('&TO_DATE', 'YYYY/MM/DD')
+/*AND */
+ GROUP BY R.AREA_CODE,
+          /*R.DISTRICT_CODE,
+          R.SHOP_CODE,*/
+          P.PRODUCT_GROUP --,
+          /*R.PRODUCT_CODE*/
+ ORDER BY R.AREA_CODE,
+          /*R.DISTRICT_CODE,
+          R.SHOP_CODE,*/
+          P.PRODUCT_GROUP --,
+          /*R.PRODUCT_CODE*/

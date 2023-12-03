@@ -1,0 +1,32 @@
+select
+c.ORDER_NO,
+t.DEMAND_ORDER_REF1,
+t.PART_NO,
+t.QTY_SHIPPED,
+t.DATE_ENTERED,
+t.CUSTOMER_NO
+from
+IFSAPP.CUSTOMER_ORDER_LINE_HIST c,
+customer_order_line_tab t
+where 
+t.order_no=c.order_no
+and t.REL_NO=c.REL_NO
+and t.LINE_ITEM_NO=c.LINE_ITEM_NO
+and t.LINE_NO=c.LINE_NO
+and c.USERID='SCOMID0569'
+and c.DATE_ENTERED like to_date('&date','dd/mm/yyyy')
+and c.HISTORY_NO in 
+(select max(HISTORY_NO) from IFSAPP.CUSTOMER_ORDER_LINE_HIST h where h.ORDER_NO=c.ORDER_NO 
+and h.REL_NO=c.REL_NO
+and h.LINE_NO=c.LINE_NO
+and h.LINE_ITEM_NO=c.LINE_ITEM_NO
+and h.USERID='SCOMID0569') 
+and t.DEMAND_ORDER_REF1 is not null
+ and t.DEMAND_ORDER_REF1='A-135022'
+and t.ORDER_NO not in (
+select
+r.ORDER_NO
+from 
+IFSAPP.RETURN_MATERIAL_LINE R
+where r.ORDER_NO=t.ORDER_NO
+ and r.STATE in ('Return Completed') )

@@ -1,0 +1,77 @@
+--*****Shopwise Cost of Sales
+select a.site,
+       (select h.area_code from shop_dts_info h where h.shop_code = a.site) area_code,
+       (select h.district_code
+          from shop_dts_info h
+         where h.shop_code = a.site) district_code,
+       sum(a.sales_price) total_sales_price,
+       round(sum(a.total_cost), 2) total_cost_of_goods_sold
+  from (select s.*, --*****INV Sales Cost
+               (select c.cost
+                  from ifsapp.INVENT_ONLINE_COST_TAB c
+                 where c.year =
+                       extract(year from to_date('&from_date', 'YYYY/MM/DD'))
+                   and c.period =
+                       extract(month from to_date('&from_date', 'YYYY/MM/DD'))
+                   and c.contract = s.site
+                   and c.part_no = s.product_code) unit_cost,
+               s.sales_quantity *
+               (select c.cost
+                  from ifsapp.INVENT_ONLINE_COST_TAB c
+                 where c.year =
+                       extract(year from to_date('&from_date', 'YYYY/MM/DD'))
+                   and c.period =
+                       extract(month from to_date('&from_date', 'YYYY/MM/DD'))
+                   and c.contract = s.site
+                   and c.part_no = s.product_code) total_cost
+          from ifsapp.SBL_JR_SALES_DTL_INV s
+         where s.sales_date between to_date('&from_date', 'YYYY/MM/DD') and
+               to_date('&to_date', 'YYYY/MM/DD')
+           and s.site not in ('JWSS',
+                              'SAPM',
+                              'SAOS',
+                              'SCOM',
+                              'SCSM',
+                              'SESM',
+                              'SHOM',
+                              'SISM',
+                              'SOSM',
+                              'SWSS',
+                              'WSMO')
+        
+        union all
+        
+        select p.*, --*****COMP Sales Cost
+               (select c.cost
+                  from ifsapp.INVENT_ONLINE_COST_TAB c
+                 where c.year =
+                       extract(year from to_date('&from_date', 'YYYY/MM/DD'))
+                   and c.period =
+                       extract(month from to_date('&from_date', 'YYYY/MM/DD'))
+                   and c.contract = p.site
+                   and c.part_no = p.product_code) unit_cost,
+               p.sales_quantity *
+               (select c.cost
+                  from ifsapp.INVENT_ONLINE_COST_TAB c
+                 where c.year =
+                       extract(year from to_date('&from_date', 'YYYY/MM/DD'))
+                   and c.period =
+                       extract(month from to_date('&from_date', 'YYYY/MM/DD'))
+                   and c.contract = p.site
+                   and c.part_no = p.product_code) total_cost
+          from ifsapp.SBL_JR_SALES_DTL_PKG_COMP p
+         where p.sales_date between to_date('&from_date', 'YYYY/MM/DD') and
+               to_date('&to_date', 'YYYY/MM/DD')
+           and p.site not in ('JWSS',
+                              'SAPM',
+                              'SAOS',
+                              'SCOM',
+                              'SCSM',
+                              'SESM',
+                              'SHOM',
+                              'SISM',
+                              'SOSM',
+                              'SWSS',
+                              'WSMO')) a
+ group by a.site
+ order by a.site

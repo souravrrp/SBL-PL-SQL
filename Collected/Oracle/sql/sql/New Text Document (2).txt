@@ -1,0 +1,21 @@
+4349771274175528 -2600
+
+select 
+a.ORDER_NO,
+a.IDENTITY, 
+a.CURR_AMOUNT,
+b.CATALOG_NO,
+customer_info_api.Get_Name(a.IDENTITY) CUSTOMER_NAME,
+decode(b.CATALOG_TYPE_DB,'NON','1') NON_INV,
+decode(b.CATALOG_TYPE_DB,'INV','2') INV,
+a.VOUCHER_DATE
+from 
+HPNRET_CO_PAY_DTL_TAB a,
+IFSAPP.CUSTOMER_ORDER_LINE b
+where 
+a.ORDER_NO=b.ORDER_NO
+and a.ROWSTATE='Paid'
+and b.CATALOG_TYPE_DB in ('NON','INV')
+--and a.ORDER_NO like 'DSC-R2507%'
+and a.CONTRACT='DSCP'
+and a.VOUCHER_DATE between  '&date' and '&date1'

@@ -1,0 +1,47 @@
+--
+select sum(t.comm_calc_amount)
+  from COMMISSION_VALUE_DETAIL_TAB t
+ where t.collection_type = 'INST'
+   and t.commission_sales_type = 'HP'
+   and t.comm_calc_amount > 0
+   and t.site = 'MYMB'
+   and t.approved_date /*between*/= to_date('&to_date', 'yyyy/mm/dd') /*and
+       to_date('&to_date', 'yyyy/mm/dd')*/
+   and trunc(t.calculated_date) between to_date('&from_date', 'yyyy/mm/dd') and
+       to_date('&to_date', 'yyyy/mm/dd')
+   and t.rowstate = 'Approved'
+   and t.entitlement_type = 'SCC'
+ order by t.approved_date
+ 
+--
+select sum(t.comm_calc_amount)
+  from COMMISSION_VALUE_DETAIL_TAB t
+ where t.collection_type = 'INST'
+   and t.commission_sales_type = 'HP'
+   --and t.comm_calc_amount > 0
+   and t.site = 'MYMB'
+   and t.approved_date /*between*/=  to_date('&to_date', 'yyyy/mm/dd') /*and
+       to_date('&to_date', 'yyyy/mm/dd') */  
+   and trunc(t.calculated_date) < to_date('&from_date', 'yyyy/mm/dd')
+   and t.rowstate = 'Approved'
+   and t.entitlement_type = 'SCC'
+order by t.calculated_date
+
+--
+SELECT H.YEAR,
+       H.PERIOD,
+       H.SHOP_CODE,
+       H.ORIGINAL_ACCT_NO,
+       H.ACCT_NO,
+       H.ACTUAL_SALES_DATE,
+       H.SALES_DATE,
+       H.CLOSED_DATE,
+       H.STATE,
+       H.COLLECTION,
+       TRUNC(H.CASH_CONVERSION_ON_DATE) CASH_CONVERSION_ON_DATE
+  FROM HPNRET_FORM249_ARREARS_TAB H
+ WHERE H.YEAR = '&YEAR_I'
+   AND H.PERIOD = '&PERIOD'
+   --AND H.ACT_OUT_BAL > 0
+   AND H.SHOP_CODE = '&SHOP_CODE'
+

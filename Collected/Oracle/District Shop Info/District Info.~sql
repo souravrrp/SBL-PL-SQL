@@ -1,0 +1,5 @@
+select  
+distinct 
+TO_NUMBER(SUBSTR(L.District, INSTR(L.District, ' ') + 1, 2))
+from 
+HPNRET_LEVELS_OVERVIEW L

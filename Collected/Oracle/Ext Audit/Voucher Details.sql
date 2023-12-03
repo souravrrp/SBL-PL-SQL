@@ -1,0 +1,66 @@
+--***** Voucher Details
+select g.voucher_type,
+       g.voucher_no,
+       /*g.row_no,*/
+       g.voucher_date,
+       g.party_type_id vendor_no,
+       IFSAPP.SUPPLIER_INFO_API.Get_Name(g.party_type_id) vendor_name,
+       g.account,
+       g.account_desc,
+       g.code_b,
+       /*g.code_b_desc,*/
+       g.text,
+       /*g.reference_serie,
+       g.reference_number,*/
+       g.amount
+  from ifsapp.GL_AND_HOLD_VOU_ROW_QRY g
+ where g.account in ('70020020',
+                     '70020030',
+                     '70020040',
+                     '70020050',
+                     '70020060',
+                     '80090010',
+                     '80090020',
+                     '80090030',
+                     '80090040',
+                     '80090050',
+                     '80090060',
+                     '80130010',
+                     '80130020',
+                     '80130030',
+                     '80160010',
+                     '80999909',
+                     '80999910',
+                     '80999915',
+                     '80110035')
+   and g.voucher_date between to_date('&FROM_DATE', 'YYYY/MM/DD') and
+       to_date('&TO_DATE', 'YYYY/MM/DD')
+ order by g.voucher_date, g.voucher_no, g.row_no;
+
+
+--***** Account Summary
+select g.account, g.account_desc, sum(g.amount) amount
+  from ifsapp.GL_AND_HOLD_VOU_ROW_QRY g
+ where g.account in ('70020020',
+                     '70020030',
+                     '70020040',
+                     '70020050',
+                     '70020060',
+                     '80090010',
+                     '80090020',
+                     '80090030',
+                     '80090040',
+                     '80090050',
+                     '80090060',
+                     '80130010',
+                     '80130020',
+                     '80130030',
+                     '80160010',
+                     '80999909',
+                     '80999910',
+                     '80999915',
+                     '80110035')
+   and g.voucher_date between to_date('&FROM_DATE', 'YYYY/MM/DD') and
+       to_date('&TO_DATE', 'YYYY/MM/DD')
+ group by g.account, g.account_desc
+ order by g.account, g.account_desc;

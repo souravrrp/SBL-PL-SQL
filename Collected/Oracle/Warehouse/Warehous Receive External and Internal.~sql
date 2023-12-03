@@ -1,0 +1,43 @@
+--***** Warehous Receive Internal
+select N.CONTRACT TR_PLACE,
+       'IN' TR_TYPE,
+       N.VENDOR_NO DEST_SOURCE,
+       N.PART_NO PART_CODE,
+       N.ARRIVAL_DATE TR_DATE,
+       N.QTY_ARRIVED QTY_IN,
+       /*0 QTY_OUT,*/
+       N.ORDER_NO DOC_REF1,
+       N.GRN_NO DOC_REF2,
+       decode(substr(N.ORDER_NO, 1, 1), 'A', 'Internal', 'External') Remark
+  from IFSAPP.PURCHASE_RECEIPT_NEW N
+ where N.CONTRACT /*= '&shop_code'*/
+       in (select w.ware_house_name from ware_house_info w)
+   and N.STATE in ('Received')
+   and to_date(to_char(N.ARRIVAL_DATE)) between
+       to_date('&from_date', 'YYYY/MM/DD') and
+       to_date('&to_date', 'YYYY/MM/DD')
+
+union all
+
+--***** Receive External
+select distinct wd.CONTRACT TR_PLACE,
+                'IN' TR_TYPE,
+                wd.VENDOR_NO /*|| '--' || wd.VENDOR_NAME*/ DEST_SOURCE,
+                wd.PART_NO PART_CODE,
+                wd.REAL_ARRIVAL_DATE TR_DATE,
+                wd.QTY_IN_STORE QTY_IN,
+                /*0 QTY_OUT,*/
+                wd.ORDER_NO DOC_REF1,
+                /*lc_no ,*/
+                WD.GRN_NO DOC_REF2,
+                decode(substr(wd.ORDER_NO, 1, 1),
+                       'A',
+                       'Internal',
+                       'External') Remark
+  from SBL_PURCHASE_RECEIPT_STAT wd, sbl_lc LC
+ where wd.order_no = lc.po_no(+)
+   aND wd.QTY_IN_STORE > 0
+   and trunc(wd.REAL_ARRIVAL_DATE) between to_date('&from_date', 'YYYY/MM/DD') and to_date('&to_date', 'YYYY/MM/DD')
+   and wd.CONTRACT /*like '&shop_code'*/ in (select w.ware_house_name from ware_house_info w)
+ order by TR_DATE, PART_CODE
+

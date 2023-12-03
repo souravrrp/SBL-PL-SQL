@@ -1,0 +1,18 @@
+--Cost of a component for a specific site & period
+select *
+  from INVENT_ONLINE_COST_TAB c
+ where c.year = 2016
+   and c.period = 4
+   and c.contract = 'ABDD'
+   and c.part_no = 'SHCOM-KEYBOARD'
+   
+--Components of a package for a site with qty
+select p.parent_part,
+       p.catalog_no,
+       p.contract,
+       p.line_item_no,
+       p.qty_per_assembly
+  from IFSAPP.SALES_PART_PACKAGE_TAB p
+ where p.parent_part = 'PKSHCOM-SINGTECH-COR-18.5'
+   and p.contract = 'ABDD'
+

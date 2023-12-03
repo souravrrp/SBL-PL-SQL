@@ -1,0 +1,21 @@
+declare
+  pv float;
+  rate float;
+  pmt float;
+  nper float;
+
+begin
+  pmt := 671;
+  nper := 16;
+  rate := 0.037361;
+  --Formula of Present Value
+  pv := pmt * ((1 - power((1 + rate), -nper)) / rate);
+  dbms_output.put_line('Present Value is '||round(pv,4));
+  --Return the result of the function
+  --return pv;
+
+exception
+  when zero_divide then
+  dbms_output.put_line('PV can''t be generated because rate is less than zero');
+  --return 0.00;
+end;

@@ -1,0 +1,129 @@
+create or replace view SBL_LATEST_SALES_PRICE as
+  select distinct (p.catalog_no) catalog_no,
+                  (select t.valid_from_date
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '1'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '1')) valid_from_date_1,
+                  (select t.sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '1'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '1')) sale_price_1,
+                  (select t.hp_sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '1'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '1')) hp_sale_price_1,
+                  nvl((select d.amount
+                        from ifsapp.SBL_DISCOUNT_PROMOTION d
+                       where d.valid_from <= sysdate
+                         and d.valid_to >= sysdate
+                         and d.part_no = p.catalog_no),
+                      0) discount,
+                  (select t.valid_from_date
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '2'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '2')) valid_from_date_2,
+                  (select t.sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '2'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '2')) sale_price_2,
+                  (select t.hp_sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '2'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '2')) hp_sale_price_2,
+                  (select t.valid_from_date
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '3'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '3')) valid_from_date_3,
+                  (select t.sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '3'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '3')) sale_price_3,
+                  (select t.hp_sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '3'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '3')) hp_sale_price_3,
+                  (select t.valid_from_date
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '4'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '4')) valid_from_date_4,
+                  (select t.sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '4'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '4')) sale_price_4,
+                  (select t.hp_sales_price
+                     from ifsapp.SALES_PRICE_LIST_PART t
+                    where t.catalog_no = p.catalog_no
+                      and t.price_list_no = '4'
+                      and t.valid_from_date <= sysdate
+                      and t.valid_from_date =
+                          (select max(t.valid_from_date)
+                             from ifsapp.SALES_PRICE_LIST_PART t
+                            where t.catalog_no = p.catalog_no
+                              and t.price_list_no = '4')) hp_sale_price_4
+    from ifsapp.SALES_PRICE_LIST_PART p

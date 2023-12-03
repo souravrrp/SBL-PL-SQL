@@ -1,0 +1,57 @@
+--***** Warehouse Disbursement Analysis
+select r.trip_no,
+       r.release_no,
+       r.order_no,
+       r.line_no,
+       r.rel_no,
+       r.line_item_no,
+       t.delevery_date,
+       t.gate_pass_no,
+       t.created_date,
+       t.contract,
+       t.act_delivery_date,
+       t.rowstate,
+       r.vat_receipt_no,
+       n.delnote_no,
+       /*n.addr_1,
+       n.addr_2,
+       n.addr_3,*/
+       p.po_order_no,
+       p.po_line_no,
+       p.po_rel_no,
+       p.oe_order_no,
+       p.oe_line_no,
+       p.oe_rel_no,
+       p.oe_line_item_no,
+       r.actual_qty_reserved,
+       p.qty_on_order,
+       /*w.SALES_QUANTITY,*/
+       l.catalog_no
+  from IFSAPP.TRN_TRIP_PLAN_CO_LINE_TAB r
+ inner join IFSAPP.TRN_TRIP_PLAN_TAB t
+    on r.trip_no = t.trip_no
+ inner join IFSAPP.CUSTOMER_ORDER_DELIVERY_TAB n
+    on r.order_no = n.order_no
+    and r.line_no = n.line_no
+    and r.rel_no = n.rel_no
+    and r.line_item_no = n.line_item_no
+ left join IFSAPP.CUSTOMER_ORDER_LINE_TAB l
+    on r.order_no = l.order_no
+   and r.line_no = l.line_no
+   and r.rel_no = l.rel_no
+   and r.line_item_no = l.line_item_no
+ inner join IFSAPP.CUSTOMER_ORDER_PUR_ORDER p
+    on l.demand_order_ref1 = p.po_order_no
+   and l.demand_order_ref2 = p.po_line_no
+   and l.demand_order_ref3 = p.po_rel_no
+ /*inner join IFSAPP.sbl_vw_wholesale_sales w
+    on p.oe_order_no = W.ORDER_NO
+   and p.oe_line_no = W.LINE_NO
+   and p.oe_rel_no = W.REL_NO
+   and p.oe_line_item_no = W.LINE_ITEM_NO
+   and r.actual_qty_reserved = w.SALES_QUANTITY*/
+ where /*t.trip_no = 442820*/
+/*r.vat_receipt_no = 3586319*/
+/*t.debit_note_no = 3586319*/
+p.po_order_no = 'W-75923'
+order by 4,5,6

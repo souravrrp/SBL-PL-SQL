@@ -1,0 +1,13 @@
+select 
+t.IDENTITY,
+customer_info_api.Get_Name(t.IDENTITY) NAME,
+t.LEDGER_ITEM_SERIES_ID SERIES_ID,
+t.INVOICE_ID INVOICE_NO,
+to_char(t.LEDGER_DATE,'dd/mm/yyyy') Inv_Date,
+ t.OPEN_AMOUNT
+from 
+IFSAPP.LEDGER_ITEM_CU_DET_QRY t
+where
+ t.LEDGER_ITEM_SERIES_ID like 'UR%'
+and t.LEDGER_DATE > to_date('&DATE','dd/mm/yyyy')
+and t.OPEN_AMOUNT <0

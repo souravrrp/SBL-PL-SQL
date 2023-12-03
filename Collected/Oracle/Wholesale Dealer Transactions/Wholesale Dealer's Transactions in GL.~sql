@@ -1,0 +1,108 @@
+--Wholesale Sales in GL
+select g.voucher_type,
+       g.voucher_no,
+       g.row_no,
+       g.voucher_date,
+       g.debet_amount,
+       g.credit_amount,
+       g.quantity,
+       g.account,
+       IFSAPP.ACCOUNT_API.Get_Description('SBL', g.ACCOUNT) ACCOUNT_Description,
+       g.text,
+       g.party_type_id,
+       g.reference_serie,
+       g.trans_code,
+       g.code_b,
+       g.code_c
+  from ifsapp.GEN_LED_VOUCHER_ROW_TAB g
+ inner join (select t.invoice_id,
+                    t.c10              "SITE",
+                    t.c1               ORDER_NO,
+                    t.identity,
+                    i.voucher_no_ref,
+                    i.voucher_type_ref,
+                    i.voucher_date_ref,
+                    i.c1,
+                    i.pay_term_id
+               from ifsapp.invoice_item_tab t, ifsapp.INVOICE_TAB i
+              where t.invoice_id = i.invoice_id
+                and t.net_curr_amount > 0
+                and t.creator = 'CUSTOMER_ORDER_INV_ITEM_API'
+                and t.rowstate = 'Posted'
+                and IFSAPP.SALES_PART_API.Get_Catalog_Type(T.C5) in
+                    ('INV', 'PKG')
+                and t.identity like '&CustomerID' --CB => W0000337-1, J => W0000817-2, K => W0000646-1, U => W0000634-2
+              group by t.invoice_id,
+                       t.c10,
+                       t.c1,
+                       t.identity,
+                       i.voucher_no_ref,
+                       i.voucher_type_ref,
+                       i.voucher_date_ref,
+                       i.c1,
+                       i.pay_term_id) s
+    on g.voucher_type = s.voucher_type_ref
+   and g.voucher_no = s.voucher_no_ref
+   and g.party_type_id = s.identity
+ /*order by 4, 2, 3;*/
+
+union all
+
+--Wholesale Cash Collections in GL
+select g.voucher_type,
+       g.voucher_no,
+       g.row_no,
+       g.voucher_date,
+       g.debet_amount,
+       g.credit_amount,
+       g.quantity,
+       g.account,
+       IFSAPP.ACCOUNT_API.Get_Description('SBL', g.ACCOUNT) ACCOUNT_Description,
+       g.text,
+       g.party_type_id,
+       g.reference_serie,
+       g.trans_code,
+       g.code_b,
+       g.code_c
+  from ifsapp.GEN_LED_VOUCHER_ROW_TAB g
+ inner join (select m.payer_identity,
+                    p.voucher_type_ref,
+                    p.voucher_no_ref,
+                    p.voucher_date_ref,
+                    p.rowstate
+               from ifsapp.mixed_payment_lump_sum_tab m
+              inner join ifsapp.MIXED_PAYMENT_TAB p
+                 on m.mixed_payment_id = p.mixed_payment_id
+              where m.payer_identity like '&CustomerID' --CB => W0000337-1, J => W0000817-2, K => W0000646-1, U => W0000634-2
+                and p.rowstate != 'Cancelled') b
+    on g.voucher_type = b.voucher_type_ref
+   and g.voucher_no = b.voucher_no_ref
+ /*order by 4, 2, 3;*/
+
+union all
+
+--Wholesale Check Collections in GL
+select g.voucher_type,
+       g.voucher_no,
+       g.row_no,
+       g.voucher_date,
+       g.debet_amount,
+       g.credit_amount,
+       g.quantity,
+       g.account,
+       IFSAPP.ACCOUNT_API.Get_Description('SBL', g.ACCOUNT) ACCOUNT_Description,
+       g.text,
+       g.party_type_id,
+       g.reference_serie,
+       g.trans_code,
+       g.code_b,
+       g.code_c
+  from ifsapp.GEN_LED_VOUCHER_ROW_TAB g
+ inner join ifsapp.CHECK_LEDGER_ITEM c
+    on g.voucher_type = c.voucher_type
+   and g.voucher_no = c.voucher_no
+   and g.party_type_id = c.identity
+ where c.state != 'Cancelled'
+   and c.identity like '&CustomerID' --CB => W0000337-1, J => W0000817-2, K => W0000646-1, U => W0000634-2
+ 
+ order by 4,2,3;

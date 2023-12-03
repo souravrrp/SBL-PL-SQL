@@ -1,0 +1,51 @@
+--National Sales Details (INV & COMP)
+--INV SALES
+SELECT I.SITE,
+       I.ORDER_NO,
+       I.LINE_NO,
+       I.REL_NO,
+       I.STATUS,
+       I.SALES_DATE,
+       I.PRODUCT_CODE,
+       P.PRODUCT_FAMILY,
+       P.BRAND,
+       I.CUSTOMER_NO,
+       I.SALES_QUANTITY,
+       I.UNIT_NSP,
+       I.DISCOUNT,
+       I.SALES_PRICE,
+       I.VAT,
+       I.AMOUNT_RSP
+  FROM IFSAPP.SBL_JR_SALES_DTL_INV I
+ INNER JOIN IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+    ON I.PRODUCT_CODE = P.PRODUCT_CODE
+ WHERE I.SALES_PRICE != 0
+   AND I.SALES_DATE BETWEEN TO_DATE('&FROM_DATE', 'YYYY/MM/DD') AND
+       TO_DATE('&TO_DATE', 'YYYY/MM/DD')
+
+UNION ALL
+
+--PKG COMP SALES
+select c.SITE,
+       c.ORDER_NO,
+       c.LINE_NO,
+       c.REL_NO,
+       c.STATUS,
+       c.SALES_DATE,
+       c.PRODUCT_CODE,
+       P.PRODUCT_FAMILY,
+       P.BRAND,
+       c.CUSTOMER_NO,
+       c.SALES_QUANTITY,
+       c.UNIT_NSP,
+       c.DISCOUNT,
+       c.SALES_PRICE,
+       c.VAT,
+       c.AMOUNT_RSP
+  from ifsapp.SBL_JR_SALES_DTL_PKG_COMP c
+ INNER JOIN IFSAPP.SBL_JR_PRODUCT_DTL_INFO P
+    ON c.PRODUCT_CODE = P.PRODUCT_CODE
+ WHERE c.sales_price != 0
+   AND c.SALES_DATE BETWEEN TO_DATE('&FROM_DATE', 'YYYY/MM/DD') AND
+       TO_DATE('&TO_DATE', 'YYYY/MM/DD')
+ ORDER BY 2, 3, 4

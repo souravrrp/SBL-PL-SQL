@@ -1,0 +1,23 @@
+create or replace view sbl_vw_product_aging as
+select
+      i.contract shop_code,
+      inventory_part_api.Get_Part_Product_Family(i.contract, i.part_no) product_family,
+      INVENTORY_PRODUCT_FAMILY_API.Get_Description(inventory_part_api.Get_Part_Product_Family(i.contract, i.part_no)) product_family_description,
+      IFSAPP.PART_CATALOG_API.Get_Serial_Tracking_Code(i.part_no) Serial_Tracking_Code,
+      i.part_no,
+      i.serial_no,
+      SERIAL_OEM_CONN_API.Get_Oem_No(i.part_no, i.serial_no) Oem_No,
+      i.qty_onhand,
+      trunc(i.receipt_date) receipt_date,
+      trunc(sysdate) - trunc(i.receipt_date) age,
+      case when trunc(sysdate) - trunc(i.receipt_date) <= 90 then '03'
+        when trunc(sysdate) - trunc(i.receipt_date) <= 180 then '06'
+          when trunc(sysdate) - trunc(i.receipt_date) <= 270 then '09'
+            when trunc(sysdate) - trunc(i.receipt_date) <= 360 then '12'
+            else '12+'
+              end age_month
+  from INVENTORY_PART_IN_STOCK_NOPAL i
+  WHERE
+    i.qty_onhand > 0 and
+    IFSAPP.PART_CATALOG_API.Get_Serial_Tracking_Code(i.part_no) = 'Serial Tracking' and
+    inventory_part_api.Get_Part_Product_Family(i.contract, i.part_no) != 'RBOOK';

@@ -1,0 +1,13 @@
+select * from TEMP_INVENTORY_PART_TAB
+
+--delete TEMP_INVENTORY_PART_TAB;
+--commit;
+
+--exec TRANSFER_TO_INVENTORY_PART('DSCP');
+
+select * from TEMP_SALES_PART_TAB
+
+--delete TEMP_SALES_PART_TAB;
+--commit;
+
+--exec TRANSFER_TO_SALES_PART('DSCP');

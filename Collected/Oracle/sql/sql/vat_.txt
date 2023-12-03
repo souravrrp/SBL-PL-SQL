@@ -1,0 +1,17 @@
+
+/*****VAT RECEIPT ***/
+select
+t.RECEIPT_NO,
+t.VAT_RECEIPT,
+p.ORDER_NO
+from
+hpnret_co_pay_head_tab t,
+hpnret_co_pay_dtl p
+where
+p.PAY_NO=t.PAY_NO
+and p.ORDER_NO like 'JKR-R55%'
+
+*****/
+select 
+* 
+from hpnret_pay_receipt_head_tab

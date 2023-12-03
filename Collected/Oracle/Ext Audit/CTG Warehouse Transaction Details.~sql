@@ -1,0 +1,19 @@
+--***** CTG Warehouse Transaction Details
+select t.*,
+       case
+         when t.order_type_db = 'PUR ORDER' then
+          (select p.vendor_no
+             from PURCHASE_ORDER_TAB p
+            where p.order_no = t.order_no)
+         when t.order_type_db = 'CUST ORDER' then
+          (select c.customer_no
+             from HPNRET_CUSTOMER_ORDER c
+            where c.order_no = t.order_no)
+         else
+          ''
+       END "VENDOR/CUSTOMER"
+  from IFSAPP.INVENTORY_TRANSACTION_HIST t
+ where t.direction in ('+', '-')
+   and t.contract in ('CTGW', 'CTWW', 'CTCW')
+   and trunc(t.dated) between to_date('&from_date', 'YYYY/MM/DD') and
+       to_date('&to_date', 'YYYY/MM/DD')

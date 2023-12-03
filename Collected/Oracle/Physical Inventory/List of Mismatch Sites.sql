@@ -1,0 +1,7 @@
+select distinct(s.site) from sbl_inventory_counting_dts s
+where s.site not in (
+select distinct(t.site) from sbl_user_list t
+where t.site not in (select distinct(s.site) from sbl_inventory_counting_dts s)
+
+select * from sbl_user_list t
+where t.site = 'BOGB'

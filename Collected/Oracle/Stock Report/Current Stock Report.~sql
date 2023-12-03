@@ -1,0 +1,38 @@
+--*****Shopwise as on inventory/stock report for a product group
+select 
+  i.contract,
+  --s.SHOP_CODE,
+  i.PART_NO,
+  sum(i.QTY_ONHAND) as ONHAND 
+from
+  IFSAPP.INVENTORY_PART_IN_STOCK_TAB i,
+  --IFSAPP.SHOP_DTS_INFO s,
+  IFSAPP.PRODUCT_CATEGORY_INFO p
+WHERE 
+  --s.shop_code = i.contract AND 
+  i.part_no = p.product_code and 
+  --DISTRICT_CODE like '$district_code' and 
+  p.GROUP_NO = 131 --131 Safe
+  --and i.PART_NO like '$product_code'
+group by i.contract, i.PART_NO
+order by i.contract, i.PART_NO
+
+
+--*****Shopwise as on inventory/stock report for a particular product brand or part no.
+select 
+  (select s.district_code from IFSAPP.SHOP_DTS_INFO s where s.shop_code = i.contract) district_code,
+  i.contract,
+  --s.SHOP_CODE,
+  i.PART_NO,
+  sum(i.QTY_ONHAND) as ONHAND 
+from
+  IFSAPP.INVENTORY_PART_IN_STOCK_TAB i,
+  --IFSAPP.SHOP_DTS_INFO s,
+  IFSAPP.PRODUCT_CATEGORY_INFO p
+WHERE 
+  --s.shop_code = i.contract AND 
+  i.part_no = p.product_code and 
+  --p.GROUP_NO = 131 and --131 Safe group code
+  i.PART_NO like 'SC%'--'MX%'--'GJREF%'
+group by i.contract, i.PART_NO
+order by district_code, i.contract, i.PART_NO

@@ -1,0 +1,61 @@
+-- Data Load from qty_onhand & in-transit
+insert into SBL_INVENTORY_COUNTING_DTS
+  (CATALOG_NO, SITE, QTY_ONHAND, QTY_IN_TRANSIT)
+--*****Finished Good
+  select i.part_no,
+         i.contract,
+         sum(i.qty_onhand) qty_onhand,
+         nvl((select sum(t.qty) QTY_IN_TRANSIT
+               from IFSAPP.INV_TRANSIT_TRACKING t
+              where t.qty > 0
+                and t.contract = i.contract
+                and t.part_no = i.part_no),
+             0) QTY_IN_TRANSIT
+    from IFSAPP.INVENTORY_PART_IN_STOCK i
+   where i.qty_onhand > 0
+     and ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM',
+                                                           i.part_no) !=
+         'RBOOK'
+     and ifsapp.inventory_part_api.Get_Part_Product_Code('SCOM', i.part_no) !=
+         'RAW'
+     and ifsapp.inventory_part_api.Get_Second_Commodity('DSCP', i.part_no) not like
+         'S-%'
+   group by i.part_no, i.contract
+  
+  union all
+  
+  --***** Raw Materials
+  select i.part_no,
+         i.contract,
+         sum(i.qty_onhand) qty_onhand,
+         nvl((select sum(t.qty) QTY_IN_TRANSIT
+               from IFSAPP.INV_TRANSIT_TRACKING t
+              where t.qty > 0
+                and t.contract = i.contract
+                and t.part_no = i.part_no),
+             0) QTY_IN_TRANSIT
+    from IFSAPP.INVENTORY_PART_IN_STOCK i
+   where i.qty_onhand > 0
+     and ifsapp.inventory_part_api.Get_Part_Product_Code('SCOM', i.part_no) =
+         'RAW'
+   group by i.part_no, i.contract
+  
+  union all
+  
+  --***** Spare
+  select i.part_no,
+         i.contract,
+         sum(i.qty_onhand) qty_onhand,
+         nvl((select sum(t.qty) QTY_IN_TRANSIT
+               from IFSAPP.INV_TRANSIT_TRACKING t
+              where t.qty > 0
+                and t.contract = i.contract
+                and t.part_no = i.part_no),
+             0) QTY_IN_TRANSIT
+    from IFSAPP.INVENTORY_PART_IN_STOCK i
+   where i.qty_onhand > 0
+     and ifsapp.inventory_part_api.Get_Second_Commodity('DSCP', i.part_no) like
+         'S-%'
+     and i.part_no != 'PG-BT-TV-WALL-BRACKET'
+   group by i.part_no, i.contract;
+commit;

@@ -1,0 +1,71 @@
+--***** Selling Commission Details
+select c.transaction_id,
+       c.trans_item_no,
+       c.trans_revision_no,
+       c.commission_receiver,
+       c.site,
+       c.channel_id,
+       c.customer_type,
+       c.commission_type,
+       c.commission_sales_type,
+       c.collection_type,
+       c.agreement_id,
+       c.revision_no,
+       c.rev_line_no,
+       c.catalog_no,
+       decode(IFSAPP.SALES_PART_API.Get_Catalog_Type(c.CATALOG_NO),
+              'PKG',
+              ifsapp.INVENTORY_PRODUCT_FAMILY_API.Get_Description(ifsapp.sales_part_api.Get_Part_Product_Family('SCOM',
+                                                                                                                c.CATALOG_NO)),
+              ifsapp.INVENTORY_PRODUCT_FAMILY_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Family('SCOM',
+                                                                                                                    c.CATALOG_NO))) product_family,
+       c.quantity,
+       c.order_price,
+       c.invoice_amount,
+       c.installment_amount,
+       c.comm_calc_amount,
+       trunc(c.calculated_date) calculated_date,
+       c.order_no,
+       c.ord_line_no,
+       c.ord_rel_no,
+       c.ord_line_item_no,
+       c.invoice_id,
+       c.inv_item_id,
+       c.account_no,
+       c.account_rev,
+       c.acc_line_no,
+       c.approved_date,
+       c.approved_amount,
+       c.not_approved_amount,
+       c.approved_user,
+       c.deduction_type,
+       c.deduction_reason,
+       c.deduction_amount,
+       c.claim_id,
+       c.entitlement_type,
+       c.receipt_no,
+       c.invoice_no,
+       c.note,
+       c.reverse_reason,
+       c.org_transaction_id,
+       c.org_trans_item_no,
+       c.org_trans_revision_no,
+       c.reversed,
+       c.objstate,
+       c.state
+  from IFSAPP.COMMISSION_VALUE_DETAIL c
+ where c.state = 'Approved' /*like '&state'*/ --Initial for Commission Holds
+   and c.site like '&shop_code'
+   /*and c.commission_sales_type = 'HP'*/
+   and c.collection_type is null /*= 'INST'*/
+   /*and (c.catalog_no like 'SRSM-%' or
+        c.catalog_no like '%FUR-%')*/
+   and c.claim_id in
+       (select l.claim_id
+          from IFSAPP.COMM_BONS_INCEN_CLAIM l
+         where l.calculated_date between to_date('&from_date', 'YYYY/MM/DD') and
+               to_date('&to_date', 'YYYY/MM/DD'))
+ order by c.claim_id,
+          c.transaction_id,
+          c.trans_item_no,
+          c.trans_revision_no

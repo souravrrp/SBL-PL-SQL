@@ -1,0 +1,20 @@
+select
+c.Account_No,
+
+c.CATALOG_NO,
+c.QUANTITY,
+customer_order_line_api.Get_Sale_Price_Total(c.Account_No, c.REF_LINE_NO, c.REF_REL_NO ,c.REF_LINE_ITEM_NO) "SALE PRICE",
+(SELECT SUM(t.discount_amount)
+ FROM cust_order_line_discount t 
+ WHERE t.order_no = c.Account_No
+ AND t.line_no = c.REF_LINE_NO
+ AND t.rel_no =  c.REF_REL_No
+ AND t.line_item_no = c.REF_LINE_ITEM_NO ) "DISCOUNT",
+customer_order_line_api.Get_Total_Tax_Amount(c.Account_No, c.REF_LINE_NO, c.REF_REL_NO ,c.REF_LINE_ITEM_NO) "TAX PRICE",
+c.ROWSTATE
+from
+hpnret_hp_dtl_tab c
+where
+c.VARIATED_DATE between to_date('01/01/2013','dd/mm/yyyy') and to_date('28/02/2013','dd/mm/yyyy')
+and c.CONTRACT='DGNB'
+and c.ROWSTATE in ('CashConverted','Returned')

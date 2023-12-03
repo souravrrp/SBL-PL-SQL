@@ -1,0 +1,19 @@
+--Sales Price in a specified Date
+select IFSAPP.SALES_PART_API.Get_Catalog_Desc('SCOM', p.CATALOG_NO) Catalog_Desc,
+       p.*
+  FROM ifsapp.SALES_PRICE_LIST_PART_TAB p
+ inner join (select lp.price_list_no, --Find the difference between cutoff date and last price date
+                    lp.catalog_no,
+                    min(abs(lp.valid_from_date -
+                            to_date('&cutoff_date', 'YYYY/MM/DD') /*trunc(sysdate)*/)) diff
+               from IFSAPP.SALES_PRICE_LIST_PART_TAB lp
+              where lp.valid_from_date <=
+                    to_date('&cutoff_date', 'YYYY/MM/DD')
+              group by lp.price_list_no, lp.catalog_no
+              order by lp.catalog_no) m
+    on p.price_list_no = m.price_list_no
+   and p.catalog_no = m.catalog_no
+ where abs(p.valid_from_date - to_date('&cutoff_date', 'YYYY/MM/DD') /*trunc(sysdate)*/) =
+       m.diff
+   and p.price_list_no like '&price_list_no'
+   and p.catalog_no like '&product_code'

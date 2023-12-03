@@ -1,0 +1,22 @@
+select distinct wd.CONTRACT TR_PLACE,
+   'IN' TR_TYPE,
+   wd.VENDOR_NO||'--'|| wd.VENDOR_NAME DEST_SOURCE,
+   wd.PART_NO PART_CODE , 
+   wd.REAL_ARRIVAL_DATE TR_DATE, 
+   wd.QTY_IN_STORE QTY_IN, 
+   0 QTY_OUT,
+   DBN_ID DOC_REF2,
+   wd.ORDER_NO , 
+   decode(substr(wd.ORDER_NO,1,1),'A','Internal','External') Remark
+from PURCHASE_RECEIPT_STATISTICS wd ,
+(select PO.CUSTOMER_PO_NO PO_NO, im.DBN_ID 
+      from   IFSAPP.TRN_TRIP_PLAN_TAB  im , 
+             IFSAPP.TRN_TRIP_PLAN_CO_LINE id,
+               IFSAPP.EXTERNAL_CUSTOMER_ORDER po
+      where  im.TRIP_NO=id.TRIP_NO        
+               and id.ORDER_NO=po.ORDER_NO)H 
+WHERE wd.ORDER_NO=H.PO_NO 
+ AND    wd.QTY_IN_STORE>0
+ and to_date(to_char( wd.REAL_ARRIVAL_DATE)) between  '$Date' and '$Date1'
+ and wd.CONTRACT like '$shop_code'
+ order by  wd.REAL_ARRIVAL_DATE,PART_CODE

@@ -1,0 +1,13 @@
+select 
+    /*COUNT(*)*/
+    t.stat_year,
+    t.stat_period_no,
+    t.contract,
+    t.part_no,
+    /*t.branch,
+    t.bf_balance,*/
+    t.cf_balance
+  from REP246_TAB t
+  where t.stat_year = 2013 and
+    t.stat_period_no = 12 and
+    t.Contract = 'MS2C'

@@ -1,0 +1,51 @@
+select t.c10 "SITE",
+       (select s.area_code
+          from ifsapp.SHOP_DTS_INFO s
+         where s.shop_code = t.c10) area_code,
+       (select s.district_code
+          from ifsapp.SHOP_DTS_INFO s
+         where s.shop_code = t.c10) district_code,
+       sum(case
+         when t.net_curr_amount != 0 then
+          t.n2 * (t.net_curr_amount / abs(t.net_curr_amount))
+         else
+          IFSAPP.GET_SBL_FREE_ITEM_SALES_QTN(t.invoice_id, t.item_id, T.N2)
+       end) TOTAL_SALES_QUANTITY,
+       sum(t.net_curr_amount) TOTAL_SALES_PRICE,
+       sum(t.vat_curr_amount) TOTAL_VAT,
+       sum(t.net_curr_amount + t.vat_curr_amount) TOTAL_RSP
+  from ifsapp.invoice_item_tab t, ifsapp.INVOICE_TAB i
+ where t.invoice_id = i.invoice_id
+   and t.creator = 'CUSTOMER_ORDER_INV_ITEM_API'
+   and t.rowstate = 'Posted'
+   and IFSAPP.SALES_PART_API.Get_Catalog_Type(T.C5) in
+       ('INV', 'PKG')
+   and t.c10 not in ('BSCP',
+                     'BLSP',
+                     'CLSP',
+                     'CSCP',
+                     'DSCP',
+                     'JSCP',
+                     'MSCP', --New Service Center
+                     'RSCP',
+                     'SSCP',
+                     'MS1C',
+                     'MS2C',
+                     'BTSC') --Service Sites
+   and t.c10 not in ('JWSS', 'SAOS', 'SWSS', 'WSMO') --Wholesale Sites
+   and t.c10 not in ('SAPM', 'SCSM', 'SESM', 'SHOM', 'SISM', 'SFSM', 'SOSM') --Corporate, Employee, & Scrap Sites
+   and i.invoice_date between to_date('&from_date', 'yyyy/mm/dd') and
+       to_date('&to_date', 'yyyy/mm/dd')
+   and t.net_curr_amount != 0
+   /*and ifsapp.get_sbl_account_status(t.c1,
+                                     t.c2,
+                                     t.c3,
+                                     t.c5,
+                                     t.net_curr_amount,
+                                     i.invoice_date) in
+       ('CashSale', 'ReturnCompleted', 'HireSale', 'Returned')*/
+   and IFSAPP.INVENTORY_PRODUCT_CODE_API.Get_Description(ifsapp.inventory_part_api.Get_Part_Product_Code('SCOM',
+                                                                                                         t.c5)) not in
+       ('Singer', 'Merritt')
+ group by t.c10
+ order by area_code, district_code, t.c10
